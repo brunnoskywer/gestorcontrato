@@ -17,13 +17,16 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
 
     # Banco de dados (PostgreSQL)
-    # Coolify/Heroku enviam postgres://; SQLAlchemy 2 exige postgresql://
+    # Coolify/Heroku usam postgres://; SQLAlchemy 2 só aceita postgresql+psycopg2
     _database_url = os.getenv(
         "DATABASE_URL",
         "postgresql+psycopg2://postgres:qwe123@localhost:5433/gestor_contrato",
     )
-    if _database_url and _database_url.startswith("postgres://"):
-        _database_url = _database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    if _database_url:
+        if _database_url.startswith("postgres://"):
+            _database_url = "postgresql+psycopg2://" + _database_url[11:]
+        elif _database_url.startswith("postgresql://") and not _database_url.startswith("postgresql+"):
+            _database_url = "postgresql+psycopg2://" + _database_url[13:]
     SQLALCHEMY_DATABASE_URI = _database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
