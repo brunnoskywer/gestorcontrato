@@ -16,12 +16,15 @@ class Config:
     # Segurança
     SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
 
-    # Banco de dados (PostgreSQL por padrão)
-    # Ex.: postgres://user:password@host:5432/dbname
-    SQLALCHEMY_DATABASE_URI = os.getenv(
+    # Banco de dados (PostgreSQL)
+    # Coolify/Heroku enviam postgres://; SQLAlchemy 2 exige postgresql://
+    _database_url = os.getenv(
         "DATABASE_URL",
         "postgresql+psycopg2://postgres:qwe123@localhost:5433/gestor_contrato",
     )
+    if _database_url and _database_url.startswith("postgres://"):
+        _database_url = _database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    SQLALCHEMY_DATABASE_URI = _database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Outros parâmetros de sistema
