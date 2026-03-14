@@ -2,6 +2,7 @@ import logging
 from logging.config import fileConfig
 
 from flask import current_app
+from sqlalchemy import text
 
 from alembic import context
 
@@ -97,6 +98,19 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # Alembic default version_num is VARCHAR(32); our revision IDs can be longer (e.g. c006_contract_absence_unique_date)
+        try:
+            with connection.begin():
+                r = connection.execute(text(
+                    "SELECT character_maximum_length FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'alembic_version' AND column_name = 'version_num'"
+                ))
+                row = r.fetchone()
+                if row and row[0] == 32:
+                    connection.execute(text("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)"))
+        except Exception:
+            pass  # table may not exist yet on first run
+
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
@@ -105,6 +119,19 @@ def run_migrations_online():
 
         with context.begin_transaction():
             context.run_migrations()
+
+        # After migrations (or after partial run): ensure version_num can hold long revision IDs
+        try:
+            with connection.begin():
+                r = connection.execute(text(
+                    "SELECT character_maximum_length FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'alembic_version' AND column_name = 'version_num'"
+                ))
+                row = r.fetchone()
+                if row and row[0] == 32:
+                    connection.execute(text("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)"))
+        except Exception:
+            pass
 
 
 if context.is_offline_mode():
