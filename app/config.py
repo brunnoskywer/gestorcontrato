@@ -29,6 +29,11 @@ class Config:
             _database_url = "postgresql+psycopg2://" + _database_url[13:]
     SQLALCHEMY_DATABASE_URI = _database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Evita "server closed the connection unexpectedly": testa conexão antes de usar e recicla após um tempo
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,   # testa se a conexão está viva antes de usar
+        "pool_recycle": 300,      # recicla conexões após 5 min (evita timeout do servidor)
+    }
 
     # Outros parâmetros de sistema
     APP_NAME = os.getenv("APP_NAME", "Contract Manager")

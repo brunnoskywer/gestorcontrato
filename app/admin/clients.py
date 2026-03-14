@@ -1,10 +1,11 @@
 """CRUD for Clients: uses Supplier with type=client."""
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
-
-from app.admin.auth_helpers import require_admin
-from app.extensions import db
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
+
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.extensions import db
 from app.models import Company, Supplier, SUPPLIER_CLIENT
 
 
@@ -174,9 +175,12 @@ def register_routes(bp: Blueprint) -> None:
     def clients_delete(client_id: int):
         require_admin()
         client = Supplier.query.filter_by(id=client_id, type=SUPPLIER_CLIENT).first_or_404()
-        db.session.delete(client)
-        db.session.commit()
-        flash("Cliente excluído.", "info")
+        try:
+            db.session.delete(client)
+            db.session.commit()
+            flash("Cliente excluído.", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.clients_list"))
 
     @bp.post("/clients/bulk-delete")
@@ -187,12 +191,15 @@ def register_routes(bp: Blueprint) -> None:
         if not ids:
             flash("Nenhum cliente selecionado.", "warning")
             return redirect(url_for("admin.clients_list"))
-        count = (
-            Supplier.query.filter(
-                Supplier.id.in_(ids),
-                Supplier.type == SUPPLIER_CLIENT,
-            ).delete(synchronize_session=False)
-        )
-        db.session.commit()
-        flash(f"{count} cliente(s) excluído(s).", "info")
+        try:
+            count = (
+                Supplier.query.filter(
+                    Supplier.id.in_(ids),
+                    Supplier.type == SUPPLIER_CLIENT,
+                ).delete(synchronize_session=False)
+            )
+            db.session.commit()
+            flash(f"{count} cliente(s) excluído(s).", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.clients_list"))

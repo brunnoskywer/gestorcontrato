@@ -4,8 +4,9 @@ from datetime import date, datetime, time
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.extensions import db
 from app.models import (
     Account,
@@ -261,9 +262,12 @@ def register_routes(bp: Blueprint) -> None:
     def finance_delete_entry(entry_id: int):
         require_admin()
         entry = FinancialEntry.query.get_or_404(entry_id)
-        db.session.delete(entry)
-        db.session.commit()
-        flash("Lançamento excluído.", "info")
+        try:
+            db.session.delete(entry)
+            db.session.commit()
+            flash("Lançamento excluído.", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.finance_manual_entry"))
 
     @bp.post("/financeiro/lancamento/bulk-delete")
@@ -274,9 +278,12 @@ def register_routes(bp: Blueprint) -> None:
         if not ids:
             flash("Nenhum lançamento selecionado.", "warning")
             return redirect(url_for("admin.finance_manual_entry"))
-        count = FinancialEntry.query.filter(FinancialEntry.id.in_(ids)).delete(synchronize_session=False)
-        db.session.commit()
-        flash(f"{count} lançamento(s) excluído(s).", "info")
+        try:
+            count = FinancialEntry.query.filter(FinancialEntry.id.in_(ids)).delete(synchronize_session=False)
+            db.session.commit()
+            flash(f"{count} lançamento(s) excluído(s).", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.finance_manual_entry"))
 
     # ---- Transferência entre contas ----

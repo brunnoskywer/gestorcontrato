@@ -1,8 +1,9 @@
 """Rotas de CRUD para Contas (vinculadas à empresa)."""
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.extensions import db
 from app.models import Account, Company
 
@@ -105,9 +106,12 @@ def register_routes(bp: Blueprint) -> None:
     def accounts_delete(account_id: int):
         require_admin()
         account = Account.query.get_or_404(account_id)
-        db.session.delete(account)
-        db.session.commit()
-        flash("Conta excluída.", "info")
+        try:
+            db.session.delete(account)
+            db.session.commit()
+            flash("Conta excluída.", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.accounts_list"))
 
     @bp.post("/accounts/bulk-delete")
@@ -118,7 +122,10 @@ def register_routes(bp: Blueprint) -> None:
         if not ids:
             flash("Nenhuma conta selecionada.", "warning")
             return redirect(url_for("admin.accounts_list"))
-        count = Account.query.filter(Account.id.in_(ids)).delete(synchronize_session=False)
-        db.session.commit()
-        flash(f"{count} conta(s) excluída(s).", "info")
+        try:
+            count = Account.query.filter(Account.id.in_(ids)).delete(synchronize_session=False)
+            db.session.commit()
+            flash(f"{count} conta(s) excluída(s).", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.accounts_list"))

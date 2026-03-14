@@ -1,8 +1,9 @@
 """Rotas de CRUD para Naturezas Financeiras."""
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.extensions import db
 from app.models import FinancialNature
 
@@ -93,9 +94,12 @@ def register_routes(bp: Blueprint) -> None:
     def financial_natures_delete(nature_id: int):
         require_admin()
         nature = FinancialNature.query.get_or_404(nature_id)
-        db.session.delete(nature)
-        db.session.commit()
-        flash("Financial nature deleted.", "info")
+        try:
+            db.session.delete(nature)
+            db.session.commit()
+            flash("Natureza financeira excluída.", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.financial_natures_list"))
 
     @bp.post("/financial-natures/bulk-delete")
@@ -106,8 +110,11 @@ def register_routes(bp: Blueprint) -> None:
         if not ids:
             flash("Nenhuma natureza selecionada.", "warning")
             return redirect(url_for("admin.financial_natures_list"))
-        count = FinancialNature.query.filter(FinancialNature.id.in_(ids)).delete(synchronize_session=False)
-        db.session.commit()
-        flash(f"{count} natureza(s) excluída(s).", "info")
+        try:
+            count = FinancialNature.query.filter(FinancialNature.id.in_(ids)).delete(synchronize_session=False)
+            db.session.commit()
+            flash(f"{count} natureza(s) excluída(s).", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.financial_natures_list"))
 

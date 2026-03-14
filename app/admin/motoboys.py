@@ -1,8 +1,9 @@
 """CRUD for Motoboys: uses Supplier with type=motoboy."""
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.extensions import db
 from app.models import Supplier, SUPPLIER_MOTOBOY
 
@@ -144,9 +145,12 @@ def register_routes(bp: Blueprint) -> None:
     def motoboys_delete(motoboy_id: int):
         require_admin()
         motoboy = Supplier.query.filter_by(id=motoboy_id, type=SUPPLIER_MOTOBOY).first_or_404()
-        db.session.delete(motoboy)
-        db.session.commit()
-        flash("Motoboy excluído.", "info")
+        try:
+            db.session.delete(motoboy)
+            db.session.commit()
+            flash("Motoboy excluído.", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.motoboys_list"))
 
     @bp.post("/motoboys/bulk-delete")
@@ -157,12 +161,15 @@ def register_routes(bp: Blueprint) -> None:
         if not ids:
             flash("Nenhum motoboy selecionado.", "warning")
             return redirect(url_for("admin.motoboys_list"))
-        count = (
-            Supplier.query.filter(
-                Supplier.id.in_(ids),
-                Supplier.type == SUPPLIER_MOTOBOY,
-            ).delete(synchronize_session=False)
-        )
-        db.session.commit()
-        flash(f"{count} motoboy(s) excluído(s).", "info")
+        try:
+            count = (
+                Supplier.query.filter(
+                    Supplier.id.in_(ids),
+                    Supplier.type == SUPPLIER_MOTOBOY,
+                ).delete(synchronize_session=False)
+            )
+            db.session.commit()
+            flash(f"{count} motoboy(s) excluído(s).", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.motoboys_list"))

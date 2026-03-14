@@ -1,8 +1,9 @@
 """Rotas de CRUD para Usuários (admin)."""
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.extensions import db
 from app.models import User
 
@@ -111,9 +112,12 @@ def register_routes(bp: Blueprint) -> None:
             return redirect(url_for("admin.users_list"))
 
         user = User.query.get_or_404(user_id)
-        db.session.delete(user)
-        db.session.commit()
-        flash("Usuário excluído.", "info")
+        try:
+            db.session.delete(user)
+            db.session.commit()
+            flash("Usuário excluído.", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.users_list"))
 
     @bp.post("/users/bulk-delete")
@@ -122,15 +126,18 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         ids = request.form.getlist("ids", type=int)
         if not ids:
-            flash("No user selected.", "warning")
+            flash("Nenhum usuário selecionado.", "warning")
             return redirect(url_for("admin.users_list"))
         ids_to_delete = [i for i in ids if i != current_user.id]
         if current_user.id in ids:
             flash("Você não pode excluir a si mesmo.", "warning")
         count = 0
         if ids_to_delete:
-            count = User.query.filter(User.id.in_(ids_to_delete)).delete(synchronize_session=False)
-            db.session.commit()
-        if count:
-            flash(f"{count} usuário(s) excluído(s).", "info")
+            try:
+                count = User.query.filter(User.id.in_(ids_to_delete)).delete(synchronize_session=False)
+                db.session.commit()
+                if count:
+                    flash(f"{count} usuário(s) excluído(s).", "info")
+            except IntegrityError:
+                handle_delete_constraint_error()
         return redirect(url_for("admin.users_list"))

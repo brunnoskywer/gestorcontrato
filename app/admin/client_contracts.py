@@ -3,8 +3,9 @@ from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.extensions import db
 from app.models import Contract, CONTRACT_TYPE_CLIENT, Supplier, SUPPLIER_CLIENT
 from sqlalchemy import or_
@@ -131,9 +132,12 @@ def register_routes(bp: Blueprint) -> None:
     def client_contracts_delete(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_CLIENT).first_or_404()
-        db.session.delete(contract)
-        db.session.commit()
-        flash("Contrato de cliente excluído.", "info")
+        try:
+            db.session.delete(contract)
+            db.session.commit()
+            flash("Contrato de cliente excluído.", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.client_contracts_list"))
 
     @bp.post("/client-contracts/bulk-delete")
@@ -142,14 +146,17 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         ids = request.form.getlist("ids", type=int)
         if not ids:
-            flash("No contract selected.", "warning")
+            flash("Nenhum contrato selecionado.", "warning")
             return redirect(url_for("admin.client_contracts_list"))
-        count = (
-            Contract.query.filter(
-                Contract.id.in_(ids),
-                Contract.contract_type == CONTRACT_TYPE_CLIENT,
-            ).delete(synchronize_session=False)
-        )
-        db.session.commit()
-        flash(f"{count} contrato(s) excluído(s).", "info")
+        try:
+            count = (
+                Contract.query.filter(
+                    Contract.id.in_(ids),
+                    Contract.contract_type == CONTRACT_TYPE_CLIENT,
+                ).delete(synchronize_session=False)
+            )
+            db.session.commit()
+            flash(f"{count} contrato(s) excluído(s).", "info")
+        except IntegrityError:
+            handle_delete_constraint_error()
         return redirect(url_for("admin.client_contracts_list"))
