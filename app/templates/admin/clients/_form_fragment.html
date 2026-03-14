@@ -1,0 +1,45 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content">
+  <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Razão social *</label>
+      <input type="text" name="legal_name" class="form-control" required value="{{ client.legal_name if client else '' }}" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Nome fantasia</label>
+      <input type="text" name="trade_name" class="form-control" value="{{ client.trade_name if client else '' }}" />
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">CNPJ *</label>
+      <input type="text" name="cnpj" class="form-control" required value="{{ client.document if client else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">E-mail</label>
+      <input type="email" name="email" class="form-control" value="{{ client.email if client else '' }}" />
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Endereço</label>
+      <input type="text" name="address" class="form-control" value="{{ client.address if client else '' }}" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Contato</label>
+      <input type="text" name="contact_name" class="form-control" value="{{ client.contact_name if client else '' }}" />
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Empresa emissão NF</label>
+    <select name="billing_company_id" class="form-select">
+      <option value="">-- Selecione a empresa --</option>
+      {% for company in companies %}
+      <option value="{{ company.id }}" {% if client and client.billing_company_id == company.id %}selected{% endif %}>{{ company.legal_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+  </div>
+</form>

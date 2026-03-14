@@ -1,0 +1,40 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content">
+  <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Nome completo *</label>
+      <input type="text" name="full_name" class="form-control" required value="{{ motoboy.name if motoboy else '' }}" />
+    </div>
+    <div class="col-12 col-md-3 mb-3">
+      <label class="form-label">CPF *</label>
+      <input type="text" name="cpf" class="form-control" required value="{{ motoboy.document if motoboy else '' }}" data-mask="cpf" maxlength="14" placeholder="000.000.000-00" />
+    </div>
+    <div class="col-12 col-md-3 mb-3">
+      <label class="form-label">CNPJ</label>
+      <input type="text" name="cnpj" class="form-control" value="{{ motoboy.document_secondary if motoboy else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Endereço</label>
+      <input type="text" name="address" class="form-control" value="{{ motoboy.address if motoboy else '' }}" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Contato de referência</label>
+      <input type="text" name="reference_contact" class="form-control" value="{{ motoboy.reference_contact if motoboy else '' }}" />
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 col-md-4 mb-3">
+      <label class="form-label">Placa moto</label>
+      <input type="text" name="bike_plate" class="form-control" value="{{ motoboy.bike_plate if motoboy else '' }}" />
+    </div>
+    <div class="col-12 col-md-8 mb-3">
+      <label class="form-label">Conta bancária / PIX</label>
+      <input type="text" name="bank_account_pix" class="form-control" value="{{ motoboy.bank_account_pix if motoboy else '' }}" />
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+  </div>
+</form>

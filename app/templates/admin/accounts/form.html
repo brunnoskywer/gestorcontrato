@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar conta" if account else "Nova conta" }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label">Empresa *</label>
+        <select name="company_id" class="form-select" required>
+          {% for c in companies %}
+          <option value="{{ c.id }}" {% if account and account.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Nome da conta *</label>
+        <input type="text" name="name" class="form-control" required value="{{ account.name if account else '' }}" />
+      </div>
+      <div class="mb-3 form-check">
+        <input type="checkbox" name="is_active" class="form-check-input" id="account_active" {% if not account or account.is_active %}checked{% endif %} />
+        <label class="form-check-label" for="account_active">Conta ativa</label>
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="{{ url_for('admin.accounts_list') }}" class="btn btn-secondary">Voltar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

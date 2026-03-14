@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar natureza financeira" if nature else "Nova natureza financeira" }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label">Nome da natureza *</label>
+        <input type="text" name="name" class="form-control" required value="{{ nature.name if nature else '' }}" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Tipo *</label>
+        <div class="d-flex gap-3">
+          <div class="form-check">
+            <input type="radio" name="kind" id="nature_kind_payable_page" value="payable" class="form-check-input" {% if not nature or nature.kind == 'payable' %}checked{% endif %} />
+            <label class="form-check-label" for="nature_kind_payable_page">Contas a pagar</label>
+          </div>
+          <div class="form-check">
+            <input type="radio" name="kind" id="nature_kind_receivable_page" value="receivable" class="form-check-input" {% if nature and nature.kind == 'receivable' %}checked{% endif %} />
+            <label class="form-check-label" for="nature_kind_receivable_page">Contas a receber</label>
+          </div>
+        </div>
+      </div>
+      <div class="mb-3 form-check">
+        <input type="checkbox" name="is_active" class="form-check-input" id="nature_is_active_page" {% if not nature or nature.is_active %}checked{% endif %} />
+        <label class="form-check-label" for="nature_is_active_page">Natureza ativa</label>
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="{{ url_for('admin.financial_natures_list') }}" class="btn btn-secondary">Voltar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
+

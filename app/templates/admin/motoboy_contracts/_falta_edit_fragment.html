@@ -1,0 +1,19 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
+  <div class="row g-3">
+    <div class="col-12">
+      <p class="text-muted small mb-0">Contrato: {{ contract.supplier.name }}{% if contract.other_supplier %} — {{ contract.other_supplier.legal_name or contract.other_supplier.name }}{% endif %}</p>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Data *</label>
+      <input type="date" name="absence_date" class="form-control form-control-md" required value="{{ absence.absence_date.isoformat() }}" />
+    </div>
+    <div class="col-12">
+      <label class="form-label">Justificativa *</label>
+      <textarea name="justification" class="form-control form-control-md" rows="3" required placeholder="Descreva o motivo da falta...">{{ absence.justification }}</textarea>
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+  </div>
+</form>

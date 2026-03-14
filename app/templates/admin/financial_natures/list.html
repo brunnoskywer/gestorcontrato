@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Naturezas financeiras{% endblock %}
+
+{% block content %}
+{% set table_id = 'list-table' %}
+{% set insert_url = url_for('admin.financial_natures_form_new') %}
+{% set insert_title = 'Nova natureza financeira' %}
+{% set _edit_base = url_for('admin.financial_natures_form_edit', nature_id=999999) %}
+{% set edit_url_template = _edit_base.replace('999999', '{id}') %}
+{% set delete_bulk_url = url_for('admin.financial_natures_bulk_delete') %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Naturezas financeiras</h1>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="get" action="{{ url_for('admin.financial_natures_list') }}">
+      <div class="col-md-6">
+        <label class="form-label mb-1">Nome</label>
+        <input type="text" name="name" class="form-control form-control-sm" value="{{ filters.name }}" placeholder="Pesquisar por nome" />
+      </div>
+      <div class="col-md-6 text-md-end">
+        <button type="submit" class="btn btn-primary btn-sm me-2">Pesquisar</button>
+        <a href="{{ url_for('admin.financial_natures_list') }}" class="btn btn-danger btn-sm">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% include "admin/_toolbar.html" with context %}
+<div class="table-responsive">
+<table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list" id="list-table">
+  <thead>
+    <tr>
+      <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
+      <th>Nome</th>
+      <th>Tipo</th>
+      <th>Ativa</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for nature in natures %}
+    <tr data-id="{{ nature.id }}">
+      <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ nature.id }}" aria-label="Selecionar" /></td>
+      <td data-label="Nome">{{ nature.name }}</td>
+      <td data-label="Tipo">{{ 'Contas a pagar' if nature.kind == 'payable' else 'Contas a receber' }}</td>
+      <td data-label="Ativa">{{ 'Sim' if nature.is_active else 'Não' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-center text-muted">Nenhuma natureza financeira cadastrada.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<script>(function(){ var t=document.getElementById('list-table'); if(!t) return; var h=t.querySelector('thead .select-all'); if(h) h.addEventListener('change',function(){ var c=this.checked; t.querySelectorAll('tbody .row-select').forEach(function(cb){ cb.checked=c; }); }); })();</script>
+{% endblock %}

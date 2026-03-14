@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0 fw-bold">Dashboard</h1>
+  <form method="get" action="{{ url_for('main.dashboard') }}" class="d-flex flex-wrap align-items-center gap-2">
+    <label class="form-label mb-0 small text-muted">Empresa</label>
+    <select name="company_id" class="form-select form-select-sm" style="width: 12rem;" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      {% for c in companies %}
+      <option value="{{ c.id }}" {% if company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
+      {% endfor %}
+    </select>
+    <label class="form-label mb-0 small text-muted">Mês</label>
+    <input type="month" name="month" class="form-control form-control-sm" style="width: 10rem;" value="{{ month_param }}" onchange="this.form.submit()" />
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Atualizar</button>
+  </form>
+</div>
+
+{# Card maior: Esperado Hoje #}
+<div class="card border-0 shadow-sm mb-4 border-2 border-primary">
+  <div class="card-header bg-primary text-white py-2 px-3">
+    <h5 class="mb-0 fw-semibold">Esperado hoje</h5>
+  </div>
+  <div class="card-body">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0 rounded-3 bg-primary bg-opacity-10 p-3 me-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="text-primary" viewBox="0 0 16 16">
+              <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.032-.169-1.676-.734-1.676-1.617 0-.994.758-1.652 1.766-1.652z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-muted small mb-0">A receber</p>
+            <p class="mb-0 fs-3 fw-bold text-primary">R$ {{ "%.2f"|format(today_receivable) }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0 rounded-3 bg-danger bg-opacity-10 p-3 me-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="text-danger" viewBox="0 0 16 16">
+              <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.032-.169-1.676-.734-1.676-1.617 0-.994.758-1.652 1.766-1.652z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-muted small mb-0">A pagar</p>
+            <p class="mb-0 fs-3 fw-bold text-danger">R$ {{ "%.2f"|format(today_payable) }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 text-md-end d-flex align-items-center justify-content-md-end gap-2">
+        <a href="{{ url_for('main.dre') }}" class="btn btn-outline-secondary" data-turbo-frame="main-content">DRE Gerencial</a>
+        <a href="{{ url_for('admin.finance_manual_entry') }}" class="btn btn-outline-primary">Movimentos financeiros</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Detalhamento do mês #}
+<h6 class="text-muted fw-semibold mb-2">Detalhamento do mês</h6>
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card border-0 shadow-sm h-100 overflow-hidden" style="border-left: 4px solid #198754 !important;">
+      <div class="card-body d-flex align-items-center">
+        <div class="flex-shrink-0 rounded-3 bg-success bg-opacity-10 p-3 me-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="text-success" viewBox="0 0 16 16">
+            <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.032-.169-1.676-.734-1.676-1.617 0-.994.758-1.652 1.766-1.652z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-muted small mb-0 fw-medium">Receitas quitadas</p>
+          <p class="mb-0 fs-4 fw-bold text-success">R$ {{ "%.2f"|format(month_total_receivable) }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="card border-0 shadow-sm h-100 overflow-hidden" style="border-left: 4px solid #dc3545 !important;">
+      <div class="card-body d-flex align-items-center">
+        <div class="flex-shrink-0 rounded-3 bg-danger bg-opacity-10 p-3 me-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="text-danger" viewBox="0 0 16 16">
+            <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.032-.169-1.676-.734-1.676-1.617 0-.994.758-1.652 1.766-1.652z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-muted small mb-0 fw-medium">Despesas quitadas</p>
+          <p class="mb-0 fs-4 fw-bold text-danger">R$ {{ "%.2f"|format(month_total_payable) }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="card border-0 shadow-sm h-100 overflow-hidden" style="border-left: 4px solid #0d6efd !important;">
+      <div class="card-body d-flex align-items-center">
+        <div class="flex-shrink-0 rounded-3 bg-primary bg-opacity-10 p-3 me-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="text-primary" viewBox="0 0 16 16">
+            <path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.032-.169-1.676-.734-1.676-1.617 0-.994.758-1.652 1.766-1.652z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-muted small mb-0 fw-medium">Saldo do mês</p>
+          <p class="mb-0 fs-4 fw-bold {{ 'text-success' if month_balance >= 0 else 'text-danger' }}">R$ {{ "%.2f"|format(month_balance) }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Gráfico de barras: Receitas x Despesas no mês #}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-0 pt-3 pb-0">
+    <h5 class="card-title mb-0 fw-semibold">Receitas e despesas em {{ month_label }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="chart-container" style="position: relative; height: 280px;">
+      <canvas id="chartBars"></canvas>
+    </div>
+  </div>
+</div>
+
+{# Gráfico de linha: Evolução do saldo no mês #}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-0 pt-3 pb-0">
+    <h5 class="card-title mb-0 fw-semibold">Evolução do saldo em {{ month_label }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="chart-container" style="position: relative; height: 280px;">
+      <canvas id="chartBalance"></canvas>
+    </div>
+  </div>
+</div>
+
+{# Links rápidos (cards modernos) #}
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title fw-semibold">Empresas</h5>
+        <p class="card-text small text-muted">Gerencie as empresas prestadoras de serviço.</p>
+        <a href="{{ url_for('admin.companies_list') }}" class="btn btn-outline-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title fw-semibold">Clientes</h5>
+        <p class="card-text small text-muted">Gerencie clientes e contratos de clientes.</p>
+        <a href="{{ url_for('admin.clients_list') }}" class="btn btn-outline-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title fw-semibold">Motoboys</h5>
+        <p class="card-text small text-muted">Gerencie motoboys e contratos de motoboy.</p>
+        <a href="{{ url_for('admin.motoboys_list') }}" class="btn btn-outline-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Scripts dentro do frame para que os gráficos carreguem quando o dashboard é aberto via menu/volta #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script>
+(function() {
+  var labels = {{ chart_labels | tojson }};
+  var receivables = {{ chart_receivables | tojson }};
+  var payables = {{ chart_payables | tojson }};
+  var balance = {{ chart_balance | tojson }};
+
+  function drawCharts() {
+    if (typeof Chart === 'undefined') return;
+    if (document.getElementById('chartBars')) {
+      new Chart(document.getElementById('chartBars'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Receitas', data: receivables, backgroundColor: 'rgba(13, 110, 253, 0.7)', borderColor: 'rgb(13, 110, 253)', borderWidth: 1 },
+            { label: 'Despesas', data: payables, backgroundColor: 'rgba(220, 53, 69, 0.7)', borderColor: 'rgb(220, 53, 69)', borderWidth: 1 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { title: { display: true, text: 'Dia do mês' } },
+            y: { beginAtZero: true, title: { display: true, text: 'R$' } }
+          }
+        }
+      });
+    }
+    if (document.getElementById('chartBalance')) {
+      new Chart(document.getElementById('chartBalance'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Saldo acumulado',
+            data: balance,
+            borderColor: 'rgb(25, 135, 84)',
+            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { title: { display: true, text: 'Dia do mês' } },
+            y: { title: { display: true, text: 'R$' } }
+          }
+        }
+      });
+    }
+  }
+
+  function initCharts() {
+    if (typeof Chart !== 'undefined') {
+      drawCharts();
+    } else {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+      s.crossOrigin = 'anonymous';
+      s.onload = drawCharts;
+      document.head.appendChild(s);
+    }
+  }
+  initCharts();
+})();
+</script>
+{% endblock %}

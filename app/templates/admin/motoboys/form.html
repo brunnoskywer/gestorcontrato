@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar motoboy' if motoboy else 'Novo motoboy' }}{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">
+  {{ 'Editar motoboy' if motoboy else 'Novo motoboy' }}
+</h1>
+
+<form method="post">
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Nome completo *</label>
+      <input
+        type="text"
+        name="full_name"
+        class="form-control"
+        required
+        value="{{ motoboy.full_name if motoboy else '' }}"
+      />
+    </div>
+    <div class="col-md-3 mb-3">
+      <label class="form-label">CPF *</label>
+      <input
+        type="text"
+        name="cpf"
+        class="form-control"
+        required
+        value="{{ motoboy.cpf if motoboy else '' }}"
+      />
+    </div>
+    <div class="col-md-3 mb-3">
+      <label class="form-label">CNPJ</label>
+      <input
+        type="text"
+        name="cnpj"
+        class="form-control"
+        value="{{ motoboy.cnpj if motoboy else '' }}"
+      />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Endereço</label>
+      <input
+        type="text"
+        name="address"
+        class="form-control"
+        value="{{ motoboy.address if motoboy else '' }}"
+      />
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Contato de referência</label>
+      <input
+        type="text"
+        name="reference_contact"
+        class="form-control"
+        value="{{ motoboy.reference_contact if motoboy else '' }}"
+      />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <label class="form-label">Placa moto</label>
+      <input
+        type="text"
+        name="bike_plate"
+        class="form-control"
+        value="{{ motoboy.bike_plate if motoboy else '' }}"
+      />
+    </div>
+    <div class="col-md-8 mb-3">
+      <label class="form-label">Conta bancária / PIX</label>
+      <input
+        type="text"
+        name="bank_account_pix"
+        class="form-control"
+        value="{{ motoboy.bank_account_pix if motoboy else '' }}"
+      />
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      Salvar
+    </button>
+    <a href="{{ url_for('admin.motoboys_list') }}" class="btn btn-secondary">
+      Cancelar
+    </a>
+  </div>
+</form>
+{% endblock %}
+

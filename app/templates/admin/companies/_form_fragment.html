@@ -1,0 +1,26 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content">
+  <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Razão social *</label>
+      <input type="text" name="legal_name" class="form-control" required value="{{ company.legal_name if company else '' }}" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Nome fantasia</label>
+      <input type="text" name="trade_name" class="form-control" value="{{ company.trade_name if company else '' }}" />
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">CNPJ *</label>
+      <input type="text" name="cnpj" class="form-control" required value="{{ company.cnpj if company else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Sócio</label>
+      <input type="text" name="partner_name" class="form-control" value="{{ company.partner_name if company else '' }}" />
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+  </div>
+</form>

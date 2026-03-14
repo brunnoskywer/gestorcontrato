@@ -1,0 +1,69 @@
+<div class="admin-calendar-wrap" data-calendar-base-url="{{ calendar_url }}">
+  <p class="mb-2 fs-6 text-dark">
+    <span class="fw-bold">Motoboy:</span> {{ contract.supplier.name }}{% if contract.other_supplier %} · <span class="fw-bold">Cliente:</span> {{ (contract.other_supplier.legal_name or contract.other_supplier.name) }}{% endif %}
+  </p>
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <a href="{{ calendar_url }}?month={{ prev_month_arg }}" class="btn btn-outline-secondary btn-sm admin-calendar-month-nav" data-replace-modal-body="1" aria-label="Mês anterior">&larr;</a>
+    <strong class="text-nowrap">{{ month_name }} {{ year }}</strong>
+    <a href="{{ calendar_url }}?month={{ next_month_arg }}" class="btn btn-outline-secondary btn-sm admin-calendar-month-nav" data-replace-modal-body="1" aria-label="Próximo mês">&rarr;</a>
+  </div>
+  <table class="table table-bordered table-sm mb-0 admin-calendar-grid">
+    <thead>
+      <tr>
+        {% for w in weekdays %}
+        <th class="text-center small text-muted">{{ w }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+      <tr>
+        {% for cell in week %}
+        <td class="text-center p-1 position-relative">
+          {% if cell[0] %}
+            <span class="admin-calendar-day {% if cell[1] %}admin-calendar-day-absence{% endif %}"
+                  {% if cell[1] and absences_by_day.get(cell[0]) %}title="{{ absences_by_day[cell[0]].justification }}"{% endif %}>
+              {{ cell[0] }}
+              {% if cell[1] %}
+              <span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-danger" style="font-size: 0.5rem;" title="Falta">!</span>
+              {% endif %}
+            </span>
+          {% else %}
+            &nbsp;
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if absences %}
+  <div class="mt-3">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover table-sm align-middle mb-0 table-list">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Justificativa</th>
+            <th style="width: 140px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in absences %}
+          <tr>
+            <td data-label="Data">{{ a.absence_date.strftime('%d/%m/%Y') }}</td>
+            <td data-label="Justificativa">{{ a.justification }}</td>
+            <td data-label="Ações" class="text-nowrap">
+              <button type="button" class="btn btn-primary btn-sm" data-form-url="{{ url_for('admin.motoboy_contract_falta_edit_form', contract_id=contract_id, absence_id=a.id) }}" data-form-title="Editar falta" title="Editar">Editar</button>
+              <form method="post" action="{{ url_for('admin.motoboy_contract_falta_delete', contract_id=contract_id, absence_id=a.id) }}" data-turbo-frame="main-content" class="d-inline admin-confirm-submit" data-confirm-message="Excluir esta falta?" data-confirm-label="Excluir">
+                <button type="submit" class="btn btn-danger btn-sm" title="Excluir">Excluir</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Motoboys{% endblock %}
+
+{% block content %}
+{% set table_id = 'list-table' %}
+{% set insert_url = url_for('admin.motoboys_form_new') %}
+{% set insert_title = 'Novo motoboy' %}
+{% set _edit_base = url_for('admin.motoboys_form_edit', motoboy_id=999999) %}
+{% set edit_url_template = _edit_base.replace('999999', '{id}') %}
+{% set delete_bulk_url = url_for('admin.motoboys_bulk_delete') %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Motoboys</h1>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="get" action="{{ url_for('admin.motoboys_list') }}">
+      <div class="col-md-5">
+        <label class="form-label mb-1">Nome completo</label>
+        <input type="text" name="name" class="form-control form-control-sm" value="{{ filters.name }}" placeholder="Pesquisar por nome" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label mb-1">CPF</label>
+        <input type="text" name="cpf" class="form-control form-control-sm" value="{{ filters.cpf }}" placeholder="Pesquisar por CPF" />
+      </div>
+      <div class="col-md-3 text-md-end">
+        <button type="submit" class="btn btn-primary btn-sm me-2">Pesquisar</button>
+        <a href="{{ url_for('admin.motoboys_list') }}" class="btn btn-danger btn-sm">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% include "admin/_toolbar.html" with context %}
+<div class="table-responsive">
+<table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list" id="list-table">
+  <thead>
+    <tr>
+      <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
+      <th>Nome completo</th>
+      <th>CPF</th>
+      <th>CNPJ</th>
+      <th>Placa moto</th>
+      <th>Conta bancária / PIX</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for motoboy in motoboys %}
+    <tr data-id="{{ motoboy.id }}">
+      <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ motoboy.id }}" aria-label="Selecionar" /></td>
+      <td data-label="Nome completo">{{ motoboy.name }}</td>
+      <td data-label="CPF">{{ motoboy.document or '-' }}</td>
+      <td data-label="CNPJ">{{ motoboy.document_secondary or '-' }}</td>
+      <td data-label="Placa moto">{{ motoboy.bike_plate or '-' }}</td>
+      <td data-label="Conta bancária / PIX">{{ motoboy.bank_account_pix or '-' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-center text-muted">Nenhum motoboy cadastrado.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<script>(function(){ var t=document.getElementById('list-table'); if(!t) return; var h=t.querySelector('thead .select-all'); if(h) h.addEventListener('change',function(){ var c=this.checked; t.querySelectorAll('tbody .row-select').forEach(function(cb){ cb.checked=c; }); }); })();</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar contrato de motoboy' if contract else 'Novo contrato de motoboy' }}{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">
+  {{ 'Editar contrato de motoboy' if contract else 'Novo contrato de motoboy' }}
+</h1>
+
+<form method="post">
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <label class="form-label">Motoboy *</label>
+      <select name="motoboy_id" class="form-select" required>
+        <option value="">-- Selecione o motoboy --</option>
+        {% for m in motoboys %}
+        <option
+          value="{{ m.id }}"
+          {% if contract and contract.motoboy_id == m.id %}selected{% endif %}
+        >
+          {{ m.full_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">Cliente</label>
+      <select name="client_id" class="form-select">
+        <option value="">-- Nenhum --</option>
+        {% for c in clients %}
+        <option
+          value="{{ c.id }}"
+          {% if contract and contract.client_id == c.id %}selected{% endif %}
+        >
+          {{ c.legal_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Data início *</label>
+      <input
+        type="date"
+        name="start_date"
+        class="form-control"
+        required
+        value="{{ contract.start_date if contract else '' }}"
+      />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Data distrato</label>
+      <input
+        type="date"
+        name="end_date"
+        class="form-control"
+        value="{{ contract.end_date if contract else '' }}"
+      />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Locação</label>
+      <input
+        type="text"
+        name="location"
+        class="form-control"
+        value="{{ contract.location if contract else '' }}"
+      />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Valor prestação</label>
+      <input
+        type="number"
+        step="0.01"
+        name="service_value"
+        class="form-control"
+        value="{{ contract.service_value if contract else '' }}"
+      />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Premiação</label>
+      <input
+        type="number"
+        step="0.01"
+        name="bonus_value"
+        class="form-control"
+        value="{{ contract.bonus_value if contract else '' }}"
+      />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Valor falta</label>
+      <input
+        type="number"
+        step="0.01"
+        name="missing_value"
+        class="form-control"
+        value="{{ contract.missing_value if contract else '' }}"
+      />
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      Salvar
+    </button>
+    <a href="{{ url_for('admin.motoboy_contracts_list') }}" class="btn btn-secondary">
+      Cancelar
+    </a>
+  </div>
+</form>
+{% endblock %}
+

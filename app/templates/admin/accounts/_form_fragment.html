@@ -1,0 +1,27 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Empresa *</label>
+      <select name="company_id" class="form-select form-select-md" required>
+        <option value="">Selecione a empresa</option>
+        {% for c in companies %}
+        <option value="{{ c.id }}" {% if account and account.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Nome da conta *</label>
+      <input type="text" name="name" class="form-control form-control-md" required value="{{ account.name if account else '' }}" placeholder="Ex.: Caixa, Banco X" />
+    </div>
+    <div class="col-12">
+      <div class="form-check">
+        <input type="checkbox" name="is_active" class="form-check-input" id="account_active" {% if not account or account.is_active %}checked{% endif %} />
+        <label class="form-check-label" for="account_active">Conta ativa</label>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+  </div>
+</form>

@@ -1,0 +1,282 @@
+body {
+  background-color: #f5f5f7;
+}
+
+/* Barra de abas (tab panel) – sem margem em relação ao menu */
+#admin-tab-bar-wrap {
+  margin-top: 0;
+}
+.admin-tab-bar {
+  min-height: 42px;
+}
+.admin-tab-bar .nav-tabs {
+  border-bottom: 1px solid #dee2e6;
+  padding-top: 0;
+}
+.admin-tab-bar .admin-tab-item {
+  display: inline-flex;
+  align-items: center;
+}
+.admin-tab-bar .admin-tab-item .nav-link {
+  padding: 0.4rem 0.6rem;
+  color: #495057;
+  border: 1px solid transparent;
+  border-radius: 0.25rem 0.25rem 0 0;
+  text-decoration: none;
+}
+.admin-tab-bar .admin-tab-item .nav-link:hover {
+  border-color: #dee2e6;
+  isolation: isolate;
+}
+.admin-tab-bar .admin-tab-item .nav-link.active {
+  background: #fff;
+  border-color: #dee2e6 #dee2e6 #fff;
+  color: #0d6efd;
+  font-weight: 500;
+}
+.admin-tab-bar .admin-tab-close {
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #6c757d;
+  text-decoration: none;
+  cursor: pointer;
+  margin-left: 0.1rem;
+}
+.admin-tab-bar .admin-tab-close:hover {
+  color: #dc3545;
+}
+
+main.container {
+  max-width: 1100px;
+}
+
+.flash-container {
+  position: fixed;
+  top: 70px;
+  right: 16px;
+  z-index: 1080;
+  max-width: 320px;
+}
+
+.flash-container .alert {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Formulários dentro de modais: campos mais confortáveis */
+.admin-form-modal .form-control,
+.admin-form-modal .form-select,
+.form-control-md,
+.form-select-md {
+  min-height: 2.5rem;
+  font-size: 1rem;
+}
+
+.admin-form-modal .form-label {
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
+/* Destaque simples para cabeçalho de tabelas de listagem */
+.table-list thead th {
+  background-color: #0d6efd;
+  color: #fff;
+  border-bottom-color: #0b5ed7;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  font-weight: 600;
+}
+
+.table-list tbody tr:hover {
+  background-color: #eef4ff;
+}
+
+.table-list tbody td {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+  font-size: 0.9rem;
+}
+
+.table-list {
+  border-radius: 0.4rem;
+  overflow: hidden;
+}
+
+/* Botões de ação nas tabelas: só o ícone, sem moldura */
+.table-list .btn-icon-edit,
+.table-list .btn-icon-delete {
+  border: none;
+  background: none;
+  padding: 0.25rem;
+  line-height: 0;
+  opacity: 0.85;
+}
+
+.table-list .btn-icon-edit:hover,
+.table-list .btn-icon-delete:hover {
+  opacity: 1;
+}
+
+.table-list .btn-icon-edit {
+  color: #2563eb;
+}
+
+.table-list .btn-icon-edit:hover {
+  color: #1d4ed8;
+}
+
+.table-list .btn-icon-delete {
+  color: #dc2626;
+}
+
+.table-list .btn-icon-delete:hover {
+  color: #b91c1c;
+}
+
+/* Cards clicáveis (ex.: índice financeiro) */
+.hover-shadow:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.table-list .btn-icon-edit svg,
+.table-list .btn-icon-delete svg {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.table-list td .d-flex.gap-1 {
+  gap: 0.6rem !important;
+}
+
+/* Barra de comandos das listagens: botões com fundo branco, só ícones com moldura */
+.admin-toolbar .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #ffffff;
+  color: #111111;
+}
+
+.admin-toolbar .btn svg {
+  display: block;
+}
+
+/* Absences calendar in modal */
+.admin-calendar-wrap .admin-calendar-grid { table-layout: fixed; }
+.admin-calendar-wrap .admin-calendar-day { display: inline-block; min-width: 1.5rem; }
+.admin-calendar-wrap .admin-calendar-day-absence { color: #dc3545; font-weight: 600; }
+.admin-calendar-wrap .admin-calendar-day-absence .badge { font-size: 0.5rem; }
+
+/* ---- Mobile / responsive ---- */
+@media (max-width: 991.98px) {
+  main.container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .flash-container {
+    left: 0.75rem;
+    right: 0.75rem;
+    max-width: none;
+  }
+}
+
+/* Tabelas: scroll horizontal em telas estreitas */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+.table-responsive .table-list {
+  min-width: 600px;
+}
+
+/* Toolbar: larger touch targets on mobile */
+@media (max-width: 575.98px) {
+  .admin-toolbar {
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+  }
+  .admin-toolbar .btn {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem;
+  }
+}
+
+/* Page headers: stack title and actions on small screens */
+@media (max-width: 575.98px) {
+  .d-flex.justify-content-between.align-items-center.mb-3,
+  .d-flex.flex-wrap.justify-content-between.align-items-center.mb-4,
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .dashboard-header form,
+  .d-flex.flex-wrap.align-items-center.gap-2 {
+    flex-wrap: wrap;
+  }
+  .dashboard-header .form-select,
+  .dashboard-header .form-control,
+  .dashboard-header .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .dashboard-header label { width: 100%; }
+  /* Remove fixed widths on filter selects/inputs (dashboard, DRE) */
+  .d-flex.flex-wrap.align-items-center.gap-2 .form-select-sm[style*="width"],
+  .d-flex.flex-wrap.align-items-center.gap-2 .form-control-sm[style*="width"] {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
+
+/* Forms in cards: full width inputs on mobile */
+@media (max-width: 767.98px) {
+  .card .card-body .row.g-2 [class^="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .card .card-body .text-md-end {
+    text-align: left !important;
+  }
+}
+
+/* Modals: full width with small margin on mobile */
+@media (max-width: 575.98px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* DRE and dashboard cards: stack on mobile */
+@media (max-width: 767.98px) {
+  .dre-table,
+  .card .table {
+    font-size: 0.9rem;
+  }
+  .card.border-2 .card-body .row .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .card.border-2 .card-body .text-md-end {
+    justify-content: flex-start;
+  }
+}
+
+/* Chart containers: prevent horizontal overflow on mobile */
+@media (max-width: 767.98px) {
+  .chart-container {
+    max-width: 100%;
+    overflow: hidden;
+  }
+}
+

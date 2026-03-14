@@ -1,0 +1,40 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
+  <div class="row g-3">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Cliente *</label>
+      <div class="position-relative">
+        <input type="hidden" name="client_id" id="client_id" value="{{ contract.supplier_id if contract else '' }}">
+        <input
+          type="text"
+          class="form-control form-control-md search-entity-input"
+          data-search-url="{{ url_for('admin.clients_search') }}"
+          data-target-hidden="client_id"
+          placeholder="Digite ao menos 3 letras para buscar..."
+          autocomplete="off"
+          value="{{ (contract.supplier.legal_name or contract.supplier.name) if contract and contract.supplier else '' }}"
+        >
+        <div class="search-entity-dropdown list-group shadow-sm" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label class="form-label">Data início *</label>
+      <input type="date" name="start_date" class="form-control form-control-md" required value="{{ contract.start_date if contract else '' }}" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label class="form-label">Data distrato</label>
+      <input type="date" name="end_date" class="form-control form-control-md" value="{{ contract.end_date if contract else '' }}" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label class="form-label">Valor contrato (R$)</label>
+      <input type="number" step="0.01" name="contract_value" class="form-control form-control-md" value="{{ contract.contract_value if contract else '' }}" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label class="form-label">Qtd. motoboys</label>
+      <input type="number" name="motoboy_quantity" class="form-control form-control-md" value="{{ contract.motoboy_quantity if contract else '' }}" />
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+  </div>
+</form>

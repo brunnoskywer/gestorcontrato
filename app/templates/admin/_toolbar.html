@@ -1,0 +1,58 @@
+{# Barra de comandos para listagens. Botões apenas ícones, fundo branco com moldura. #}
+<div class="admin-toolbar d-flex flex-wrap align-items-center gap-2 py-2 mb-2 border-bottom"
+  data-table-id="{{ table_id }}"
+  {% if insert_url %}data-insert-url="{{ insert_url }}" data-insert-title="{{ insert_title | default('Inserir') }}"{% endif %}
+  {% if edit_url_template %}data-edit-url-template="{{ edit_url_template }}"{% endif %}
+  {% if delete_bulk_url %}data-delete-bulk-url="{{ delete_bulk_url }}"{% endif %}
+  {% if finance_actions %}data-finance-actions="1"{% endif %}
+  {% if transfer_url %}data-transfer-url="{{ transfer_url }}"{% endif %}
+  {% if approve_url_template %}data-approve-url-template="{{ approve_url_template }}"{% endif %}
+  {% if reopen_bulk_url %}data-reopen-bulk-url="{{ reopen_bulk_url }}"{% endif %}
+  {% if falta_url_template %}data-falta-url-template="{{ falta_url_template }}" data-falta-title="{{ falta_title | default('Registrar falta') }}"{% endif %}
+  {% if calendar_url_template %}data-calendar-url-template="{{ calendar_url_template }}" data-calendar-title="{{ calendar_title | default('Calendário de faltas') }}"{% endif %}>
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-select-all" title="Selecionar todos" aria-label="Selecionar todos">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <polyline points="7 12 11 16 17 8" />
+    </svg>
+  </button>
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-deselect" title="Desmarcar" aria-label="Desmarcar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+  </button>
+  {% if insert_url %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-insert" title="Inserir" aria-label="Inserir">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  {% endif %}
+  {% if edit_url_template %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-edit" title="Editar selecionado" aria-label="Editar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+  </button>
+  {% endif %}
+  {% if delete_bulk_url %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-delete" title="Excluir selecionados" aria-label="Excluir">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+  </button>
+  {% endif %}
+  {% if finance_actions %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-approve" title="Aprovar (definir data e conta)" aria-label="Aprovar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  </button>
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-reopen" title="Reabrir (voltar a pendente)" aria-label="Reabrir">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+  </button>
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-transfer" title="Transferência entre contas" aria-label="Transferência">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="8" x2="12" y2="8"/><polyline points="5 5 2 8 5 11"/><line x1="22" y1="16" x2="12" y2="16"/><polyline points="19 19 22 16 19 13"/></svg>
+  </button>
+  {% endif %}
+  {% if falta_url_template %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-falta" title="Registrar falta" aria-label="Registrar falta">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  </button>
+  {% endif %}
+  {% if calendar_url_template %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-calendar" title="Ver calendário de faltas" aria-label="Calendário de faltas">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+  </button>
+  {% endif %}
+</div>

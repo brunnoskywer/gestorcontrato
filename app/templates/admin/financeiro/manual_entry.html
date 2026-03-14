@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Movimentos Financeiros{% endblock %}
+
+{% block content %}
+{% set table_id = 'list-table' %}
+{% set insert_url = url_for('admin.finance_entry_form_new') %}
+{% set insert_title = 'Novo lançamento financeiro' %}
+{% set _edit_base = url_for('admin.finance_entry_form_edit', entry_id=999999) %}
+{% set edit_url_template = _edit_base.replace('999999', '{id}') %}
+{% set delete_bulk_url = url_for('admin.finance_bulk_delete') %}
+{% set finance_actions = true %}
+{% set _approve_base = url_for('admin.finance_approve_entry_form', entry_id=999999) %}
+{% set approve_url_template = _approve_base.replace('999999', '{id}') %}
+{% set reopen_bulk_url = url_for('admin.finance_bulk_reopen') %}
+{% set transfer_url = url_for('admin.finance_transfer_form') %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Movimentos Financeiros</h1>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="get" action="{{ url_for('admin.finance_manual_entry') }}">
+      <div class="col-md-2">
+        <label class="form-label mb-1">Data inicial</label>
+        <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}" />
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Data final</label>
+        <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}" />
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Empresa</label>
+        <select name="company_id" class="form-select form-select-sm">
+          <option value="">Todas</option>
+          {% for c in companies %}
+          <option value="{{ c.id }}" {% if filters.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Tipo</label>
+        <select name="entry_type" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          <option value="payable" {% if filters.entry_type == 'payable' %}selected{% endif %}>Contas a pagar</option>
+          <option value="receivable" {% if filters.entry_type == 'receivable' %}selected{% endif %}>Contas a receber</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-1">Tipo de fornecedor</label>
+        <select name="supplier_type" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          <option value="client" {% if filters.supplier_type == 'client' %}selected{% endif %}>Cliente</option>
+          <option value="supplier" {% if filters.supplier_type == 'supplier' %}selected{% endif %}>Fornecedor</option>
+          <option value="motoboy" {% if filters.supplier_type == 'motoboy' %}selected{% endif %}>Motoboy</option>
+        </select>
+      </div>
+      <div class="col-md-2 text-md-end">
+        <button type="submit" class="btn btn-primary btn-sm me-2">Filtrar</button>
+        <a href="{{ url_for('admin.finance_manual_entry') }}" class="btn btn-danger btn-sm">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% include "admin/_toolbar.html" with context %}
+<div class="table-responsive">
+<table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list" id="list-table">
+  <thead>
+    <tr>
+      <th style="width: 40px;">
+        <input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" />
+      </th>
+      <th>Tipo</th>
+      <th>Empresa</th>
+      <th>Natureza</th>
+      <th>Descrição</th>
+      <th>Conta</th>
+      <th>Valor</th>
+      <th>Vencimento</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+    <tr data-id="{{ e.id }}" data-settled="{{ '1' if e.settled_at else '0' }}">
+      <td data-label="Selecionar">
+        <input type="checkbox" class="form-check-input row-select" value="{{ e.id }}" aria-label="Selecionar" />
+      </td>
+      <td data-label="Tipo">{{ "Contas a pagar" if e.entry_type == "payable" else "Contas a receber" }}</td>
+      <td data-label="Empresa">{{ e.company.legal_name }}</td>
+      <td data-label="Natureza">{{ e.financial_nature.name }}</td>
+      <td data-label="Descrição">{{ e.description }}</td>
+      <td data-label="Conta">{{ e.account.name if e.account else "-" }}</td>
+      <td data-label="Valor">R$ {{ "%.2f"|format(e.amount|float) }}</td>
+      <td data-label="Vencimento">{{ e.due_date or "-" }}</td>
+      <td data-label="Status">{% if e.settled_at %}Quitado ({{ e.settled_at.strftime('%d/%m/%Y') }}){% else %}Pendente{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="9" class="text-center text-muted">Nenhum lançamento financeiro cadastrado.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<script>
+(function() {
+  var table = document.getElementById('list-table');
+  if (!table) return;
+  var theadSelectAll = table.querySelector('thead .select-all');
+  if (theadSelectAll) {
+    theadSelectAll.addEventListener('change', function() {
+      table.querySelectorAll('tbody .row-select').forEach(function(cb) {
+        cb.checked = theadSelectAll.checked;
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}

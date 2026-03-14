@@ -1,0 +1,39 @@
+"""Unified contract: client contracts and motoboy contracts in one table."""
+from datetime import date
+
+from app.extensions import db
+
+
+CONTRACT_TYPE_CLIENT = "client"
+CONTRACT_TYPE_MOTOBOY = "motoboy"
+
+
+class Contract(db.Model):
+    __tablename__ = "contracts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=False)
+    contract_type = db.Column(db.String(20), nullable=False)  # client | motoboy
+    other_supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)  # client when contract_type=motoboy
+
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)
+    location = db.Column(db.String(255), nullable=True)
+
+    # Motoboy contract fields
+    service_value = db.Column(db.Numeric(10, 2), nullable=True)
+    bonus_value = db.Column(db.Numeric(10, 2), nullable=True)
+    missing_value = db.Column(db.Numeric(10, 2), nullable=True)
+
+    # Client contract fields
+    contract_value = db.Column(db.Numeric(10, 2), nullable=True)
+    motoboy_quantity = db.Column(db.Integer, nullable=True)
+
+    supplier = db.relationship("Supplier", foreign_keys=[supplier_id])
+    other_supplier = db.relationship("Supplier", foreign_keys=[other_supplier_id])
+    absences = db.relationship(
+        "ContractAbsence",
+        back_populates="contract",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )

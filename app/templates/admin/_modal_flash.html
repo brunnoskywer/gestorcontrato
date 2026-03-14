@@ -1,0 +1,12 @@
+{# Notificação de mensagens (inserido, excluído, etc.). Só o conteúdo; fecha ao clicar em qualquer lugar. #}
+<div class="modal fade" id="adminFlashModalWrap" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow" style="cursor: pointer;" title="Clique para fechar">
+      <div class="modal-body py-3">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-0 py-2" role="alert">{{ message }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
