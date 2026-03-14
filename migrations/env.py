@@ -98,18 +98,31 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
-        # Alembic default version_num is VARCHAR(32); our revision IDs can be longer (e.g. c006_contract_absence_unique_date)
+        # Alembic default version_num is VARCHAR(32); our revision IDs can be longer (e.g. c006_contract_absence_unique_date).
+        # If table doesn't exist, create it with VARCHAR(128) so stamp/upgrade never hit the limit.
+        # If it exists with 32, alter to 128.
         try:
             with connection.begin():
                 r = connection.execute(text(
-                    "SELECT character_maximum_length FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = 'alembic_version' AND column_name = 'version_num'"
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = 'alembic_version'"
                 ))
-                row = r.fetchone()
-                if row and row[0] == 32:
-                    connection.execute(text("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)"))
+                if r.fetchone() is None:
+                    connection.execute(text(
+                        "CREATE TABLE alembic_version (version_num VARCHAR(128) NOT NULL, PRIMARY KEY (version_num))"
+                    ))
+                else:
+                    r2 = connection.execute(text(
+                        "SELECT character_maximum_length FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'alembic_version' AND column_name = 'version_num'"
+                    ))
+                    row = r2.fetchone()
+                    if row and row[0] == 32:
+                        connection.execute(text(
+                            "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)"
+                        ))
         except Exception:
-            pass  # table may not exist yet on first run
+            pass  # avoid breaking on first run or permission issues
 
         context.configure(
             connection=connection,
