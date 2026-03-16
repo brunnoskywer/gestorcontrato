@@ -25,12 +25,17 @@ class Supplier(db.Model):
     contact_name = db.Column(db.String(255), nullable=True)
     email = db.Column(db.String(255), nullable=True)
     billing_company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
+    # General notes for client
+    notes = db.Column(db.Text, nullable=True)
 
     # Motoboy-type fields (nullable)
     reference_contact = db.Column(db.String(255), nullable=True)
     bike_plate = db.Column(db.String(20), nullable=True)
     bank_account_pix = db.Column(db.String(120), nullable=True)
     document_secondary = db.Column(db.String(20), nullable=True)  # e.g. motoboy CNPJ
+    # Motoboy-specific fields
+    status = db.Column(db.String(20), nullable=False, default="active")  # active | inactive
+    contact_phone = db.Column(db.String(50), nullable=True)
 
     billing_company = db.relationship("Company", back_populates="billing_suppliers", foreign_keys=[billing_company_id])
 

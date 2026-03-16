@@ -7,20 +7,33 @@ from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.extensions import db
-from app.models import Contract, CONTRACT_TYPE_CLIENT, Supplier, SUPPLIER_CLIENT
+from app.models import Contract, CONTRACT_TYPE_CLIENT, FinancialNature, Supplier, SUPPLIER_CLIENT
+from app.utils import parse_decimal_form
 from sqlalchemy import or_
 
 
 def register_routes(bp: Blueprint) -> None:
+    def _revenue_natures():
+        return (
+            FinancialNature.query.filter(
+                FinancialNature.is_active.is_(True),
+                FinancialNature.kind.in_(["receivable", "both"]),
+            )
+            .order_by(FinancialNature.name)
+            .all()
+        )
+
     @bp.route("/client-contracts/form")
     @login_required
     def client_contracts_form_new():
         require_admin()
         clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        natures = _revenue_natures()
         return render_template(
             "admin/client_contracts/_form_fragment.html",
             contract=None,
             clients=clients,
+            natures=natures,
             action_url=url_for("admin.client_contracts_create"),
         )
 
@@ -30,10 +43,12 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_CLIENT).first_or_404()
         clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        natures = _revenue_natures()
         return render_template(
             "admin/client_contracts/_form_fragment.html",
             contract=contract,
             clients=clients,
+            natures=natures,
             action_url=url_for("admin.client_contracts_edit", contract_id=contract_id),
         )
 
@@ -68,7 +83,7 @@ def register_routes(bp: Blueprint) -> None:
             client_id = request.form.get("client_id")
             start_date_str = request.form.get("start_date", "")
             end_date_str = request.form.get("end_date", "")
-            contract_value = request.form.get("contract_value") or None
+            contract_value = parse_decimal_form(request.form.get("contract_value"))
             motoboy_quantity = request.form.get("motoboy_quantity") or None
 
             if not client_id or not start_date_str:
@@ -106,8 +121,9 @@ def register_routes(bp: Blueprint) -> None:
             client_id = request.form.get("client_id")
             start_date_str = request.form.get("start_date", "")
             end_date_str = request.form.get("end_date", "")
-            contract_value = request.form.get("contract_value") or None
+            contract_value = parse_decimal_form(request.form.get("contract_value"))
             motoboy_quantity = request.form.get("motoboy_quantity") or None
+            revenue_financial_nature_id = request.form.get("revenue_financial_nature_id") or None
 
             if not client_id or not start_date_str:
                 flash("Cliente e data de início são obrigatórios.", "danger")
@@ -117,14 +133,17 @@ def register_routes(bp: Blueprint) -> None:
                 contract.end_date = date.fromisoformat(end_date_str) if end_date_str else None
                 contract.contract_value = contract_value
                 contract.motoboy_quantity = int(motoboy_quantity) if motoboy_quantity else None
+                contract.revenue_financial_nature_id = int(revenue_financial_nature_id) if revenue_financial_nature_id else None
                 db.session.commit()
                 flash("Contrato de cliente atualizado com sucesso.", "success")
                 return redirect(url_for("admin.client_contracts_list"))
 
+        natures = _revenue_natures()
         return render_template(
             "admin/client_contracts/form.html",
             contract=contract,
             clients=clients,
+            natures=natures,
         )
 
     @bp.post("/client-contracts/<int:contract_id>/delete")

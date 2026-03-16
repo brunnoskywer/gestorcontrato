@@ -22,10 +22,42 @@
     return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, '$1.$2.$3/$4-$5');
   }
 
+  /** Brazilian currency: display as 1.234,56 (comma as decimal separator). */
+  function maskCurrency(value) {
+    if (value === null || value === undefined || value === '') return '';
+    var str = String(value).trim();
+    if (str.indexOf(',') !== -1 || str.indexOf('.') !== -1) {
+      var num = parseFloat(str.replace(/\./g, '').replace(',', '.'));
+      if (isNaN(num)) return '';
+      var intPart = Math.floor(Math.abs(num));
+      var decPart = Math.round((Math.abs(num) - intPart) * 100);
+      if (decPart >= 100) { decPart = 0; intPart += 1; }
+      var sign = num < 0 ? '-' : '';
+      var intStr = intPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      var decStr = decPart.toString().padStart(2, '0');
+      return sign + intStr + ',' + decStr;
+    }
+    var digits = str.replace(/\D/g, '');
+    if (digits.length === 0) return '';
+    var cents = digits.length <= 2 ? digits.padStart(2, '0') : digits.slice(-2);
+    var intDigits = digits.length <= 2 ? '0' : digits.slice(0, -2);
+    var intPart = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return intPart + ',' + cents;
+  }
+
+  /** Convert displayed currency to dot-decimal for form submit (e.g. 1.234,56 -> 1234.56). */
+  function parseCurrencyForSubmit(value) {
+    if (!value || !String(value).trim()) return '';
+    var s = String(value).trim().replace(/\./g, '').replace(',', '.');
+    var num = parseFloat(s);
+    return isNaN(num) ? '' : num.toFixed(2);
+  }
+
   function applyMasks(container) {
     if (!container || !container.querySelector) return;
     var cpfInputs = container.querySelectorAll('[data-mask="cpf"]');
     var cnpjInputs = container.querySelectorAll('[data-mask="cnpj"]');
+    var currencyInputs = container.querySelectorAll('[data-mask="currency"]');
 
     cpfInputs.forEach(function (input) {
       if (input.dataset.maskApplied) return;
@@ -45,14 +77,26 @@
       });
     });
 
+    currencyInputs.forEach(function (input) {
+      if (input.dataset.maskApplied) return;
+      input.dataset.maskApplied = '1';
+      input.value = maskCurrency(input.value);
+      input.addEventListener('input', function () {
+        input.value = maskCurrency(input.value);
+      });
+    });
+
     var form = container.tagName === 'FORM' ? container : container.querySelector('form');
-    if (form && (cpfInputs.length || cnpjInputs.length)) {
+    if (form && (cpfInputs.length || cnpjInputs.length || currencyInputs.length)) {
       form.addEventListener('submit', function stripMasksOnce() {
         form.querySelectorAll('[data-mask="cpf"]').forEach(function (el) {
           el.value = (el.value || '').replace(/\D/g, '');
         });
         form.querySelectorAll('[data-mask="cnpj"]').forEach(function (el) {
           el.value = (el.value || '').replace(/\D/g, '');
+        });
+        form.querySelectorAll('[data-mask="currency"]').forEach(function (el) {
+          el.value = parseCurrencyForSubmit(el.value);
         });
       }, { capture: true, once: true });
     }
@@ -84,13 +128,20 @@
     });
   }
 
-  function openFormModal(url, title) {
+  function openFormModal(url, title, size) {
     var modalEl = document.getElementById('adminFormModal');
     var bodyEl = document.getElementById('adminFormModalBody');
     var titleEl = document.getElementById('adminFormModalLabel');
+    var dialogEl = modalEl ? modalEl.querySelector('.modal-dialog') : null;
     if (!modalEl || !bodyEl) return;
     bodyEl.innerHTML = '<p class="text-muted text-center py-3">Carregando...</p>';
     if (titleEl) titleEl.textContent = title || 'Formulário';
+    if (dialogEl) {
+      dialogEl.classList.remove('modal-sm', 'modal-md', 'modal-lg');
+      if (size === 'sm') dialogEl.classList.add('modal-sm');
+      else if (size === 'md') dialogEl.classList.add('modal-md');
+      else dialogEl.classList.add('modal-lg');
+    }
     var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
     modal.show();
     fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
@@ -155,21 +206,43 @@
     var titleEl = document.getElementById('adminFormModalLabel');
     if (!modalEl || !bodyEl) return;
 
+    function replaceModalBodyWithUrl(url) {
+      bodyEl.innerHTML = '<p class="text-muted text-center py-3">Carregando...</p>';
+      fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          bodyEl.innerHTML = html;
+          runScriptsInElement(bodyEl);
+          applyMasks(bodyEl);
+          initSearchInputs(bodyEl);
+        })
+        .catch(function () {
+          bodyEl.innerHTML = '<p class="text-danger text-center py-3">Erro ao carregar.</p>';
+        });
+    }
+
     bodyEl.addEventListener('click', function (e) {
       var link = e.target.closest('a.admin-calendar-month-nav[data-replace-modal-body]');
       if (link && link.href) {
         e.preventDefault();
-        bodyEl.innerHTML = '<p class="text-muted text-center py-3">Carregando...</p>';
-        fetch(link.href, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
-          .then(function (r) { return r.text(); })
-          .then(function (html) {
-            bodyEl.innerHTML = html;
-            runScriptsInElement(bodyEl);
-          })
-          .catch(function () {
-            bodyEl.innerHTML = '<p class="text-danger text-center py-3">Erro ao carregar o calendário.</p>';
-          });
+        replaceModalBodyWithUrl(link.href);
       }
+      var clearLink = e.target.closest('a.admin-modal-filter-clear');
+      if (clearLink && clearLink.href) {
+        e.preventDefault();
+        replaceModalBodyWithUrl(clearLink.href);
+      }
+    });
+
+    bodyEl.addEventListener('submit', function (e) {
+      var form = e.target.closest('form[data-replace-modal-body]');
+      if (!form) return;
+      e.preventDefault();
+      var action = form.getAttribute('action') || '';
+      var formData = new FormData(form);
+      var params = new URLSearchParams(formData).toString();
+      var url = params ? action + (action.indexOf('?') !== -1 ? '&' : '?') + params : action;
+      replaceModalBodyWithUrl(url);
     });
 
     document.addEventListener('click', function (e) {
@@ -178,8 +251,9 @@
       e.preventDefault();
       var url = trigger.getAttribute('data-form-url');
       var title = trigger.getAttribute('data-form-title') || 'Form';
+      var size = trigger.getAttribute('data-modal-size') || '';
       if (!url) return;
-      openFormModal(url, title);
+      openFormModal(url, title, size);
     });
   }
 
@@ -351,6 +425,12 @@
           return;
         }
         openFormModal(calendarTpl.replace('{id}', ids[0]), calendarTitle);
+      });
+
+      var revenueBatchesUrl = toolbar.getAttribute('data-revenue-batches-url');
+      var revenueBatchesTitle = toolbar.getAttribute('data-revenue-batches-title') || 'Processar receitas';
+      toolbar.querySelector('.admin-toolbar-revenue-batches')?.addEventListener('click', function () {
+        if (revenueBatchesUrl) openFormModal(revenueBatchesUrl, revenueBatchesTitle);
       });
 
       if (toolbar.getAttribute('data-finance-actions') === '1') {

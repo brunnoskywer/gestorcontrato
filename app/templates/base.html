@@ -41,6 +41,7 @@
                   >Dashboard</a
                 >
               </li>
+              {# Admin full menu #}
               {% if current_user.is_admin %}
               <li class="nav-item dropdown">
                 <a
@@ -159,6 +160,31 @@
                   </li>
                 </ul>
               </li>
+              {# Supervisor: only Motoboy contracts #}
+              {% elif current_user.role == 'supervisor' %}
+              <li class="nav-item dropdown">
+                <a
+                  class="nav-link dropdown-toggle"
+                  href="#"
+                  id="contratosMenu"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Contratos
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="contratosMenu">
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('admin.motoboy_contracts_list') }}"
+                      data-turbo-frame="main-content"
+                      >Contratos de motoboy</a
+                    >
+                  </li>
+                </ul>
+              </li>
+              {# Motoboy user: no admin menus for now #}
               {% endif %}
             {% endif %}
           </ul>

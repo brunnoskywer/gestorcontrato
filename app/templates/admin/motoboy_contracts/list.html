@@ -3,6 +3,7 @@
 
 {% block content %}
 {% set table_id = 'list-table' %}
+{% if current_user.is_admin or current_user.role != 'supervisor' %}
 {% set insert_url = url_for('admin.motoboy_contracts_form_new') %}
 {% set insert_title = 'Novo contrato de motoboy' %}
 {% set _edit_base = url_for('admin.motoboy_contracts_form_edit', contract_id=999999) %}
@@ -11,6 +12,14 @@
 {% set _falta_base = url_for('admin.motoboy_contract_falta_form', contract_id=999999) %}
 {% set falta_url_template = _falta_base.replace('999999', '{id}') %}
 {% set falta_title = 'Registrar falta' %}
+{% else %}
+{% set insert_url = none %}
+{% set insert_title = none %}
+{% set edit_url_template = none %}
+{% set delete_bulk_url = none %}
+{% set falta_url_template = none %}
+{% set falta_title = none %}
+{% endif %}
 {% set _calendar_base = url_for('admin.motoboy_contract_calendar', contract_id=999999) %}
 {% set calendar_url_template = _calendar_base.replace('999999', '{id}') %}
 {% set calendar_title = 'Calendário de faltas' %}
@@ -48,9 +57,9 @@
       <th>Cliente</th>
       <th>Data início</th>
       <th>Data distrato</th>
-      <th>Valor prestação</th>
-      <th>Premiação</th>
-      <th>Valor falta</th>
+      <th class="text-end">Valor prestação</th>
+      <th class="text-end">Premiação</th>
+      <th class="text-end">Valor falta</th>
     </tr>
   </thead>
   <tbody>
@@ -61,9 +70,9 @@
       <td data-label="Cliente">{{ (c.other_supplier.legal_name or c.other_supplier.name) if c.other_supplier else '-' }}</td>
       <td data-label="Data início">{{ c.start_date }}</td>
       <td data-label="Data distrato">{{ c.end_date or '-' }}</td>
-      <td data-label="Valor prestação">{{ c.service_value or '-' }}</td>
-      <td data-label="Premiação">{{ c.bonus_value or '-' }}</td>
-      <td data-label="Valor falta">{{ c.missing_value or '-' }}</td>
+      <td data-label="Valor prestação" class="text-end">{{ c.service_value|format_currency if c.service_value is not none else '-' }}</td>
+      <td data-label="Premiação" class="text-end">{{ c.bonus_value|format_currency if c.bonus_value is not none else '-' }}</td>
+      <td data-label="Valor falta" class="text-end">{{ c.missing_value|format_currency if c.missing_value is not none else '-' }}</td>
     </tr>
     {% else %}
     <tr><td colspan="8" class="text-center text-muted">Nenhum contrato cadastrado.</td></tr>

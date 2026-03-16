@@ -106,6 +106,7 @@ def register_routes(bp: Blueprint) -> None:
             contact_name = request.form.get("contact_name", "").strip()
             email = request.form.get("email", "").strip()
             billing_company_id = request.form.get("billing_company_id") or None
+            notes = request.form.get("notes", "").strip()
 
             if not legal_name or not cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")
@@ -121,6 +122,7 @@ def register_routes(bp: Blueprint) -> None:
                     contact_name=contact_name or None,
                     email=email or None,
                     billing_company_id=billing_company_id,
+                    notes=notes or None,
                 )
                 db.session.add(client)
                 db.session.commit()
@@ -148,6 +150,7 @@ def register_routes(bp: Blueprint) -> None:
             contact_name = request.form.get("contact_name", "").strip()
             email = request.form.get("email", "").strip()
             billing_company_id = request.form.get("billing_company_id") or None
+            notes = request.form.get("notes", "").strip()
 
             if not legal_name or not cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")
@@ -160,6 +163,7 @@ def register_routes(bp: Blueprint) -> None:
                 client.contact_name = contact_name or None
                 client.email = email or None
                 client.billing_company_id = billing_company_id
+                client.notes = notes or None
                 db.session.commit()
                 flash("Cliente atualizado com sucesso.", "success")
                 return redirect(url_for("admin.clients_list"))

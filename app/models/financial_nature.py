@@ -9,7 +9,8 @@ class FinancialNature(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False, unique=True)
-    kind = db.Column(db.String(20), nullable=False, default="payable")  # payable | receivable
+    # payable = contas a pagar, receivable = contas a receber, both = pode ser usada em ambos (ex.: transferência)
+    kind = db.Column(db.String(20), nullable=False, default="payable")  # payable | receivable | both
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

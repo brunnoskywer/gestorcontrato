@@ -14,11 +14,14 @@
       <label class="form-label">Senha {% if user %}<small class="text-muted">(deixe em branco para manter)</small>{% endif %}</label>
       <input type="password" name="password" class="form-control" />
     </div>
-    <div class="col-12 col-md-4 mb-3 d-flex align-items-end pb-2">
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" value="1" id="is_admin_modal" name="is_admin" {% if user and user.is_admin %}checked{% endif %} />
-        <label class="form-check-label" for="is_admin_modal">Administrador</label>
-      </div>
+    <div class="col-12 col-md-4 mb-3">
+      <label class="form-label">Perfil</label>
+      {% set current_role = user.role if user else 'admin' %}
+      <select name="role" class="form-select">
+        <option value="admin" {% if current_role == 'admin' %}selected{% endif %}>Administrador</option>
+        <option value="supervisor" {% if current_role == 'supervisor' %}selected{% endif %}>Supervisor</option>
+        <option value="motoboy" {% if current_role == 'motoboy' %}selected{% endif %}>Motoboy</option>
+      </select>
     </div>
     <div class="col-12 col-md-4 mb-3 d-flex align-items-end pb-2">
       <div class="form-check">

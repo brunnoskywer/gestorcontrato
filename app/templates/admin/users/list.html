@@ -40,7 +40,7 @@
       <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
       <th>Nome</th>
       <th>E-mail</th>
-      <th>Admin</th>
+      <th>Perfil</th>
       <th>Ativo</th>
     </tr>
   </thead>
@@ -50,7 +50,17 @@
       <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ u.id }}" aria-label="Selecionar" /></td>
       <td data-label="Nome">{{ u.name }}</td>
       <td data-label="E-mail">{{ u.email }}</td>
-      <td data-label="Admin">{{ 'Sim' if u.is_admin else 'Não' }}</td>
+      <td data-label="Perfil">
+        {% if u.is_admin or u.role == 'admin' %}
+          Administrador
+        {% elif u.role == 'supervisor' %}
+          Supervisor
+        {% elif u.role == 'motoboy' %}
+          Motoboy
+        {% else %}
+          -
+        {% endif %}
+      </td>
       <td data-label="Ativo">{{ 'Sim' if u.is_active else 'Não' }}</td>
     </tr>
     {% else %}

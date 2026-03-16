@@ -37,7 +37,7 @@
       <th>Cliente</th>
       <th>Data início</th>
       <th>Data distrato</th>
-      <th>Valor contrato</th>
+      <th class="text-end">Valor contrato</th>
       <th>Qtd. motoboys</th>
     </tr>
   </thead>
@@ -48,7 +48,7 @@
       <td data-label="Cliente">{{ c.supplier.legal_name or c.supplier.name }}</td>
       <td data-label="Data início">{{ c.start_date }}</td>
       <td data-label="Data distrato">{{ c.end_date or '-' }}</td>
-      <td data-label="Valor contrato">{{ c.contract_value or '-' }}</td>
+      <td data-label="Valor contrato" class="text-end">{{ c.contract_value|format_currency if c.contract_value is not none else '-' }}</td>
       <td data-label="Qtd. motoboys">{{ c.motoboy_quantity or '-' }}</td>
     </tr>
     {% else %}

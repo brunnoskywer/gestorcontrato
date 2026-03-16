@@ -5,9 +5,10 @@ from datetime import date
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, require_supervisor_or_admin, is_supervisor
 from app.extensions import db
 from app.models import Contract, ContractAbsence, CONTRACT_TYPE_MOTOBOY, Supplier, SUPPLIER_CLIENT, SUPPLIER_MOTOBOY
+from app.utils import parse_decimal_form
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
@@ -46,7 +47,7 @@ def register_routes(bp: Blueprint) -> None:
     @bp.route("/motoboy-contracts")
     @login_required
     def motoboy_contracts_list():
-        require_admin()
+        require_supervisor_or_admin()
         motoboy_name = request.args.get("motoboy_name", "").strip()
         client_name = request.args.get("client_name", "").strip()
 
@@ -133,9 +134,9 @@ def register_routes(bp: Blueprint) -> None:
             start_date_str = request.form.get("start_date", "")
             end_date_str = request.form.get("end_date", "")
             contract.location = request.form.get("location", "").strip() or None
-            contract.service_value = request.form.get("service_value") or None
-            contract.bonus_value = request.form.get("bonus_value") or None
-            contract.missing_value = request.form.get("missing_value") or None
+            contract.service_value = parse_decimal_form(request.form.get("service_value"))
+            contract.bonus_value = parse_decimal_form(request.form.get("bonus_value"))
+            contract.missing_value = parse_decimal_form(request.form.get("missing_value"))
 
             if not contract.supplier_id or not start_date_str:
                 flash("Motoboy e data de início são obrigatórios.", "danger")
@@ -172,6 +173,10 @@ def register_routes(bp: Blueprint) -> None:
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
         absence_date_str = request.form.get("absence_date", "").strip()
         justification = request.form.get("justification", "").strip()
+        substitute_name = request.form.get("substitute_name", "").strip()
+        substitute_document = request.form.get("substitute_document", "").strip()
+        substitute_pix = request.form.get("substitute_pix", "").strip()
+        amount_val = parse_decimal_form(request.form.get("substitute_amount"))
         if not absence_date_str or not justification:
             flash("Dia e justificativa são obrigatórios.", "danger")
             return redirect(url_for("admin.motoboy_contracts_list"))
@@ -191,6 +196,10 @@ def register_routes(bp: Blueprint) -> None:
             contract_id=contract_id,
             absence_date=absence_date,
             justification=justification,
+            substitute_name=substitute_name or None,
+            substitute_document=substitute_document or None,
+            substitute_pix=substitute_pix or None,
+            substitute_amount=amount_val,
         )
         db.session.add(absence)
         try:
@@ -227,6 +236,9 @@ def register_routes(bp: Blueprint) -> None:
         ).first_or_404()
         absence_date_str = request.form.get("absence_date", "").strip()
         justification = request.form.get("justification", "").strip()
+        substitute_name = request.form.get("substitute_name", "").strip()
+        substitute_document = request.form.get("substitute_document", "").strip()
+        substitute_pix = request.form.get("substitute_pix", "").strip()
         if not absence_date_str or not justification:
             flash("Data e justificativa são obrigatórios.", "danger")
             return redirect(url_for("admin.motoboy_contracts_list"))
@@ -244,6 +256,10 @@ def register_routes(bp: Blueprint) -> None:
             return redirect(url_for("admin.motoboy_contracts_list"))
         absence.absence_date = absence_date
         absence.justification = justification
+        absence.substitute_name = substitute_name or None
+        absence.substitute_document = substitute_document or None
+        absence.substitute_pix = substitute_pix or None
+        absence.substitute_amount = parse_decimal_form(request.form.get("substitute_amount"))
         db.session.commit()
         flash("Falta atualizada com sucesso.", "success")
         return redirect(url_for("admin.motoboy_contracts_list"))

@@ -13,6 +13,22 @@
       <label class="form-label">Nome da conta *</label>
       <input type="text" name="name" class="form-control form-control-md" required value="{{ account.name if account else '' }}" placeholder="Ex.: Caixa, Banco X" />
     </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Banco</label>
+      <input type="text" name="bank_name" class="form-control form-control-md" value="{{ account.bank_name if account else '' }}" placeholder="Nome do banco" />
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">Agência</label>
+      <input type="text" name="agency" class="form-control form-control-md" value="{{ account.agency if account else '' }}" />
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">Conta</label>
+      <input type="text" name="account_number" class="form-control form-control-md" value="{{ account.account_number if account else '' }}" />
+    </div>
+    <div class="col-12">
+      <label class="form-label">Chave PIX</label>
+      <input type="text" name="pix_key" class="form-control form-control-md" value="{{ account.pix_key if account else '' }}" />
+    </div>
     <div class="col-12">
       <div class="form-check">
         <input type="checkbox" name="is_active" class="form-check-input" id="account_active" {% if not account or account.is_active %}checked{% endif %} />

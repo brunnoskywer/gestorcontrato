@@ -57,8 +57,8 @@ def register_routes(bp: Blueprint) -> None:
             is_active = request.form.get("is_active") == "on"
             if not name:
                 flash("Nome da natureza é obrigatório.", "danger")
-            elif kind not in ("payable", "receivable"):
-                flash("Tipo da natureza deve ser Contas a pagar ou Contas a receber.", "danger")
+            elif kind not in ("payable", "receivable", "both"):
+                flash("Tipo da natureza deve ser Contas a pagar, Contas a receber ou Ambas.", "danger")
             else:
                 nature = FinancialNature(name=name, kind=kind, is_active=is_active)
                 db.session.add(nature)
@@ -79,8 +79,8 @@ def register_routes(bp: Blueprint) -> None:
             nature.is_active = request.form.get("is_active") == "on"
             if not nature.name:
                 flash("Nome da natureza é obrigatório.", "danger")
-            elif kind not in ("payable", "receivable"):
-                flash("Tipo da natureza deve ser Contas a pagar ou Contas a receber.", "danger")
+            elif kind not in ("payable", "receivable", "both"):
+                flash("Tipo da natureza deve ser Contas a pagar, Contas a receber ou Ambas.", "danger")
             else:
                 nature.kind = kind
                 db.session.commit()

@@ -45,7 +45,9 @@
           <tr>
             <th>Data</th>
             <th>Justificativa</th>
+            {% if current_user.is_admin or current_user.role != 'supervisor' %}
             <th style="width: 140px;">Ações</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -53,12 +55,14 @@
           <tr>
             <td data-label="Data">{{ a.absence_date.strftime('%d/%m/%Y') }}</td>
             <td data-label="Justificativa">{{ a.justification }}</td>
+            {% if current_user.is_admin or current_user.role != 'supervisor' %}
             <td data-label="Ações" class="text-nowrap">
               <button type="button" class="btn btn-primary btn-sm" data-form-url="{{ url_for('admin.motoboy_contract_falta_edit_form', contract_id=contract_id, absence_id=a.id) }}" data-form-title="Editar falta" title="Editar">Editar</button>
               <form method="post" action="{{ url_for('admin.motoboy_contract_falta_delete', contract_id=contract_id, absence_id=a.id) }}" data-turbo-frame="main-content" class="d-inline admin-confirm-submit" data-confirm-message="Excluir esta falta?" data-confirm-label="Excluir">
                 <button type="submit" class="btn btn-danger btn-sm" title="Excluir">Excluir</button>
               </form>
             </td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>

@@ -58,7 +58,8 @@ def register_routes(bp: Blueprint) -> None:
             email = request.form.get("email", "").strip().lower()
             name = request.form.get("name", "").strip()
             password = request.form.get("password", "")
-            is_admin = bool(request.form.get("is_admin"))
+            role = request.form.get("role", "admin").strip() or "admin"
+            is_admin = role == "admin"
 
             if not email or not password or not name:
                 flash("Nome, e-mail e senha são obrigatórios.", "danger")
@@ -67,7 +68,7 @@ def register_routes(bp: Blueprint) -> None:
                 if user:
                     flash("Já existe um usuário com este e-mail.", "danger")
                 else:
-                    user = User(email=email, name=name, is_admin=is_admin)
+                    user = User(email=email, name=name, is_admin=is_admin, role=role)
                     user.set_password(password)
                     db.session.add(user)
                     db.session.commit()
@@ -85,11 +86,13 @@ def register_routes(bp: Blueprint) -> None:
         if request.method == "POST":
             user.email = request.form.get("email", "").strip().lower()
             user.name = request.form.get("name", "").strip()
-            is_admin = bool(request.form.get("is_admin"))
+            role = request.form.get("role", "admin").strip() or "admin"
+            is_admin = role == "admin"
             is_active = bool(request.form.get("is_active"))
             password = request.form.get("password", "")
 
             user.is_admin = is_admin
+            user.role = role
             user.is_active = is_active
             if password:
                 user.set_password(password)

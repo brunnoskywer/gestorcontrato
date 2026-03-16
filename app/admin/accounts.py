@@ -64,6 +64,10 @@ def register_routes(bp: Blueprint) -> None:
         if request.method == "POST":
             company_id = request.form.get("company_id")
             name = request.form.get("name", "").strip()
+            bank_name = request.form.get("bank_name", "").strip()
+            agency = request.form.get("agency", "").strip()
+            account_number = request.form.get("account_number", "").strip()
+            pix_key = request.form.get("pix_key", "").strip()
             is_active = request.form.get("is_active") == "on"
 
             if not company_id or not name:
@@ -72,6 +76,10 @@ def register_routes(bp: Blueprint) -> None:
                 account = Account(
                     company_id=int(company_id),
                     name=name,
+                    bank_name=bank_name or None,
+                    agency=agency or None,
+                    account_number=account_number or None,
+                    pix_key=pix_key or None,
                     is_active=is_active,
                 )
                 db.session.add(account)
@@ -90,6 +98,10 @@ def register_routes(bp: Blueprint) -> None:
         if request.method == "POST":
             account.company_id = int(request.form.get("company_id", account.company_id))
             account.name = request.form.get("name", "").strip()
+            account.bank_name = request.form.get("bank_name", "").strip() or None
+            account.agency = request.form.get("agency", "").strip() or None
+            account.account_number = request.form.get("account_number", "").strip() or None
+            account.pix_key = request.form.get("pix_key", "").strip() or None
             account.is_active = request.form.get("is_active") == "on"
 
             if not account.name:

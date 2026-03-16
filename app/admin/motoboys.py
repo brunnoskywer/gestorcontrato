@@ -87,6 +87,8 @@ def register_routes(bp: Blueprint) -> None:
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
+            status = request.form.get("status", "active").strip() or "active"
+            contact_phone = request.form.get("contact_phone", "").strip()
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
@@ -101,6 +103,8 @@ def register_routes(bp: Blueprint) -> None:
                     bike_plate=bike_plate or None,
                     bank_account_pix=bank_account_pix or None,
                     document_secondary=cnpj or None,
+                    status=status,
+                    contact_phone=contact_phone or None,
                 )
                 db.session.add(motoboy)
                 db.session.commit()
@@ -123,6 +127,8 @@ def register_routes(bp: Blueprint) -> None:
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
+            status = request.form.get("status", "active").strip() or "active"
+            contact_phone = request.form.get("contact_phone", "").strip()
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
@@ -134,6 +140,8 @@ def register_routes(bp: Blueprint) -> None:
                 motoboy.bike_plate = bike_plate or None
                 motoboy.bank_account_pix = bank_account_pix or None
                 motoboy.document_secondary = cnpj or None
+                motoboy.status = status
+                motoboy.contact_phone = contact_phone or None
                 db.session.commit()
                 flash("Motoboy atualizado com sucesso.", "success")
                 return redirect(url_for("admin.motoboys_list"))

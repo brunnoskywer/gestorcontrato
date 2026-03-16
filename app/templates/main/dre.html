@@ -27,15 +27,15 @@
       <tbody>
         <tr class="border-bottom">
           <td class="py-2 ps-3 fw-semibold">Receitas</td>
-          <td class="py-2 pe-3 text-end fw-semibold text-success">R$ {{ "%.2f"|format(total_receitas) }}</td>
+          <td class="py-2 pe-3 text-end fw-semibold text-success">R$ {{ total_receitas|format_currency }}</td>
         </tr>
         <tr class="border-bottom">
           <td class="py-2 ps-3">(-) Despesas</td>
-          <td class="py-2 pe-3 text-end text-danger">R$ {{ "%.2f"|format(total_despesas) }}</td>
+          <td class="py-2 pe-3 text-end text-danger">R$ {{ total_despesas|format_currency }}</td>
         </tr>
         <tr class="bg-light">
           <td class="py-3 ps-3 fw-bold">Resultado do período</td>
-          <td class="py-3 pe-3 text-end fw-bold {{ 'text-success' if resultado >= 0 else 'text-danger' }}">R$ {{ "%.2f"|format(resultado) }}</td>
+          <td class="py-3 pe-3 text-end fw-bold {{ 'text-success' if resultado >= 0 else 'text-danger' }}">R$ {{ resultado|format_currency }}</td>
         </tr>
       </tbody>
     </table>
@@ -62,7 +62,7 @@
             {% for r in rec_por_natureza %}
             <tr>
               <td class="ps-3">{{ r.name }}</td>
-              <td class="text-end pe-3 text-success">R$ {{ "%.2f"|format(r.total|float) }}</td>
+              <td class="text-end pe-3 text-success">R$ {{ r.total|format_currency }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -91,7 +91,7 @@
             {% for p in pay_por_natureza %}
             <tr>
               <td class="ps-3">{{ p.name }}</td>
-              <td class="text-end pe-3 text-danger">R$ {{ "%.2f"|format(p.total|float) }}</td>
+              <td class="text-end pe-3 text-danger">R$ {{ p.total|format_currency }}</td>
             </tr>
             {% endfor %}
           </tbody>

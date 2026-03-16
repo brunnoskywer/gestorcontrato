@@ -11,7 +11,7 @@
           data-target-hidden="motoboy_id"
           placeholder="Digite ao menos 3 letras para buscar..."
           autocomplete="off"
-          value="{{ contract.motoboy.full_name if contract and contract.motoboy else '' }}"
+          value="{{ contract.supplier.name if contract and contract.supplier else '' }}"
         >
         <div class="search-entity-dropdown list-group shadow-sm" style="display:none;"></div>
       </div>
@@ -19,7 +19,7 @@
     <div class="col-12 col-md-6">
       <label class="form-label">Cliente</label>
       <div class="position-relative">
-        <input type="hidden" name="client_id" id="client_id" value="{{ contract.client_id if contract else '' }}">
+        <input type="hidden" name="client_id" id="client_id" value="{{ contract.other_supplier_id if contract else '' }}">
         <input
           type="text"
           class="form-control form-control-md search-entity-input"
@@ -46,15 +46,15 @@
     </div>
     <div class="col-12 col-sm-4">
       <label class="form-label">Valor prestação (R$)</label>
-      <input type="number" step="0.01" min="0" name="service_value" class="form-control form-control-md" value="{{ contract.service_value if contract else '' }}" placeholder="0,00" />
+      <input type="text" name="service_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.service_value|format_currency if contract else '' }}" placeholder="0,00" />
     </div>
     <div class="col-12 col-sm-4">
       <label class="form-label">Premiação (R$)</label>
-      <input type="number" step="0.01" min="0" name="bonus_value" class="form-control form-control-md" value="{{ contract.bonus_value if contract else '' }}" placeholder="0,00" />
+      <input type="text" name="bonus_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.bonus_value|format_currency if contract else '' }}" placeholder="0,00" />
     </div>
     <div class="col-12 col-sm-4">
       <label class="form-label">Valor falta (R$)</label>
-      <input type="number" step="0.01" min="0" name="missing_value" class="form-control form-control-md" value="{{ contract.missing_value if contract else '' }}" placeholder="0,00" />
+      <input type="text" name="missing_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.missing_value|format_currency if contract else '' }}" placeholder="0,00" />
     </div>
   </div>
   <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">

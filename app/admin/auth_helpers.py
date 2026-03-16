@@ -11,6 +11,22 @@ def require_admin() -> None:
         abort(403)
 
 
+def require_supervisor_or_admin() -> None:
+    """Permite apenas usuários admin ou supervisor."""
+    if not current_user.is_authenticated:
+        abort(403)
+    if not (current_user.is_admin or getattr(current_user, "role", None) == "supervisor"):
+        abort(403)
+
+
+def is_supervisor() -> bool:
+    return bool(current_user.is_authenticated and getattr(current_user, "role", None) == "supervisor" and not current_user.is_admin)
+
+
+def is_motoboy_user() -> bool:
+    return bool(current_user.is_authenticated and getattr(current_user, "role", None) == "motoboy" and not current_user.is_admin)
+
+
 def handle_delete_constraint_error() -> None:
     """Faz rollback e exibe mensagem quando exclusão falha por restrição de chave (dependência)."""
     db.session.rollback()

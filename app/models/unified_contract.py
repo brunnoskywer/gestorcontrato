@@ -28,8 +28,15 @@ class Contract(db.Model):
     # Client contract fields
     contract_value = db.Column(db.Numeric(10, 2), nullable=True)
     motoboy_quantity = db.Column(db.Integer, nullable=True)
+    revenue_financial_nature_id = db.Column(
+        db.Integer, db.ForeignKey("financial_natures.id"), nullable=True
+    )
 
     supplier = db.relationship("Supplier", foreign_keys=[supplier_id])
+    revenue_financial_nature = db.relationship(
+        "FinancialNature",
+        foreign_keys=[revenue_financial_nature_id],
+    )
     other_supplier = db.relationship("Supplier", foreign_keys=[other_supplier_id])
     absences = db.relationship(
         "ContractAbsence",

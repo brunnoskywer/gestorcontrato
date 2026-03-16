@@ -1,9 +1,9 @@
 """Rotas do módulo Financeiro: contas a pagar, a receber, despesa e lançamento manual."""
 import calendar as cal
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
@@ -19,6 +19,11 @@ from app.models import (
     SUPPLIER_MOTOBOY,
     ENTRY_PAYABLE,
     ENTRY_RECEIVABLE,
+    FinancialBatch,
+    BATCH_TYPE_REVENUE,
+    BATCH_TYPE_PAYMENT,
+    Contract,
+    CONTRACT_TYPE_CLIENT,
 )
 
 
@@ -27,7 +32,22 @@ def _companies_with_accounts():
 
 
 def _financial_natures():
+    # Retorna todas as naturezas ativas (payable, receivable e both).
     return FinancialNature.query.filter_by(is_active=True).order_by(FinancialNature.name).all()
+
+
+def _suggest_charge_date(year: int, month: int) -> date:
+    # mês seguinte, dia 5, pulando fim de semana para segunda
+    if month == 12:
+        y, m = year + 1, 1
+    else:
+        y, m = year, month + 1
+    d = date(y, m, 5)
+    if d.weekday() == 5:  # sábado
+        d = d + timedelta(days=2)
+    elif d.weekday() == 6:  # domingo
+        d = d + timedelta(days=1)
+    return d
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -125,6 +145,7 @@ def register_routes(bp: Blueprint) -> None:
         entry_type = request.args.get("entry_type", "").strip()
         supplier_type = request.args.get("supplier_type", "").strip()
         supplier_name = request.args.get("supplier_name", "").strip()
+        status = request.args.get("status", "").strip()  # '', pending, settled
 
         date_from_filter = None
         date_to_filter = None
@@ -159,6 +180,10 @@ def register_routes(bp: Blueprint) -> None:
             query = query.filter(Supplier.type == supplier_type)
         if supplier_name:
             query = query.filter(Supplier.name.ilike(f"%{supplier_name}%"))
+        if status == "pending":
+            query = query.filter(FinancialEntry.settled_at.is_(None))
+        elif status == "settled":
+            query = query.filter(FinancialEntry.settled_at.isnot(None))
 
         entries = query.order_by(
             FinancialEntry.due_date.desc().nullslast(), FinancialEntry.id.desc()
@@ -175,8 +200,350 @@ def register_routes(bp: Blueprint) -> None:
                 "entry_type": entry_type,
                 "supplier_type": supplier_type,
                 "supplier_name": supplier_name,
+                "status": status,
             },
         )
+
+    @bp.route("/financeiro/processamentos")
+    @login_required
+    def finance_batches():
+        require_admin()
+        date_from_str = request.args.get("date_from", "").strip()
+        date_to_str = request.args.get("date_to", "").strip()
+        batch_type_filter = request.args.get("batch_type", "").strip().lower()
+        next_param = request.args.get("next") or url_for("admin.finance_manual_entry")
+
+        today = date.today()
+        first_of_month = today.replace(day=1)
+        _, last_day = cal.monthrange(today.year, today.month)
+        last_of_month = today.replace(day=last_day)
+
+        date_from = None
+        date_to = None
+        if date_from_str:
+            try:
+                date_from = date.fromisoformat(date_from_str)
+            except ValueError:
+                pass
+        if date_to_str:
+            try:
+                date_to = date.fromisoformat(date_to_str)
+            except ValueError:
+                pass
+        if date_from is None:
+            date_from = first_of_month
+            date_from_str = first_of_month.isoformat()
+        if date_to is None:
+            date_to = last_of_month
+            date_to_str = last_of_month.isoformat()
+
+        q = FinancialBatch.query
+        if batch_type_filter == "revenue":
+            q = q.filter(FinancialBatch.batch_type == BATCH_TYPE_REVENUE)
+        elif batch_type_filter == "payment":
+            q = q.filter(FinancialBatch.batch_type == BATCH_TYPE_PAYMENT)
+        q = q.filter(FinancialBatch.created_at >= datetime.combine(date_from, time.min))
+        q = q.filter(FinancialBatch.created_at <= datetime.combine(date_to, time.max))
+        batches = q.order_by(FinancialBatch.created_at.desc()).all()
+
+        return render_template(
+            "admin/financeiro/_batches_modal.html",
+            batches=batches,
+            filters={"date_from": date_from_str, "date_to": date_to_str, "batch_type": batch_type_filter},
+            next_url=next_param,
+        )
+
+    @bp.route("/financeiro/receitas/processamentos")
+    @login_required
+    def finance_revenue_batches():
+        """Redireciona para o modal unificado com filtro de receitas."""
+        args = {k: v for k, v in request.args.items() if v}
+        args.setdefault("batch_type", "revenue")
+        return redirect(url_for("admin.finance_batches", **args))
+
+    @bp.route("/financeiro/receitas/processar/form")
+    @login_required
+    def finance_revenue_process_form():
+        require_admin()
+        next_url = request.args.get("next") or url_for("admin.finance_manual_entry")
+        today = date.today()
+        default_year = today.year
+        default_month = today.month
+        suggested_charge_date = _suggest_charge_date(default_year, default_month)
+        return render_template(
+            "admin/financeiro/_revenue_process_form_fragment.html",
+            default_year=default_year,
+            default_month=default_month,
+            suggested_charge_date=suggested_charge_date.isoformat(),
+            action_url=url_for("admin.finance_revenue_process"),
+            next_url=next_url,
+        )
+
+    @bp.post("/financeiro/receitas/processar")
+    @login_required
+    def finance_revenue_process():
+        require_admin()
+        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        year = request.form.get("year", type=int)
+        month = request.form.get("month", type=int)
+        charge_date_str = request.form.get("charge_date", "").strip()
+
+        if not year or not month or not charge_date_str:
+            flash("Ano, mês e data de cobrança são obrigatórios.", "danger")
+            return redirect(next_url)
+
+        try:
+            charge_date = date.fromisoformat(charge_date_str)
+        except ValueError:
+            flash("Data de cobrança inválida.", "danger")
+            return redirect(next_url)
+
+        month_start = date(year, month, 1)
+        if month == 12:
+            month_end = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            month_end = date(year, month + 1, 1) - timedelta(days=1)
+
+        existing = FinancialBatch.query.filter_by(
+            batch_type=BATCH_TYPE_REVENUE,
+            year=year,
+            month=month,
+        ).first()
+        if existing:
+            flash("Já existe um processamento de receitas para este mês/ano.", "warning")
+            return redirect(next_url)
+
+        contracts = (
+            Contract.query.filter(Contract.contract_type == CONTRACT_TYPE_CLIENT)
+            .filter(Contract.start_date <= month_end)
+            .filter((Contract.end_date.is_(None)) | (Contract.end_date >= month_start))
+            .all()
+        )
+
+        created = 0
+        skipped_no_company = 0
+        skipped_no_nature = 0
+        batch = None
+
+        for c in contracts:
+            if not c.contract_value:
+                continue
+            # Natureza vem do cadastro do contrato do cliente
+            nature = c.revenue_financial_nature if c.revenue_financial_nature_id else None
+            if not nature or not nature.is_active or nature.kind not in ("receivable", "both"):
+                skipped_no_nature += 1
+                continue
+            # Usar a empresa associada ao cliente para emissão de nota (billing_company_id)
+            company_id = None
+            if c.supplier and c.supplier.billing_company_id:
+                company_id = c.supplier.billing_company_id
+            if company_id is None:
+                skipped_no_company += 1
+                continue
+
+            if batch is None:
+                batch = FinancialBatch(
+                    batch_type=BATCH_TYPE_REVENUE,
+                    year=year,
+                    month=month,
+                    financial_nature_id=nature.id,
+                    charge_date=charge_date,
+                    created_by_id=getattr(current_user, "id", None),
+                )
+                db.session.add(batch)
+                db.session.flush()
+
+            eff_start = max(c.start_date, month_start)
+            eff_end = min(c.end_date or month_end, month_end)
+            days_in_month = (month_end - month_start).days + 1
+            effective_days = (eff_end - eff_start).days + 1
+            proportion = effective_days / days_in_month if days_in_month > 0 else 1
+            amount = float(c.contract_value) * proportion
+
+            entry = FinancialEntry(
+                company_id=company_id,
+                account_id=None,
+                financial_nature_id=nature.id,
+                supplier_id=c.supplier_id,
+                entry_type=ENTRY_RECEIVABLE,
+                description=f"Receita contrato cliente #{c.id} - {year}-{month:02d}",
+                amount=amount,
+                due_date=charge_date,
+                settled_at=None,
+                reference=None,
+                financial_batch_id=batch.id,
+            )
+            db.session.add(entry)
+            created += 1
+
+        if created == 0:
+            db.session.rollback()
+            if skipped_no_nature and not skipped_no_company:
+                flash("Nenhuma receita gerada: defina a natureza financeira de receita no cadastro de cada contrato de cliente.", "warning")
+            elif skipped_no_company:
+                flash("Nenhuma receita gerada: os clientes dos contratos precisam ter uma empresa associada para emissão de nota (cadastro do cliente).", "warning")
+            else:
+                flash("Nenhuma receita foi gerada para os contratos vigentes no período.", "warning")
+        else:
+            db.session.commit()
+            msg = f"{created} lançamento(s) de receita gerado(s)."
+            if skipped_no_company:
+                msg += f" {skipped_no_company} contrato(s) ignorado(s): cliente sem empresa para emissão de nota."
+            if skipped_no_nature:
+                msg += f" {skipped_no_nature} contrato(s) ignorado(s): sem natureza financeira de receita."
+            flash(msg, "success" if not (skipped_no_company or skipped_no_nature) else "warning")
+
+        return redirect(next_url)
+
+    @bp.post("/financeiro/processamentos/<int:batch_id>/delete")
+    @login_required
+    def finance_batch_delete(batch_id: int):
+        require_admin()
+        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        batch = FinancialBatch.query.get_or_404(batch_id)
+        any_settled = (
+            FinancialEntry.query.filter_by(financial_batch_id=batch.id)
+            .filter(FinancialEntry.settled_at.isnot(None))
+            .first()
+        )
+        if any_settled:
+            flash("Não é possível excluir: existem lançamentos quitados neste processamento.", "danger")
+            return redirect(next_url)
+        FinancialEntry.query.filter_by(financial_batch_id=batch.id).delete(synchronize_session=False)
+        db.session.delete(batch)
+        db.session.commit()
+        tipo = "receita" if batch.batch_type == BATCH_TYPE_REVENUE else "pagamento"
+        flash(f"Processamento de {tipo} excluído com seus lançamentos pendentes.", "info")
+        return redirect(next_url)
+
+    @bp.post("/financeiro/receitas/processamentos/<int:batch_id>/delete")
+    @login_required
+    def finance_revenue_batch_delete(batch_id: int):
+        """Compatibilidade: mesma lógica de exclusão."""
+        return finance_batch_delete(batch_id)
+
+    @bp.route("/financeiro/pagamentos/processar/form")
+    @login_required
+    def finance_payment_process_form():
+        require_admin()
+        next_url = request.args.get("next") or url_for("admin.finance_manual_entry")
+        today = date.today()
+        default_year = today.year
+        default_month = today.month
+        suggested_charge_date = _suggest_charge_date(default_year, default_month)
+        return render_template(
+            "admin/financeiro/_payment_process_form_fragment.html",
+            default_year=default_year,
+            default_month=default_month,
+            suggested_charge_date=suggested_charge_date.isoformat(),
+            action_url=url_for("admin.finance_payment_process"),
+            next_url=next_url,
+        )
+
+    @bp.post("/financeiro/pagamentos/processar")
+    @login_required
+    def finance_payment_process():
+        require_admin()
+        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        year = request.form.get("year", type=int)
+        month = request.form.get("month", type=int)
+        charge_date_str = request.form.get("charge_date", "").strip()
+        if not year or not month or not charge_date_str:
+            flash("Ano, mês e data de cobrança são obrigatórios.", "danger")
+            return redirect(next_url)
+        try:
+            charge_date = date.fromisoformat(charge_date_str)
+        except ValueError:
+            flash("Data de cobrança inválida.", "danger")
+            return redirect(next_url)
+        month_start = date(year, month, 1)
+        if month == 12:
+            month_end = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            month_end = date(year, month + 1, 1) - timedelta(days=1)
+        existing = FinancialBatch.query.filter_by(
+            batch_type=BATCH_TYPE_PAYMENT,
+            year=year,
+            month=month,
+        ).first()
+        if existing:
+            flash("Já existe um processamento de pagamentos para este mês/ano.", "warning")
+            return redirect(next_url)
+        nature = (
+            FinancialNature.query.filter(
+                FinancialNature.is_active.is_(True),
+                FinancialNature.kind.in_(["payable", "both"]),
+            )
+            .order_by(FinancialNature.name)
+            .first()
+        )
+        if not nature:
+            flash("Cadastre uma natureza financeira do tipo 'Contas a pagar' ou 'Ambas' para processar pagamentos.", "danger")
+            return redirect(next_url)
+        batch = FinancialBatch(
+            batch_type=BATCH_TYPE_PAYMENT,
+            year=year,
+            month=month,
+            financial_nature_id=nature.id,
+            charge_date=charge_date,
+            created_by_id=getattr(current_user, "id", None),
+        )
+        db.session.add(batch)
+        db.session.commit()
+        flash("Processamento de pagamentos criado. Em breve os lançamentos serão gerados a partir dos contratos de motoboy.", "success")
+        return redirect(next_url)
+
+    @bp.route("/financeiro/adiantamentos/processar/form")
+    @login_required
+    def finance_advance_process_form():
+        require_admin()
+        next_url = request.args.get("next") or url_for("admin.finance_manual_entry")
+        today = date.today()
+        default_year = today.year
+        default_month = today.month
+        suggested_charge_date = _suggest_charge_date(default_year, default_month)
+        return render_template(
+            "admin/financeiro/_advance_process_form_fragment.html",
+            default_year=default_year,
+            default_month=default_month,
+            suggested_charge_date=suggested_charge_date.isoformat(),
+            action_url=url_for("admin.finance_advance_process"),
+            next_url=next_url,
+        )
+
+    @bp.post("/financeiro/adiantamentos/processar")
+    @login_required
+    def finance_advance_process():
+        require_admin()
+        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        flash("Processamento de adiantamentos em desenvolvimento.", "info")
+        return redirect(next_url)
+
+    @bp.route("/financeiro/residual/processar/form")
+    @login_required
+    def finance_residual_process_form():
+        require_admin()
+        next_url = request.args.get("next") or url_for("admin.finance_manual_entry")
+        today = date.today()
+        default_year = today.year
+        default_month = today.month
+        suggested_charge_date = _suggest_charge_date(default_year, default_month)
+        return render_template(
+            "admin/financeiro/_residual_process_form_fragment.html",
+            default_year=default_year,
+            default_month=default_month,
+            suggested_charge_date=suggested_charge_date.isoformat(),
+            action_url=url_for("admin.finance_residual_process"),
+            next_url=next_url,
+        )
+
+    @bp.post("/financeiro/residual/processar")
+    @login_required
+    def finance_residual_process():
+        require_admin()
+        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        flash("Processamento residual em desenvolvimento.", "info")
+        return redirect(next_url)
 
     # ---- Aprovar (definir data de baixa) ----
     @bp.route("/financeiro/lancamento/<int:entry_id>/aprovar/form")
@@ -291,7 +658,12 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_transfer_form():
         require_admin()
-        natures = _financial_natures()
+        # Na transferência entre contas, exibe apenas naturezas do tipo "Ambas"
+        natures = (
+            FinancialNature.query.filter_by(is_active=True, kind="both")
+            .order_by(FinancialNature.name)
+            .all()
+        )
         all_accounts = _all_accounts_for_transfer()
         return render_template(
             "admin/financeiro/_transfer_form_fragment.html",

@@ -13,6 +13,8 @@
 {% set approve_url_template = _approve_base.replace('999999', '{id}') %}
 {% set reopen_bulk_url = url_for('admin.finance_bulk_reopen') %}
 {% set transfer_url = url_for('admin.finance_transfer_form') %}
+{% set revenue_batches_url = url_for('admin.finance_batches', next=request.full_path) %}
+{% set revenue_batches_title = 'Processamentos de Receitas/Pagamentos' %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Movimentos Financeiros</h1>
@@ -20,43 +22,55 @@
 
 <div class="card mb-3">
   <div class="card-body">
-    <form class="row g-2 align-items-end" method="get" action="{{ url_for('admin.finance_manual_entry') }}">
-      <div class="col-md-2">
-        <label class="form-label mb-1">Data inicial</label>
-        <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}" />
+    <form class="row g-2 align-items-end justify-content-between" method="get" action="{{ url_for('admin.finance_manual_entry') }}">
+      <div class="col-auto">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-2">
+            <label class="form-label mb-1">Data inicial</label>
+            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Data final</label>
+            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Empresa</label>
+            <select name="company_id" class="form-select form-select-sm">
+              <option value="">Todas</option>
+              {% for c in companies %}
+              <option value="{{ c.id }}" {% if filters.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Tipo</label>
+            <select name="entry_type" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="payable" {% if filters.entry_type == 'payable' %}selected{% endif %}>Contas a pagar</option>
+              <option value="receivable" {% if filters.entry_type == 'receivable' %}selected{% endif %}>Contas a receber</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Status</label>
+            <select name="status" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>Pendentes</option>
+              <option value="settled" {% if filters.status == 'settled' %}selected{% endif %}>Quitados</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Tipo de fornecedor</label>
+            <select name="supplier_type" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="client" {% if filters.supplier_type == 'client' %}selected{% endif %}>Cliente</option>
+              <option value="supplier" {% if filters.supplier_type == 'supplier' %}selected{% endif %}>Fornecedor</option>
+              <option value="motoboy" {% if filters.supplier_type == 'motoboy' %}selected{% endif %}>Motoboy</option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="col-md-2">
-        <label class="form-label mb-1">Data final</label>
-        <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}" />
-      </div>
-      <div class="col-md-2">
-        <label class="form-label mb-1">Empresa</label>
-        <select name="company_id" class="form-select form-select-sm">
-          <option value="">Todas</option>
-          {% for c in companies %}
-          <option value="{{ c.id }}" {% if filters.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label mb-1">Tipo</label>
-        <select name="entry_type" class="form-select form-select-sm">
-          <option value="">Todos</option>
-          <option value="payable" {% if filters.entry_type == 'payable' %}selected{% endif %}>Contas a pagar</option>
-          <option value="receivable" {% if filters.entry_type == 'receivable' %}selected{% endif %}>Contas a receber</option>
-        </select>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label mb-1">Tipo de fornecedor</label>
-        <select name="supplier_type" class="form-select form-select-sm">
-          <option value="">Todos</option>
-          <option value="client" {% if filters.supplier_type == 'client' %}selected{% endif %}>Cliente</option>
-          <option value="supplier" {% if filters.supplier_type == 'supplier' %}selected{% endif %}>Fornecedor</option>
-          <option value="motoboy" {% if filters.supplier_type == 'motoboy' %}selected{% endif %}>Motoboy</option>
-        </select>
-      </div>
-      <div class="col-md-2 text-md-end">
-        <button type="submit" class="btn btn-primary btn-sm me-2">Filtrar</button>
+      <div class="col-auto d-flex align-items-end">
+        <button type="submit" class="btn btn-primary btn-sm me-2">Pesquisar</button>
         <a href="{{ url_for('admin.finance_manual_entry') }}" class="btn btn-danger btn-sm">Limpar</a>
       </div>
     </form>
@@ -76,7 +90,7 @@
       <th>Natureza</th>
       <th>Descrição</th>
       <th>Conta</th>
-      <th>Valor</th>
+      <th class="text-end">Valor</th>
       <th>Vencimento</th>
       <th>Status</th>
     </tr>
@@ -92,7 +106,7 @@
       <td data-label="Natureza">{{ e.financial_nature.name }}</td>
       <td data-label="Descrição">{{ e.description }}</td>
       <td data-label="Conta">{{ e.account.name if e.account else "-" }}</td>
-      <td data-label="Valor">R$ {{ "%.2f"|format(e.amount|float) }}</td>
+      <td data-label="Valor" class="text-end">R$ {{ e.amount|format_currency }}</td>
       <td data-label="Vencimento">{{ e.due_date or "-" }}</td>
       <td data-label="Status">{% if e.settled_at %}Quitado ({{ e.settled_at.strftime('%d/%m/%Y') }}){% else %}Pendente{% endif %}</td>
     </tr>

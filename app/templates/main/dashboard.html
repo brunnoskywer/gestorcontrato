@@ -34,7 +34,7 @@
           </div>
           <div>
             <p class="text-muted small mb-0">A receber</p>
-            <p class="mb-0 fs-3 fw-bold text-primary">R$ {{ "%.2f"|format(today_receivable) }}</p>
+            <p class="mb-0 fs-3 fw-bold text-primary">R$ {{ today_receivable|format_currency }}</p>
           </div>
         </div>
       </div>
@@ -47,7 +47,7 @@
           </div>
           <div>
             <p class="text-muted small mb-0">A pagar</p>
-            <p class="mb-0 fs-3 fw-bold text-danger">R$ {{ "%.2f"|format(today_payable) }}</p>
+            <p class="mb-0 fs-3 fw-bold text-danger">R$ {{ today_payable|format_currency }}</p>
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@
         </div>
         <div>
           <p class="text-muted small mb-0 fw-medium">Despesas quitadas</p>
-          <p class="mb-0 fs-4 fw-bold text-danger">R$ {{ "%.2f"|format(month_total_payable) }}</p>
+          <p class="mb-0 fs-4 fw-bold text-danger">R$ {{ month_total_payable|format_currency }}</p>
         </div>
       </div>
     </div>
@@ -102,7 +102,7 @@
         </div>
         <div>
           <p class="text-muted small mb-0 fw-medium">Saldo do mês</p>
-          <p class="mb-0 fs-4 fw-bold {{ 'text-success' if month_balance >= 0 else 'text-danger' }}">R$ {{ "%.2f"|format(month_balance) }}</p>
+          <p class="mb-0 fs-4 fw-bold {{ 'text-success' if month_balance >= 0 else 'text-danger' }}">R$ {{ month_balance|format_currency }}</p>
         </div>
       </div>
     </div>

@@ -66,7 +66,7 @@
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Valor (R$) *</label>
-      <input type="number" step="0.01" min="0.01" name="amount" class="form-control form-control-md" required placeholder="0,00" value="{{ entry.amount|string if entry else '' }}" />
+      <input type="text" name="amount" class="form-control form-control-md" data-mask="currency" required placeholder="0,00" value="{{ entry.amount|format_currency if entry else '' }}" />
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Vencimento *</label>
@@ -134,7 +134,9 @@
     for (var i = 0; i < natureSelect.options.length; i++) {
       var opt = natureSelect.options[i];
       if (opt.value === '') { opt.style.display = 'block'; continue; }
-      opt.style.display = opt.getAttribute('data-kind') === kind ? 'block' : 'none';
+      var nkind = opt.getAttribute('data-kind');
+      // Exibe naturezas do tipo selecionado e também as do tipo \"both\" (Ambas)
+      opt.style.display = (nkind === kind || nkind === 'both') ? 'block' : 'none';
     }
     if (!keepValue) natureSelect.value = '';
   }

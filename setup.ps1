@@ -25,22 +25,26 @@ flask db upgrade
 
 Write-Host "==> Criando usuário admin (se não existir)..." -ForegroundColor Cyan
 $script = @"
+from app import create_app
 from app.extensions import db
 from app.models import User
 
-email = "$AdminEmail"
-name = "$AdminName"
-password = "$AdminPassword"
+app = create_app()
 
-user = User.query.filter_by(email=email).first()
-if not user:
-    user = User(email=email, name=name, is_admin=True)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-    print("Admin created:", email)
-else:
-    print("Admin already exists:", email)
+with app.app_context():
+    email = "$AdminEmail"
+    name = "$AdminName"
+    password = "$AdminPassword"
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(email=email, name=name, is_admin=True)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        print("Admin created:", email)
+    else:
+        print("Admin already exists:", email)
 "@
 
 # Envia o script Python para a entrada padrão do interpretador

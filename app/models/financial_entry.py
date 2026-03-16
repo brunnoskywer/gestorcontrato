@@ -26,6 +26,7 @@ class FinancialEntry(db.Model):
     due_date = db.Column(db.Date, nullable=True)
     settled_at = db.Column(db.DateTime, nullable=True)  # quando foi pago/recebido
     reference = db.Column(db.String(255), nullable=True)
+    financial_batch_id = db.Column(db.Integer, db.ForeignKey("financial_batches.id"), nullable=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -43,3 +44,4 @@ class FinancialEntry(db.Model):
         foreign_keys=[financial_nature_id],
     )
     supplier = db.relationship("Supplier", foreign_keys=[supplier_id])
+    batch = db.relationship("FinancialBatch", back_populates="entries", foreign_keys=[financial_batch_id])
