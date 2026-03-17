@@ -163,10 +163,11 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def client_contracts_bulk_delete():
         require_admin()
+        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.client_contracts_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum contrato selecionado.", "warning")
-            return redirect(url_for("admin.client_contracts_list"))
+            return redirect(next_url)
         try:
             count = (
                 Contract.query.filter(
@@ -178,4 +179,4 @@ def register_routes(bp: Blueprint) -> None:
             flash(f"{count} contrato(s) excluído(s).", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.client_contracts_list"))
+        return redirect(next_url)

@@ -165,10 +165,11 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboys_bulk_delete():
         require_admin()
+        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.motoboys_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum motoboy selecionado.", "warning")
-            return redirect(url_for("admin.motoboys_list"))
+            return redirect(next_url)
         try:
             count = (
                 Supplier.query.filter(
@@ -180,4 +181,4 @@ def register_routes(bp: Blueprint) -> None:
             flash(f"{count} motoboy(s) excluído(s).", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.motoboys_list"))
+        return redirect(next_url)

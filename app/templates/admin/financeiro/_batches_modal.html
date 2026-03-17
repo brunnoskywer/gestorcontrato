@@ -14,6 +14,8 @@
       <option value="">Todos</option>
       <option value="revenue" {% if filters.batch_type == 'revenue' %}selected{% endif %}>Receita</option>
       <option value="payment" {% if filters.batch_type == 'payment' %}selected{% endif %}>Pagamento</option>
+      <option value="advance" {% if filters.batch_type == 'advance' %}selected{% endif %}>Adiantamento</option>
+      <option value="residual" {% if filters.batch_type == 'residual' %}selected{% endif %}>Residual</option>
     </select>
   </div>
   <div class="col-auto ms-auto d-flex align-items-end gap-2">
@@ -55,7 +57,17 @@
       {% for b in batches %}
       <tr>
         <td>{{ b.id }}</td>
-        <td>{% if b.batch_type == 'revenue' %}Receita{% else %}Pagamento{% endif %}</td>
+        <td>
+          {% if b.batch_type == 'revenue' %}
+            Receita
+          {% elif b.batch_type == 'advance' %}
+            Adiantamento
+          {% elif b.batch_type == 'residual' %}
+            Residual
+          {% else %}
+            Pagamento
+          {% endif %}
+        </td>
         <td>{{ "%04d-%02d"|format(b.year, b.month) }}</td>
         <td>{{ b.charge_date.strftime("%d/%m/%Y") }}</td>
         <td>{{ b.created_at.strftime("%d/%m/%Y %H:%M") }}</td>

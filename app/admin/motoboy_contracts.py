@@ -88,9 +88,10 @@ def register_routes(bp: Blueprint) -> None:
             start_date_str = request.form.get("start_date", "")
             end_date_str = request.form.get("end_date", "")
             location = request.form.get("location", "").strip()
-            service_value = request.form.get("service_value") or None
-            bonus_value = request.form.get("bonus_value") or None
-            missing_value = request.form.get("missing_value") or None
+            service_value = parse_decimal_form(request.form.get("service_value"))
+            bonus_value = parse_decimal_form(request.form.get("bonus_value"))
+            missing_value = parse_decimal_form(request.form.get("missing_value"))
+            advance_value = parse_decimal_form(request.form.get("advance_value"))
 
             if not motoboy_id or not start_date_str:
                 flash("Motoboy e data de início são obrigatórios.", "danger")
@@ -107,6 +108,7 @@ def register_routes(bp: Blueprint) -> None:
                     service_value=service_value,
                     bonus_value=bonus_value,
                     missing_value=missing_value,
+                    advance_value=advance_value,
                 )
                 db.session.add(contract)
                 db.session.commit()
@@ -137,6 +139,7 @@ def register_routes(bp: Blueprint) -> None:
             contract.service_value = parse_decimal_form(request.form.get("service_value"))
             contract.bonus_value = parse_decimal_form(request.form.get("bonus_value"))
             contract.missing_value = parse_decimal_form(request.form.get("missing_value"))
+            contract.advance_value = parse_decimal_form(request.form.get("advance_value"))
 
             if not contract.supplier_id or not start_date_str:
                 flash("Motoboy e data de início são obrigatórios.", "danger")
@@ -350,10 +353,11 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboy_contracts_bulk_delete():
         require_admin()
+        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.motoboy_contracts_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum contrato selecionado.", "warning")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(next_url)
         try:
             # Delete related absences first (bulk delete does not trigger ORM cascade)
             ContractAbsence.query.filter(ContractAbsence.contract_id.in_(ids)).delete(
@@ -369,4 +373,4 @@ def register_routes(bp: Blueprint) -> None:
             flash(f"{count} contrato(s) excluído(s).", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.motoboy_contracts_list"))
+        return redirect(next_url)

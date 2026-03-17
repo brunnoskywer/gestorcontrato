@@ -85,6 +85,24 @@ main.container {
   padding-top: 0.6rem;
   padding-bottom: 0.6rem;
   font-weight: 600;
+  position: relative;
+  user-select: none;
+}
+
+.table-list thead th.table-sort-asc::after,
+.table-list thead th.table-sort-desc::after {
+  content: '';
+  border: 4px solid transparent;
+  border-top-color: #fff;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.table-list thead th.table-sort-desc::after {
+  border-top-color: transparent;
+  border-bottom-color: #fff;
 }
 
 .table-list tbody tr:hover {

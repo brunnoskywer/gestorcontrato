@@ -106,15 +106,16 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def financial_natures_bulk_delete():
         require_admin()
+        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.financial_natures_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhuma natureza selecionada.", "warning")
-            return redirect(url_for("admin.financial_natures_list"))
+            return redirect(next_url)
         try:
             count = FinancialNature.query.filter(FinancialNature.id.in_(ids)).delete(synchronize_session=False)
             db.session.commit()
             flash(f"{count} natureza(s) excluída(s).", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.financial_natures_list"))
+        return redirect(next_url)
 

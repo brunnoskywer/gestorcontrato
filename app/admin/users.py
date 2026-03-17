@@ -127,10 +127,11 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def users_bulk_delete():
         require_admin()
+        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.users_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum usuário selecionado.", "warning")
-            return redirect(url_for("admin.users_list"))
+            return redirect(next_url)
         ids_to_delete = [i for i in ids if i != current_user.id]
         if current_user.id in ids:
             flash("Você não pode excluir a si mesmo.", "warning")
@@ -143,4 +144,4 @@ def register_routes(bp: Blueprint) -> None:
                     flash(f"{count} usuário(s) excluído(s).", "info")
             except IntegrityError:
                 handle_delete_constraint_error()
-        return redirect(url_for("admin.users_list"))
+        return redirect(next_url)

@@ -80,10 +80,11 @@
     currencyInputs.forEach(function (input) {
       if (input.dataset.maskApplied) return;
       input.dataset.maskApplied = '1';
-      input.value = maskCurrency(input.value);
-      input.addEventListener('input', function () {
-        input.value = maskCurrency(input.value);
-      });
+      // Não formatamos durante a digitação para não mexer no cursor.
+      // Apenas garantimos que o valor inicial vindo do backend esteja no formato esperado.
+      if (input.value) {
+        input.value = String(input.value).replace(/[^0-9,]/g, '').replace(/\./g, ',');
+      }
     });
 
     var form = container.tagName === 'FORM' ? container : container.querySelector('form');
@@ -95,8 +96,17 @@
         form.querySelectorAll('[data-mask="cnpj"]').forEach(function (el) {
           el.value = (el.value || '').replace(/\D/g, '');
         });
-        form.querySelectorAll('[data-mask="currency"]').forEach(function (el) {
-          el.value = parseCurrencyForSubmit(el.value);
+        // Para currency, só limpamos caracteres inválidos e deixamos o backend interpretar
+        // a vírgula como separador decimal (ex.: \"7,00\" -> 7.00).
+        form.querySelectorAll('[data-mask=\"currency\"]').forEach(function (el) {
+          var raw = (el.value || '').trim();
+          if (!raw) return;
+          raw = raw.replace(/[^0-9,]/g, '').replace(/\./g, ',');
+          var parts = raw.split(',');
+          if (parts.length > 2) {
+            raw = parts[0] + ',' + parts.slice(1).join('');
+          }
+          el.value = raw;
         });
       }, { capture: true, once: true });
     }
@@ -270,6 +280,55 @@
     root.querySelectorAll('table.table-list').forEach(function (table) {
       if (!container && table.getAttribute('data-row-click-inited') === '1') return;
       if (!container) table.setAttribute('data-row-click-inited', '1');
+
+      // Sorting by header click (except selection checkbox column)
+      var headers = table.querySelectorAll('thead th');
+      headers.forEach(function (th, index) {
+        var hasSelectAll = th.querySelector('.select-all');
+        if (hasSelectAll) return; // skip checkbox column
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', function () {
+          var tbody = table.querySelector('tbody');
+          if (!tbody) return;
+          var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+          var currentOrder = th.getAttribute('data-sort-order') || 'none';
+          var newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+          // reset others
+          headers.forEach(function (h) {
+            if (h !== th) {
+              h.removeAttribute('data-sort-order');
+              h.classList.remove('table-sort-asc', 'table-sort-desc');
+            }
+          });
+          th.setAttribute('data-sort-order', newOrder);
+          th.classList.remove('table-sort-asc', 'table-sort-desc');
+          th.classList.add(newOrder === 'asc' ? 'table-sort-asc' : 'table-sort-desc');
+
+          var isNumeric = th.classList.contains('text-end') || th.getAttribute('data-sort-type') === 'number';
+
+          rows.sort(function (a, b) {
+            var aCell = a.children[index];
+            var bCell = b.children[index];
+            if (!aCell || !bCell) return 0;
+            var aText = (aCell.innerText || aCell.textContent || '').trim();
+            var bText = (bCell.innerText || bCell.textContent || '').trim();
+
+            if (isNumeric) {
+              var aNum = parseFloat(aText.replace(/[^\d,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+              var bNum = parseFloat(bText.replace(/[^\d,-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+              return newOrder === 'asc' ? aNum - bNum : bNum - aNum;
+            } else {
+              var cmp = aText.localeCompare(bText, 'pt-BR', { sensitivity: 'base' });
+              return newOrder === 'asc' ? cmp : -cmp;
+            }
+          });
+
+          rows.forEach(function (r) {
+            tbody.appendChild(r);
+          });
+        });
+      });
+
       table.querySelectorAll('tbody tr').forEach(function (tr) {
         var cb = tr.querySelector('.row-select');
         if (!cb) return;
@@ -382,6 +441,12 @@
             form.method = 'POST';
             form.action = deleteUrl;
             form.setAttribute('data-turbo-frame', 'main-content');
+            // Preserva filtros atuais após a ação
+            var nextInput = document.createElement('input');
+            nextInput.type = 'hidden';
+            nextInput.name = 'next';
+            nextInput.value = window.location.pathname + window.location.search;
+            form.appendChild(nextInput);
             ids.forEach(function (id) {
               var input = document.createElement('input');
               input.type = 'hidden';
@@ -448,7 +513,9 @@
             return;
           }
           var id = cb.closest('tr').getAttribute('data-id');
-          openFormModal(approveTpl.replace('{id}', id), 'Aprovar lançamento');
+          var next = window.location.pathname + window.location.search;
+          var url = approveTpl.replace('{id}', id) + '?next=' + encodeURIComponent(next);
+          openFormModal(url, 'Aprovar lançamento');
         });
 
         var reopenUrl = toolbar.getAttribute('data-reopen-bulk-url');
@@ -471,6 +538,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
             'Reabrir',
             function () {
               var formData = new FormData();
+              formData.append('next', window.location.pathname + window.location.search);
               ids.forEach(function (id) {
                 formData.append('ids', id);
               });

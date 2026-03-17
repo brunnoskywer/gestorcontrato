@@ -116,14 +116,15 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def companies_bulk_delete():
         require_admin()
+        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.companies_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhuma empresa selecionada.", "warning")
-            return redirect(url_for("admin.companies_list"))
+            return redirect(next_url)
         try:
             count = Company.query.filter(Company.id.in_(ids)).delete(synchronize_session=False)
             db.session.commit()
             flash(f"{count} empresa(s) excluída(s).", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.companies_list"))
+        return redirect(next_url)

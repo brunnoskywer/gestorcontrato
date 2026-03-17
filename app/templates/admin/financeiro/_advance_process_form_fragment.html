@@ -13,6 +13,24 @@
     <input type="date" name="charge_date" class="form-control form-control-sm" required value="{{ suggested_charge_date }}">
   </div>
   <div class="col-auto">
+    <label class="form-label mb-1">Natureza adiantamento *</label>
+    <select name="advance_nature_id" class="form-select form-select-sm" required>
+      <option value="">— Selecione —</option>
+      {% for n in natures %}
+      <option value="{{ n.id }}">{{ n.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1">Natureza distrato *</label>
+    <select name="distrato_nature_id" class="form-select form-select-sm" required>
+      <option value="">— Selecione —</option>
+      {% for n in natures %}
+      <option value="{{ n.id }}">{{ n.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
     <button type="submit" class="btn btn-primary btn-sm">Processar</button>
   </div>
 </form>

@@ -5,13 +5,15 @@ from app.extensions import db
 
 BATCH_TYPE_REVENUE = "revenue"
 BATCH_TYPE_PAYMENT = "payment"
+BATCH_TYPE_ADVANCE = "advance"
+BATCH_TYPE_RESIDUAL = "residual"
 
 
 class FinancialBatch(db.Model):
     __tablename__ = "financial_batches"
 
     id = db.Column(db.Integer, primary_key=True)
-    batch_type = db.Column(db.String(20), nullable=False)  # revenue | payment
+    batch_type = db.Column(db.String(20), nullable=False)  # revenue | payment | advance | residual
     year = db.Column(db.Integer, nullable=False)
     month = db.Column(db.Integer, nullable=False)
     financial_nature_id = db.Column(db.Integer, db.ForeignKey("financial_natures.id"), nullable=False)

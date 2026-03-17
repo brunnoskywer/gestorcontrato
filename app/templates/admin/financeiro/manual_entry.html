@@ -14,7 +14,7 @@
 {% set reopen_bulk_url = url_for('admin.finance_bulk_reopen') %}
 {% set transfer_url = url_for('admin.finance_transfer_form') %}
 {% set revenue_batches_url = url_for('admin.finance_batches', next=request.full_path) %}
-{% set revenue_batches_title = 'Processamentos de Receitas/Pagamentos' %}
+{% set revenue_batches_title = 'Processar' %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Movimentos Financeiros</h1>
@@ -87,10 +87,10 @@
       </th>
       <th>Tipo</th>
       <th>Empresa</th>
+      <th>Fornecedor</th>
       <th>Natureza</th>
-      <th>Descrição</th>
       <th>Conta</th>
-      <th class="text-end">Valor</th>
+      <th class="text-end text-nowrap">Valor</th>
       <th>Vencimento</th>
       <th>Status</th>
     </tr>
@@ -103,10 +103,16 @@
       </td>
       <td data-label="Tipo">{{ "Contas a pagar" if e.entry_type == "payable" else "Contas a receber" }}</td>
       <td data-label="Empresa">{{ e.company.legal_name }}</td>
+      <td data-label="Fornecedor">
+        {% if e.supplier %}
+          {{ e.supplier.name }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
       <td data-label="Natureza">{{ e.financial_nature.name }}</td>
-      <td data-label="Descrição">{{ e.description }}</td>
       <td data-label="Conta">{{ e.account.name if e.account else "-" }}</td>
-      <td data-label="Valor" class="text-end">R$ {{ e.amount|format_currency }}</td>
+      <td data-label="Valor" class="text-end text-nowrap">R$ {{ e.amount|format_currency }}</td>
       <td data-label="Vencimento">{{ e.due_date or "-" }}</td>
       <td data-label="Status">{% if e.settled_at %}Quitado ({{ e.settled_at.strftime('%d/%m/%Y') }}){% else %}Pendente{% endif %}</td>
     </tr>
