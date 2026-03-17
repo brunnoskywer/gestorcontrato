@@ -2,7 +2,7 @@
 import calendar as cal
 from datetime import date, datetime, time, timedelta
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for, make_response
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
@@ -29,6 +29,14 @@ from app.models import (
     CONTRACT_TYPE_MOTOBOY,
     ContractAbsence,
 )
+from io import BytesIO
+
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+except ImportError:  # pragma: no cover - depende de pacote externo
+    A4 = None
+    canvas = None
 
 
 def _companies_with_accounts():
@@ -1136,6 +1144,248 @@ def register_routes(bp: Blueprint) -> None:
         except IntegrityError:
             handle_delete_constraint_error()
         return redirect(next_url)
+
+    @bp.route("/financeiro/processamento/<int:batch_id>/relatorio.pdf")
+    @login_required
+    def finance_batch_report(batch_id: int):
+        require_admin()
+        batch = FinancialBatch.query.get_or_404(batch_id)
+        entries = (
+            FinancialEntry.query.filter_by(financial_batch_id=batch.id)
+            .order_by(FinancialEntry.company_id, FinancialEntry.supplier_id)
+            .all()
+        )
+
+        if canvas is None:
+            flash(
+                "Geração de PDF indisponível: instale o pacote 'reportlab' no ambiente.",
+                "danger",
+            )
+            return redirect(url_for("admin.finance_manual_entry"))
+
+        # Preparar dados agrupados: Empresa -> Cliente -> [motoboys]
+        grouped: dict[str, dict[str, list[dict]]] = {}
+
+        # Intervalo do mês para localizar contratos (para adiantamento/residual)
+        month_start = date(batch.year, batch.month, 1)
+        if batch.month == 12:
+            month_end = date(batch.year + 1, 1, 1) - timedelta(days=1)
+        else:
+            month_end = date(batch.year, batch.month + 1, 1) - timedelta(days=1)
+
+        for e in entries:
+            company_name = e.company.legal_name if e.company else "-"
+            client_name = "-"
+            motoboy_name = "-"
+            pix_key = "-"
+
+            if e.supplier:
+                if e.supplier.type == SUPPLIER_CLIENT:
+                    client_name = e.supplier.legal_name or e.supplier.name
+                elif e.supplier.type == SUPPLIER_MOTOBOY:
+                    motoboy_name = e.supplier.name
+                    pix_key = e.supplier.bank_account_pix or "-"
+
+                    # Para batches de adiantamento/residual, tentar descobrir o CLIENTE
+                    # a partir do contrato de motoboy ativo no mês do batch.
+                    if batch.batch_type in (BATCH_TYPE_ADVANCE, BATCH_TYPE_RESIDUAL):
+                        try:
+                            contract = (
+                                Contract.query.filter(
+                                    Contract.contract_type == CONTRACT_TYPE_MOTOBOY,
+                                    Contract.supplier_id == e.supplier_id,
+                                )
+                                .filter(Contract.start_date <= month_end)
+                                .filter(
+                                    (Contract.end_date.is_(None))
+                                    | (Contract.end_date >= month_start)
+                                )
+                                .first()
+                            )
+                            if contract and contract.other_supplier:
+                                client_name = (
+                                    contract.other_supplier.legal_name
+                                    or contract.other_supplier.name
+                                )
+                        except Exception:
+                            pass
+
+            try:
+                val = float(e.amount)
+            except (TypeError, ValueError):
+                val = 0.0
+
+            comp_key = company_name or "-"
+            cli_key = client_name or "-"
+            grouped.setdefault(comp_key, {}).setdefault(cli_key, []).append(
+                {
+                    "motoboy": motoboy_name or "-",
+                    "pix": pix_key or "-",
+                    "amount": val,
+                }
+            )
+
+        buf = BytesIO()
+        pdf = canvas.Canvas(buf, pagesize=A4)
+        width, height = A4
+
+        # Cabeçalho
+        tipo_map = {
+            BATCH_TYPE_REVENUE: "Receita",
+            BATCH_TYPE_PAYMENT: "Pagamento",
+            BATCH_TYPE_ADVANCE: "Adiantamento",
+            BATCH_TYPE_RESIDUAL: "Residual",
+        }
+        month_names = (
+            "",
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro",
+        )
+        tipo = tipo_map.get(batch.batch_type, batch.batch_type)
+        mes_label = f"{month_names[batch.month]} de {batch.year}"
+        titulo = f"Relatório de {tipo}"
+
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(40, height - 40, titulo)
+
+        pdf.setFont("Helvetica", 11)
+        pdf.drawString(40, height - 60, f"Referência: {mes_label}")
+        pdf.drawString(40, height - 75, f"Natureza: {batch.financial_nature.name}")
+        pdf.drawString(
+            40,
+            height - 90,
+            f"Data de cobrança: {batch.charge_date.strftime('%d/%m/%Y')}",
+        )
+
+        y = height - 120
+        pdf.setFont("Helvetica", 10)
+
+        def new_page():
+            nonlocal y
+            pdf.showPage()
+            pdf.setFont("Helvetica", 10)
+            y = height - 40
+
+        total_geral = 0.0
+
+        # Agrupado por Empresa, Cliente, com motoboys listados abaixo
+        for company_name in sorted(grouped.keys()):
+            if y < 80:
+                new_page()
+            pdf.setFont("Helvetica-Bold", 11)
+            pdf.drawString(40, y, f"Empresa: {company_name}")
+            y -= 18
+
+            for client_name in sorted(grouped[company_name].keys()):
+                if y < 70:
+                    new_page()
+                    pdf.setFont("Helvetica-Bold", 11)
+                    pdf.drawString(40, y, f"Empresa: {company_name}")
+                    y -= 18
+
+                pdf.setFont("Helvetica-Bold", 10)
+                pdf.drawString(60, y, f"Cliente: {client_name}")
+                y -= 14
+
+                # Cabeçalho da sub-tabela de motoboys (com linha inferior)
+                pdf.setFont("Helvetica-Bold", 9)
+                pdf.drawString(70, y, "Motoboy")
+                pdf.drawString(260, y, "PIX")
+                pdf.drawRightString(540, y, "Valor a pagar")
+                # linha horizontal abaixo do cabeçalho
+                pdf.line(68, y - 2, 540, y - 2)
+                y -= 12
+
+                pdf.setFont("Helvetica", 9)
+                subtotal = 0.0
+                row_index = 0
+                for item in grouped[company_name][client_name]:
+                    if y < 60:
+                        new_page()
+                        pdf.setFont("Helvetica-Bold", 11)
+                        pdf.drawString(40, y, f"Empresa: {company_name}")
+                        y -= 18
+                        pdf.setFont("Helvetica-Bold", 10)
+                        pdf.drawString(60, y, f"Cliente: {client_name}")
+                        y -= 14
+                        pdf.setFont("Helvetica-Bold", 9)
+                        pdf.drawString(70, y, "Motoboy")
+                        pdf.drawString(260, y, "PIX")
+                        pdf.drawRightString(540, y, "Valor a pagar")
+                        y -= 12
+                        pdf.setFont("Helvetica", 9)
+
+                    # Fundo listrado alternado (um pouco mais escuro dentro da área da tabela)
+                    if row_index % 2 == 0:
+                        pdf.setFillGray(0.92)
+                        pdf.rect(68, y - 1, 472, 11, fill=1, stroke=0)
+                        pdf.setFillGray(0.0)
+
+                    pdf.drawString(70, y, (item["motoboy"] or "")[:30])
+                    pdf.drawString(260, y, (item["pix"] or "")[:24])
+                    val = item["amount"] or 0.0
+                    subtotal += val
+                    total_geral += val
+                    pdf.drawRightString(
+                        540,
+                        y,
+                        f"{val:,.2f}".replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", "."),
+                    )
+                    # linha horizontal separando as linhas da tabela
+                    pdf.line(68, y - 2, 540, y - 2)
+                    y -= 12
+                    row_index += 1
+
+                # Subtotal por cliente
+                if y < 50:
+                    new_page()
+                pdf.setFont("Helvetica-Bold", 9)
+                pdf.drawRightString(
+                    540,
+                    y,
+                    f"Subtotal cliente: {subtotal:,.2f}"
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", "."),
+                )
+                y -= 18
+
+            y -= 6
+
+        # Total geral
+        if y < 40:
+            new_page()
+        pdf.setFont("Helvetica-Bold", 11)
+        pdf.drawRightString(
+            540,
+            y,
+            f"Total geral: {total_geral:,.2f}".replace(",", "X")
+            .replace(".", ",")
+            .replace("X", "."),
+        )
+
+        pdf.showPage()
+        pdf.save()
+        buf.seek(0)
+
+        resp = make_response(buf.read())
+        resp.headers["Content-Type"] = "application/pdf"
+        resp.headers[
+            "Content-Disposition"
+        ] = f'inline; filename="processamento_{batch.id}.pdf"'
+        return resp
 
     # ---- Transferência entre contas ----
     @bp.route("/financeiro/transferencia/form")

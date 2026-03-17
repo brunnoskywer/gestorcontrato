@@ -109,6 +109,14 @@ main.container {
   background-color: #eef4ff;
 }
 
+.table-list tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.table-list tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
 .table-list tbody td {
   padding-top: 0.55rem;
   padding-bottom: 0.55rem;
