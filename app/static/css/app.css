@@ -48,14 +48,34 @@ body {
   background-color: rgba(13, 110, 253, 0.18);
 }
 
+[data-bs-theme="dark"] .hover-shadow:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
+}
+
+/* Hardcoded bg-white on tables: use theme background */
+[data-bs-theme="dark"] .table.bg-white {
+  --bs-table-bg: var(--bs-body-bg);
+  background-color: var(--bs-body-bg) !important;
+}
+
+/* DRE / tables: thead.table-light must not stay paper-white in dark mode */
+[data-bs-theme="dark"] thead.table-light th {
+  background-color: var(--bs-secondary-bg) !important;
+  color: var(--bs-body-color) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+/* Toolbar icon buttons: clearer contrast on dark pages */
 [data-bs-theme="dark"] .admin-toolbar .btn {
   background-color: var(--bs-secondary-bg);
   border-color: var(--bs-border-color);
-  color: var(--bs-body-color);
+  color: var(--bs-emphasis-color);
 }
 
-[data-bs-theme="dark"] .hover-shadow:hover {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
+[data-bs-theme="dark"] .admin-toolbar .btn:hover {
+  background-color: var(--bs-tertiary-bg);
+  border-color: var(--bs-border-color);
+  color: var(--bs-emphasis-color);
 }
 
 /* Barra de abas (tab panel) – sem margem em relação ao menu */

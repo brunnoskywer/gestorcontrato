@@ -111,7 +111,7 @@
 
 {# Gráfico de barras: Receitas x Despesas no mês #}
 <div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-white border-0 pt-3 pb-0">
+  <div class="card-header border-0 border-bottom py-3">
     <h5 class="card-title mb-0 fw-semibold">Receitas e despesas em {{ month_label }}</h5>
   </div>
   <div class="card-body">
@@ -123,7 +123,7 @@
 
 {# Gráfico de linha: Evolução do saldo no mês #}
 <div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-white border-0 pt-3 pb-0">
+  <div class="card-header border-0 border-bottom py-3">
     <h5 class="card-title mb-0 fw-semibold">Evolução do saldo em {{ month_label }}</h5>
   </div>
   <div class="card-body">
@@ -173,8 +173,17 @@
   var payables = {{ chart_payables | tojson }};
   var balance = {{ chart_balance | tojson }};
 
+  function chartThemeColors() {
+    var dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    return {
+      color: dark ? '#e9ecef' : '#495057',
+      grid: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+    };
+  }
+
   function drawCharts() {
     if (typeof Chart === 'undefined') return;
+    var tc = chartThemeColors();
     if (document.getElementById('chartBars')) {
       new Chart(document.getElementById('chartBars'), {
         type: 'bar',
@@ -188,12 +197,21 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
+          plugins: { legend: { position: 'top', labels: { color: tc.color } } },
           scales: {
-            x: { title: { display: true, text: 'Dia do mês' } },
-            y: { beginAtZero: true, title: { display: true, text: 'R$' } }
-          }
-        }
+            x: {
+              title: { display: true, text: 'Dia do mês', color: tc.color },
+              ticks: { color: tc.color },
+              grid: { color: tc.grid },
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'R$', color: tc.color },
+              ticks: { color: tc.color },
+              grid: { color: tc.grid },
+            },
+          },
+        },
       });
     }
     if (document.getElementById('chartBalance')) {
@@ -213,12 +231,20 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
+          plugins: { legend: { position: 'top', labels: { color: tc.color } } },
           scales: {
-            x: { title: { display: true, text: 'Dia do mês' } },
-            y: { title: { display: true, text: 'R$' } }
-          }
-        }
+            x: {
+              title: { display: true, text: 'Dia do mês', color: tc.color },
+              ticks: { color: tc.color },
+              grid: { color: tc.grid },
+            },
+            y: {
+              title: { display: true, text: 'R$', color: tc.color },
+              ticks: { color: tc.color },
+              grid: { color: tc.grid },
+            },
+          },
+        },
       });
     }
   }

@@ -33,7 +33,7 @@
           <td class="py-2 ps-3">(-) Despesas</td>
           <td class="py-2 pe-3 text-end text-danger">R$ {{ total_despesas|format_currency }}</td>
         </tr>
-        <tr class="bg-light">
+        <tr class="table-secondary">
           <td class="py-3 ps-3 fw-bold">Resultado do período</td>
           <td class="py-3 pe-3 text-end fw-bold {{ 'text-success' if resultado >= 0 else 'text-danger' }}">R$ {{ resultado|format_currency }}</td>
         </tr>
@@ -46,7 +46,7 @@
 <div class="row g-3">
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100">
-      <div class="card-header bg-white border-0 border-bottom py-2">
+      <div class="card-header border-0 border-bottom py-2">
         <h6 class="mb-0 fw-semibold">Receitas por natureza</h6>
       </div>
       <div class="card-body p-0">
@@ -75,7 +75,7 @@
   </div>
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100">
-      <div class="card-header bg-white border-0 border-bottom py-2">
+      <div class="card-header border-0 border-bottom py-2">
         <h6 class="mb-0 fw-semibold">Despesas por natureza</h6>
       </div>
       <div class="card-body p-0">
