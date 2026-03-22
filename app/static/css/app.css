@@ -2,6 +2,13 @@ body {
   background-color: #f5f5f7;
 }
 
+/* Turbo frame: feedback visual durante troca de aba / navegação */
+#main-content.main-content-loading {
+  opacity: 0.72;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
 /* ---- Dark theme (Bootstrap color mode + custom components) ---- */
 [data-bs-theme="dark"] body {
   background-color: var(--bs-body-bg);

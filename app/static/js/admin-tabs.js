@@ -1,5 +1,7 @@
 /**
  * Painel de abas: cada link do menu abre em uma aba; se já existir, apenas foca nela.
+ * Usa navegação nativa do turbo-frame (src / reload) para o Turbo executar scripts,
+ * cancelar requisições antigas e evitar race conditions do fetch+innerHTML.
  */
 (function () {
   'use strict';
@@ -13,6 +15,9 @@
   var lastFrameLoadUrl = null;
   var listenersBound = false;
   var filterFormsBound = false;
+  /** Evita initInitialTab duplicado (DOMContentLoaded + turbo:load na primeira carga). */
+  var initialTabsReady = false;
+  var pendingLoadCallback = null;
 
   function normalizePath(href) {
     if (!href) return '';
@@ -25,8 +30,19 @@
     }
   }
 
+  function resolveFrameUrl(url) {
+    if (!url) return '';
+    try {
+      return new URL(url, window.location.origin).href;
+    } catch (e) {
+      return url;
+    }
+  }
+
   function findTabByPath(path) {
-    return tabs.find(function (t) { return t.path === path; });
+    return tabs.find(function (t) {
+      return t.path === path;
+    });
   }
 
   function getFrame() {
@@ -43,49 +59,62 @@
     });
   }
 
-  function loadUrlInFrame(url, callback) {
+  function updateTabTitleFromFrame(tab) {
+    if (!tab) return;
     var frame = getFrame();
     if (!frame) return;
-    fetch(url, {
-      headers: {
-        'Accept': 'text/html',
-        'Turbo-Frame': FRAME_ID,
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-      .then(function (r) { return r.text(); })
-      .then(function (html) {
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(html, 'text/html');
-        var frameEl = doc.querySelector('turbo-frame#' + FRAME_ID);
-        if (frameEl) {
-          frame.innerHTML = frameEl.innerHTML;
-          try {
-            document.dispatchEvent(new CustomEvent('admin:frame-updated', { detail: { frame: frame } }));
-          } catch (err) {}
-        }
-        if (callback) callback(html);
-      })
-      .catch(function () {
+    var h =
+      frame.querySelector('h1.h3') ||
+      frame.querySelector('h1.h4') ||
+      frame.querySelector('.h3') ||
+      frame.querySelector('.h4') ||
+      frame.querySelector('h1');
+    if (h && h.textContent.trim()) {
+      tab.title = h.textContent.trim();
+      var tabLink = document.querySelector('[data-tab-id="' + tab.id + '"] .admin-tab-title');
+      if (tabLink) tabLink.textContent = tab.title;
+    }
+  }
+
+  /**
+   * Carrega URL no frame principal via Turbo (executa scripts, cancela loads anteriores).
+   */
+  function loadUrlInFrame(url, callback) {
+    var frame = getFrame();
+    if (!frame) {
+      if (callback) callback(null);
+      return;
+    }
+    var absolute = resolveFrameUrl(url);
+    if (!absolute) {
+      if (callback) callback(null);
+      return;
+    }
+
+    pendingLoadCallback = callback || null;
+
+    var currentAttr = frame.getAttribute('src');
+    var sameDestination =
+      currentAttr && resolveFrameUrl(currentAttr) === absolute;
+
+    if (sameDestination && typeof frame.reload === 'function') {
+      frame.reload().catch(function () {
+        frame.classList.remove('main-content-loading');
+        pendingLoadCallback = null;
         if (callback) callback(null);
       });
+      return;
+    }
+
+    frame.src = absolute;
   }
 
   function loadTabContent(tab, callback) {
     if (!tab || !tab.path) return;
     lastFrameLoadUrl = tab.path;
-    loadUrlInFrame(tab.path, function (html) {
-      if (tab && html) {
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(html, 'text/html');
-        var titleEl = doc.querySelector('title');
-        if (titleEl && titleEl.textContent) {
-          var rawTitle = titleEl.textContent.trim();
-          var parts = rawTitle.split(' - ');
-          tab.title = parts[parts.length - 1].trim();
-          var tabLink = document.querySelector('[data-tab-id="' + tab.id + '"] .admin-tab-title');
-          if (tabLink) tabLink.textContent = tab.title;
-        }
+    loadUrlInFrame(tab.path, function (ok) {
+      if (ok && tab) {
+        updateTabTitleFromFrame(tab);
       }
       if (callback) callback();
     });
@@ -119,9 +148,17 @@
     var li = document.createElement('li');
     li.className = 'nav-item admin-tab-item';
     li.innerHTML =
-      '<a class="nav-link d-flex align-items-center" href="#" data-tab-id="' + id + '" data-path="' + (norm.replace(/"/g, '&quot;')) + '">' +
-      '<span class="admin-tab-title">' + (title || norm) + '</span>' +
-      '<span class="admin-tab-close ms-2" data-tab-id="' + id + '" aria-label="Fechar" title="Fechar aba">&times;</span>' +
+      '<a class="nav-link d-flex align-items-center" href="#" data-tab-id="' +
+      id +
+      '" data-path="' +
+      norm.replace(/"/g, '&quot;') +
+      '">' +
+      '<span class="admin-tab-title">' +
+      (title || norm) +
+      '</span>' +
+      '<span class="admin-tab-close ms-2" data-tab-id="' +
+      id +
+      '" aria-label="Fechar" title="Fechar aba">&times;</span>' +
       '</a>';
     list.appendChild(li);
 
@@ -129,7 +166,9 @@
     link.addEventListener('click', function (e) {
       e.preventDefault();
       if (e.target.closest('.admin-tab-close')) {
-        var idx = tabs.findIndex(function (t) { return t.id === id; });
+        var idx = tabs.findIndex(function (t) {
+          return t.id === id;
+        });
         if (idx === -1) return;
         tabs.splice(idx, 1);
         li.remove();
@@ -170,23 +209,28 @@
   function interceptFilterForms() {
     if (filterFormsBound) return;
     filterFormsBound = true;
-    document.addEventListener('submit', function (e) {
-      var form = e.target && e.target.tagName === 'FORM' ? e.target : null;
-      if (!form || form.method.toLowerCase() !== 'get') return;
-      var frame = getFrame();
-      if (!frame || !form.closest('#' + FRAME_ID)) return;
-      e.preventDefault();
-      var action = (form.getAttribute('action') || window.location.href).trim();
-      if (!action) return;
-      var params = new URLSearchParams(new FormData(form));
-      var sep = action.indexOf('?') !== -1 ? '&' : '?';
-      var url = params.toString() ? action + sep + params.toString() : action.replace(/\?.*$/, '');
-      loadUrlInFrame(url, function () {
-        try {
-          window.history.replaceState(null, '', url);
-        } catch (err) {}
-      });
-    }, true);
+    document.addEventListener(
+      'submit',
+      function (e) {
+        var form = e.target && e.target.tagName === 'FORM' ? e.target : null;
+        if (!form || form.method.toLowerCase() !== 'get') return;
+        var frame = getFrame();
+        if (!frame || !form.closest('#' + FRAME_ID)) return;
+        e.preventDefault();
+        var action = (form.getAttribute('action') || window.location.href).trim();
+        if (!action) return;
+        var params = new URLSearchParams(new FormData(form));
+        var sep = action.indexOf('?') !== -1 ? '&' : '?';
+        var url = params.toString() ? action + sep + params.toString() : action.replace(/\?.*$/, '');
+        loadUrlInFrame(url, function (ok) {
+          if (!ok) return;
+          try {
+            window.history.replaceState(null, '', url);
+          } catch (err) {}
+        });
+      },
+      true
+    );
   }
 
   function interceptNavLinks() {
@@ -207,13 +251,23 @@
   function updateActiveTabOnFrameNavigate() {
     document.addEventListener('turbo:before-fetch-request', function (e) {
       var target = e.target;
-      if (target.id === FRAME_ID || (target.getAttribute && target.getAttribute('data-turbo-frame') === FRAME_ID)) {
-        lastFrameLoadUrl = e.detail.url.toString ? new URL(e.detail.url).pathname : e.detail.url;
+      if (
+        target.id === FRAME_ID ||
+        (target.getAttribute && target.getAttribute('data-turbo-frame') === FRAME_ID)
+      ) {
+        try {
+          var u = new URL(e.detail.url.toString(), window.location.origin);
+          lastFrameLoadUrl = u.pathname;
+        } catch (err) {
+          lastFrameLoadUrl = e.detail.url;
+        }
       }
     });
     document.addEventListener('turbo:frame-render', function (e) {
       if (e.target.id !== FRAME_ID || !activeTabId || !lastFrameLoadUrl) return;
-      var tab = tabs.find(function (t) { return t.id === activeTabId; });
+      var tab = tabs.find(function (t) {
+        return t.id === activeTabId;
+      });
       if (tab) {
         tab.path = lastFrameLoadUrl;
         var tabLink = document.querySelector('[data-tab-id="' + activeTabId + '"]');
@@ -223,13 +277,46 @@
     });
   }
 
+  /** Um único handler: dispara admin:frame-updated e o callback da navegação que acabou de concluir. */
+  function wireFrameLoadPipeline() {
+    document.addEventListener('turbo:frame-load', function (e) {
+      if (e.target.id !== FRAME_ID) return;
+      var frame = e.target;
+      frame.classList.remove('main-content-loading');
+      try {
+        document.dispatchEvent(new CustomEvent('admin:frame-updated', { detail: { frame: frame } }));
+      } catch (err) {}
+      var cb = pendingLoadCallback;
+      pendingLoadCallback = null;
+      if (cb) cb(true);
+    });
+
+    document.addEventListener('turbo:before-fetch-request', function (e) {
+      if (e.target && e.target.id === FRAME_ID) {
+        e.target.classList.add('main-content-loading');
+      }
+    });
+
+    document.addEventListener('turbo:fetch-request-error', function () {
+      var frame = getFrame();
+      if (!frame || !frame.classList.contains('main-content-loading')) return;
+      frame.classList.remove('main-content-loading');
+      pendingLoadCallback = null;
+    });
+  }
+
   function init() {
     if (!document.getElementById(FRAME_ID)) return;
-    initInitialTab();
+    if (!initialTabsReady) {
+      initInitialTab();
+      initialTabsReady = true;
+    }
     interceptFilterForms();
     interceptNavLinks();
     updateActiveTabOnFrameNavigate();
   }
+
+  wireFrameLoadPipeline();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
