@@ -1,8 +1,24 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-bs-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      (function () {
+        try {
+          var k = "gestorContrato-theme";
+          var v = localStorage.getItem(k);
+          if (v === "dark" || v === "light") {
+            document.documentElement.setAttribute("data-bs-theme", v);
+          } else if (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+          ) {
+            document.documentElement.setAttribute("data-bs-theme", "dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>{{ config.APP_NAME }} - {% block title %}{% endblock %}</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -188,7 +204,29 @@
               {% endif %}
             {% endif %}
           </ul>
-          <ul class="navbar-nav ms-auto">
+          <ul class="navbar-nav ms-auto align-items-center flex-row gap-1">
+            <li class="nav-item d-flex align-items-center">
+              <button
+                type="button"
+                class="btn btn-outline-light btn-sm rounded-pill d-flex align-items-center justify-content-center p-0"
+                id="theme-toggle"
+                style="width: 2.35rem; height: 2.35rem"
+                title="Dark mode"
+                aria-label="Switch to dark theme"
+                aria-pressed="false"
+              >
+                <span class="theme-icon-moon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.619 16 0 12.382 0 7.678 0 3.767 1.89 1.318 3.78.437a.733.733 0 0 1 .631-.039c.246.11.45.354.39.58z"/>
+                  </svg>
+                </span>
+                <span class="theme-icon-sun" hidden aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                  </svg>
+                </span>
+              </button>
+            </li>
             {% if current_user.is_authenticated %}
             <li class="nav-item dropdown">
               <a
@@ -231,7 +269,7 @@
     {% include "admin/_modal_confirm_action.html" %}
 
     <div id="admin-tab-bar-wrap" class="container-fluid px-0" data-home-url="{{ url_for('main.dashboard') }}" data-home-title="Dashboard">
-      <div id="admin-tab-bar" class="admin-tab-bar border-bottom bg-white px-2" style="display: none;">
+      <div id="admin-tab-bar" class="admin-tab-bar border-bottom px-2" style="display: none;">
         <ul id="admin-tab-list" class="nav nav-tabs"></ul>
       </div>
     </div>
@@ -252,6 +290,7 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
+    <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
     <script src="{{ url_for('static', filename='js/admin-modals.js') }}"></script>
     <script src="{{ url_for('static', filename='js/admin-tabs.js') }}"></script>
     {% block scripts %}{% endblock %}
