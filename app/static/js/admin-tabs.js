@@ -1,7 +1,6 @@
 /**
  * Painel de abas: cada link do menu abre em uma aba; se já existir, apenas foca nela.
- * Usa navegação nativa do turbo-frame (src / reload) para o Turbo executar scripts,
- * cancelar requisições antigas e evitar race conditions do fetch+innerHTML.
+ * Implementação sem depender do lifecycle do Turbo para troca de conteúdo.
  */
 (function () {
   'use strict';
@@ -10,13 +9,14 @@
   var TAB_BAR_WRAP_ID = 'admin-tab-bar-wrap';
   var TAB_LIST_ID = 'admin-tab-list';
   var FRAME_ID = 'main-content';
+
   var tabs = [];
   var activeTabId = null;
   var listenersBound = false;
   var filterFormsBound = false;
-  /** Evita initInitialTab duplicado (DOMContentLoaded + turbo:load na primeira carga). */
   var initialTabsReady = false;
-  var pendingLoadCallback = null;
+  var currentRequestController = null;
+  var requestCounter = 0;
 
   function normalizePath(href) {
     if (!href) return '';
@@ -29,23 +29,20 @@
     }
   }
 
-  function resolveFrameUrl(url) {
-    if (!url) return '';
+  function toAbsoluteUrl(url) {
     try {
-      return new URL(url, window.location.origin).href;
+      return new URL(url, window.location.origin).toString();
     } catch (e) {
       return url;
     }
   }
 
-  function findTabByPath(path) {
-    return tabs.find(function (t) {
-      return t.path === path;
-    });
-  }
-
   function getFrame() {
     return document.getElementById(FRAME_ID);
+  }
+
+  function findTabByPath(path) {
+    return tabs.find(function (t) { return t.path === path; });
   }
 
   function setActiveTab(id) {
@@ -53,98 +50,148 @@
     var list = document.getElementById(TAB_LIST_ID);
     if (!list) return;
     list.querySelectorAll('.nav-link').forEach(function (el) {
-      var tabId = el.getAttribute('data-tab-id');
-      el.classList.toggle('active', tabId === id);
+      el.classList.toggle('active', el.getAttribute('data-tab-id') === id);
     });
+  }
+
+  function setTabPath(tabId, path) {
+    if (!tabId || !path) return;
+    var normalized = normalizePath(path);
+    var tab = tabs.find(function (t) { return t.id === tabId; });
+    if (!tab) return;
+    tab.path = normalized;
+    var link = document.querySelector('[data-tab-id="' + tabId + '"]');
+    if (link) link.setAttribute('data-path', normalized);
   }
 
   function updateTabTitleFromFrame(tab) {
     if (!tab) return;
     var frame = getFrame();
     if (!frame) return;
-    var h =
+    var titleEl =
       frame.querySelector('h1.h3') ||
       frame.querySelector('h1.h4') ||
+      frame.querySelector('h1') ||
       frame.querySelector('.h3') ||
-      frame.querySelector('.h4') ||
-      frame.querySelector('h1');
-    if (h && h.textContent.trim()) {
-      tab.title = h.textContent.trim();
-      var tabLink = document.querySelector('[data-tab-id="' + tab.id + '"] .admin-tab-title');
-      if (tabLink) tabLink.textContent = tab.title;
-    }
+      frame.querySelector('.h4');
+    if (!titleEl || !titleEl.textContent.trim()) return;
+    tab.title = titleEl.textContent.trim();
+    var textEl = document.querySelector('[data-tab-id="' + tab.id + '"] .admin-tab-title');
+    if (textEl) textEl.textContent = tab.title;
   }
 
-  /**
-   * Carrega URL no frame principal via Turbo (executa scripts, cancela loads anteriores).
-   */
+  function executeScriptsSequentially(container, done) {
+    var scripts = Array.prototype.slice.call(container.querySelectorAll('script'));
+    if (!scripts.length) {
+      if (done) done();
+      return;
+    }
+
+    var i = 0;
+    function runNext() {
+      if (i >= scripts.length) {
+        if (done) done();
+        return;
+      }
+      var oldScript = scripts[i++];
+      var newScript = document.createElement('script');
+      Array.prototype.forEach.call(oldScript.attributes, function (attr) {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      if (!oldScript.src) newScript.textContent = oldScript.textContent;
+      newScript.async = false;
+
+      if (oldScript.src) {
+        newScript.onload = runNext;
+        newScript.onerror = runNext;
+      }
+
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+      if (!oldScript.src) runNext();
+    }
+
+    runNext();
+  }
+
   function loadUrlInFrame(url, callback) {
     var frame = getFrame();
     if (!frame) {
       if (callback) callback(null);
       return;
     }
-    var absolute = resolveFrameUrl(url);
+
+    var absolute = toAbsoluteUrl(url);
     if (!absolute) {
       if (callback) callback(null);
       return;
     }
 
-    pendingLoadCallback = callback || null;
+    if (currentRequestController) currentRequestController.abort();
+    currentRequestController = new AbortController();
+    requestCounter += 1;
+    var reqId = requestCounter;
 
-    var currentAttr = frame.getAttribute('src');
-    var sameDestination =
-      currentAttr && resolveFrameUrl(currentAttr) === absolute;
+    frame.classList.add('main-content-loading');
 
-    if (sameDestination && typeof frame.reload === 'function') {
-      frame.reload().catch(function () {
+    fetch(absolute, {
+      headers: {
+        Accept: 'text/html',
+        'Turbo-Frame': FRAME_ID,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      signal: currentRequestController.signal,
+    })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        if (reqId !== requestCounter) return;
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        var newFrame = doc.querySelector('turbo-frame#' + FRAME_ID);
+        frame.innerHTML = newFrame ? newFrame.innerHTML : html;
+
+        executeScriptsSequentially(frame, function () {
+          if (reqId !== requestCounter) return;
+          frame.classList.remove('main-content-loading');
+          try {
+            document.dispatchEvent(new CustomEvent('admin:frame-updated', { detail: { frame: frame } }));
+          } catch (e) {}
+          if (callback) callback(true);
+        });
+      })
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        if (reqId !== requestCounter) return;
         frame.classList.remove('main-content-loading');
-        pendingLoadCallback = null;
         if (callback) callback(null);
       });
-      return;
-    }
-
-    frame.src = absolute;
-  }
-
-  function setTabPath(tabId, path) {
-    if (!tabId || !path) return;
-    var tab = tabs.find(function (t) { return t.id === tabId; });
-    if (!tab) return;
-    tab.path = normalizePath(path);
-    var tabLink = document.querySelector('[data-tab-id="' + tabId + '"]');
-    if (tabLink) tabLink.setAttribute('data-path', tab.path);
   }
 
   function loadTabContent(tab, callback) {
     if (!tab || !tab.path) return;
     loadUrlInFrame(tab.path, function (ok) {
-      if (ok && tab) {
-        updateTabTitleFromFrame(tab);
-      }
+      if (ok) updateTabTitleFromFrame(tab);
       if (callback) callback();
     });
   }
 
   function ensureTabBar() {
     var bar = document.getElementById(TAB_BAR_ID);
-    if (bar) {
-      bar.style.display = bar.style.display === 'none' ? 'block' : bar.style.display;
-      return bar;
-    }
-    return null;
+    if (!bar) return null;
+    if (bar.style.display === 'none') bar.style.display = 'block';
+    return bar;
   }
 
   function addTab(path, title, focus) {
     var norm = normalizePath(path);
-    if (!norm) return;
+    if (!norm) return null;
+
     var existing = findTabByPath(norm);
     if (existing) {
       setActiveTab(existing.id);
       if (focus !== false) loadTabContent(existing, function () {});
       return existing;
     }
+
     ensureTabBar();
     var id = 'tab-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     var tab = { id: id, path: norm, title: title || norm };
@@ -152,20 +199,13 @@
 
     var list = document.getElementById(TAB_LIST_ID);
     if (!list) return tab;
+
     var li = document.createElement('li');
     li.className = 'nav-item admin-tab-item';
     li.innerHTML =
-      '<a class="nav-link d-flex align-items-center" href="#" data-tab-id="' +
-      id +
-      '" data-path="' +
-      norm.replace(/"/g, '&quot;') +
-      '">' +
-      '<span class="admin-tab-title">' +
-      (title || norm) +
-      '</span>' +
-      '<span class="admin-tab-close ms-2" data-tab-id="' +
-      id +
-      '" aria-label="Fechar" title="Fechar aba">&times;</span>' +
+      '<a class="nav-link d-flex align-items-center" href="#" data-tab-id="' + id + '" data-path="' + norm.replace(/"/g, '&quot;') + '">' +
+      '<span class="admin-tab-title">' + (title || norm) + '</span>' +
+      '<span class="admin-tab-close ms-2" data-tab-id="' + id + '" aria-label="Close tab" title="Close tab">&times;</span>' +
       '</a>';
     list.appendChild(li);
 
@@ -173,12 +213,12 @@
     link.addEventListener('click', function (e) {
       e.preventDefault();
       if (e.target.closest('.admin-tab-close')) {
-        var idx = tabs.findIndex(function (t) {
-          return t.id === id;
-        });
+        var idx = tabs.findIndex(function (t) { return t.id === id; });
         if (idx === -1) return;
+
         tabs.splice(idx, 1);
         li.remove();
+
         if (activeTabId === id && tabs.length > 0) {
           var next = tabs[idx] || tabs[idx - 1] || tabs[0];
           setActiveTab(next.id);
@@ -193,6 +233,7 @@
         }
         return;
       }
+
       setActiveTab(id);
       loadTabContent(tab, function () {});
     });
@@ -203,11 +244,11 @@
   }
 
   function initInitialTab() {
-    var path = window.location.pathname || '/';
+    if (!getFrame()) return;
+    var path = (window.location.pathname || '/') + (window.location.search || '');
     var rawTitle = document.title || path;
     var parts = rawTitle.split(' - ');
     var title = parts[parts.length - 1].trim();
-    if (!getFrame()) return;
     var bar = document.getElementById(TAB_BAR_ID);
     if (bar) bar.style.display = 'block';
     addTab(path, title, false);
@@ -216,76 +257,51 @@
   function interceptFilterForms() {
     if (filterFormsBound) return;
     filterFormsBound = true;
-    document.addEventListener(
-      'submit',
-      function (e) {
-        var form = e.target && e.target.tagName === 'FORM' ? e.target : null;
-        if (!form || form.method.toLowerCase() !== 'get') return;
-        var frame = getFrame();
-        if (!frame || !form.closest('#' + FRAME_ID)) return;
-        e.preventDefault();
-        var action = (form.getAttribute('action') || window.location.href).trim();
-        if (!action) return;
-        var params = new URLSearchParams(new FormData(form));
-        var sep = action.indexOf('?') !== -1 ? '&' : '?';
-        var url = params.toString() ? action + sep + params.toString() : action.replace(/\?.*$/, '');
-        setTabPath(activeTabId, url);
-        loadUrlInFrame(url, function (ok) {
-          if (!ok) return;
-          try {
-            window.history.replaceState(null, '', url);
-          } catch (err) {}
-        });
-      },
-      true
-    );
+
+    document.addEventListener('submit', function (e) {
+      var form = e.target && e.target.tagName === 'FORM' ? e.target : null;
+      if (!form || form.method.toLowerCase() !== 'get') return;
+      var frame = getFrame();
+      if (!frame || !form.closest('#' + FRAME_ID)) return;
+
+      e.preventDefault();
+      var action = (form.getAttribute('action') || window.location.href).trim();
+      if (!action) return;
+
+      var params = new URLSearchParams(new FormData(form));
+      var sep = action.indexOf('?') !== -1 ? '&' : '?';
+      var url = params.toString() ? action + sep + params.toString() : action.replace(/\?.*$/, '');
+
+      setTabPath(activeTabId, url);
+      loadUrlInFrame(url, function (ok) {
+        if (!ok) return;
+        try {
+          window.history.replaceState(null, '', url);
+        } catch (err) {}
+      });
+    }, true);
   }
 
   function interceptNavLinks() {
     if (listenersBound) return;
     listenersBound = true;
+
     document.addEventListener('click', function (e) {
       var link = e.target.closest('a[data-turbo-frame="' + FRAME_ID + '"]');
-      if (!link || link.getAttribute('href') === '#' || link.getAttribute('href') === '') return;
-      var href = link.getAttribute('href');
-      if (!href || href.indexOf('javascript:') === 0) return;
+      if (!link) return;
       if (link.closest('#admin-tab-bar')) return;
+
+      var href = link.getAttribute('href');
+      if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
+
       e.preventDefault();
       var title = (link.textContent || '').trim();
       addTab(href, title || undefined, true);
     });
   }
 
-  /** Um único handler: dispara admin:frame-updated e o callback da navegação que acabou de concluir. */
-  function wireFrameLoadPipeline() {
-    document.addEventListener('turbo:frame-load', function (e) {
-      if (e.target.id !== FRAME_ID) return;
-      var frame = e.target;
-      frame.classList.remove('main-content-loading');
-      try {
-        document.dispatchEvent(new CustomEvent('admin:frame-updated', { detail: { frame: frame } }));
-      } catch (err) {}
-      var cb = pendingLoadCallback;
-      pendingLoadCallback = null;
-      if (cb) cb(true);
-    });
-
-    document.addEventListener('turbo:before-fetch-request', function (e) {
-      if (e.target && e.target.id === FRAME_ID) {
-        e.target.classList.add('main-content-loading');
-      }
-    });
-
-    document.addEventListener('turbo:fetch-request-error', function () {
-      var frame = getFrame();
-      if (!frame || !frame.classList.contains('main-content-loading')) return;
-      frame.classList.remove('main-content-loading');
-      pendingLoadCallback = null;
-    });
-  }
-
   function init() {
-    if (!document.getElementById(FRAME_ID)) return;
+    if (!getFrame()) return;
     if (!initialTabsReady) {
       initInitialTab();
       initialTabsReady = true;
@@ -293,8 +309,6 @@
     interceptFilterForms();
     interceptNavLinks();
   }
-
-  wireFrameLoadPipeline();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
