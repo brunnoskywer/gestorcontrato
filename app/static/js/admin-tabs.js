@@ -12,7 +12,6 @@
   var FRAME_ID = 'main-content';
   var tabs = [];
   var activeTabId = null;
-  var lastFrameLoadUrl = null;
   var listenersBound = false;
   var filterFormsBound = false;
   /** Evita initInitialTab duplicado (DOMContentLoaded + turbo:load na primeira carga). */
@@ -24,7 +23,7 @@
     try {
       var a = document.createElement('a');
       a.href = href;
-      return a.pathname || href;
+      return (a.pathname || '') + (a.search || '');
     } catch (e) {
       return href;
     }
@@ -109,9 +108,17 @@
     frame.src = absolute;
   }
 
+  function setTabPath(tabId, path) {
+    if (!tabId || !path) return;
+    var tab = tabs.find(function (t) { return t.id === tabId; });
+    if (!tab) return;
+    tab.path = normalizePath(path);
+    var tabLink = document.querySelector('[data-tab-id="' + tabId + '"]');
+    if (tabLink) tabLink.setAttribute('data-path', tab.path);
+  }
+
   function loadTabContent(tab, callback) {
     if (!tab || !tab.path) return;
-    lastFrameLoadUrl = tab.path;
     loadUrlInFrame(tab.path, function (ok) {
       if (ok && tab) {
         updateTabTitleFromFrame(tab);
@@ -222,6 +229,7 @@
         var params = new URLSearchParams(new FormData(form));
         var sep = action.indexOf('?') !== -1 ? '&' : '?';
         var url = params.toString() ? action + sep + params.toString() : action.replace(/\?.*$/, '');
+        setTabPath(activeTabId, url);
         loadUrlInFrame(url, function (ok) {
           if (!ok) return;
           try {
@@ -245,35 +253,6 @@
       e.preventDefault();
       var title = (link.textContent || '').trim();
       addTab(href, title || undefined, true);
-    });
-  }
-
-  function updateActiveTabOnFrameNavigate() {
-    document.addEventListener('turbo:before-fetch-request', function (e) {
-      var target = e.target;
-      if (
-        target.id === FRAME_ID ||
-        (target.getAttribute && target.getAttribute('data-turbo-frame') === FRAME_ID)
-      ) {
-        try {
-          var u = new URL(e.detail.url.toString(), window.location.origin);
-          lastFrameLoadUrl = u.pathname;
-        } catch (err) {
-          lastFrameLoadUrl = e.detail.url;
-        }
-      }
-    });
-    document.addEventListener('turbo:frame-render', function (e) {
-      if (e.target.id !== FRAME_ID || !activeTabId || !lastFrameLoadUrl) return;
-      var tab = tabs.find(function (t) {
-        return t.id === activeTabId;
-      });
-      if (tab) {
-        tab.path = lastFrameLoadUrl;
-        var tabLink = document.querySelector('[data-tab-id="' + activeTabId + '"]');
-        if (tabLink) tabLink.setAttribute('data-path', lastFrameLoadUrl);
-      }
-      lastFrameLoadUrl = null;
     });
   }
 
@@ -313,7 +292,6 @@
     }
     interceptFilterForms();
     interceptNavLinks();
-    updateActiveTabOnFrameNavigate();
   }
 
   wireFrameLoadPipeline();
