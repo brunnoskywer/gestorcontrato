@@ -268,7 +268,8 @@
     {% include "admin/_modal_message.html" %}
     {% include "admin/_modal_confirm_action.html" %}
 
-    <div id="admin-tab-bar-wrap" class="container-fluid px-0" data-home-url="{{ url_for('main.dashboard') }}" data-home-title="Dashboard">
+    {# data-turbo-permanent: mantém as abas dinâmicas após POST/redirect (ex.: modais) — senão o Turbo troca o DOM pelo HTML do servidor (lista vazia). #}
+    <div id="admin-tab-bar-wrap" class="container-fluid px-0" data-turbo-permanent data-home-url="{{ url_for('main.dashboard') }}" data-home-title="Dashboard">
       <div id="admin-tab-bar" class="admin-tab-bar border-bottom px-2" style="display: none;">
         <ul id="admin-tab-list" class="nav nav-tabs"></ul>
       </div>

@@ -1,6 +1,10 @@
 /**
  * Painel de abas: cada link do menu abre em uma aba; se já existir, apenas foca nela.
  * Implementação sem depender do lifecycle do Turbo para troca de conteúdo.
+ *
+ * O elemento #admin-tab-bar-wrap no base.html usa data-turbo-permanent para que,
+ * após navegações Turbo (redirect pós-formulário em modal, etc.), a barra de abas
+ * não seja substituída pelo template vazio do servidor.
  */
 (function () {
   'use strict';
