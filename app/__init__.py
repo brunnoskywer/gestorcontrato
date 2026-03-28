@@ -26,7 +26,9 @@ def create_app(config_class: type[Config] | None = None) -> Flask:
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(api_v1_bp, url_prefix="/api/v1")
 
-    from .filters import format_currency
+    from .filters import format_currency, jinja_finalize
+
+    app.jinja_env.finalize = jinja_finalize
     app.jinja_env.filters["format_currency"] = format_currency
 
     return app
