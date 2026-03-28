@@ -17,9 +17,9 @@
       </div>
     </div>
     <div class="col-12 col-md-6">
-      <label class="form-label">Cliente</label>
+      <label class="form-label">Cliente *</label>
       <div class="position-relative">
-        <input type="hidden" name="client_id" id="client_id" value="{{ contract.other_supplier_id if contract else '' }}">
+        <input type="hidden" name="client_id" id="client_id" required value="{{ contract.other_supplier_id if contract else '' }}">
         <input
           type="text"
           class="form-control form-control-md search-entity-input"

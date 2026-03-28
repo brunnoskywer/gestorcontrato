@@ -201,7 +201,7 @@ def register_routes(bp: Blueprint) -> None:
 
         if request.method == "POST":
             motoboy_id = request.form.get("motoboy_id")
-            client_id = request.form.get("client_id") or None
+            client_id_raw = (request.form.get("client_id") or "").strip()
             start_date_str = request.form.get("start_date", "")
             end_date_str = request.form.get("end_date", "")
             location = request.form.get("location", "").strip()
@@ -212,25 +212,36 @@ def register_routes(bp: Blueprint) -> None:
 
             if not motoboy_id or not start_date_str:
                 flash("Motoboy e data de início são obrigatórios.", "danger")
+            elif not client_id_raw:
+                flash("Cliente é obrigatório no contrato de motoboy.", "danger")
             else:
-                start_date_val = date.fromisoformat(start_date_str)
-                end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
-                contract = Contract(
-                    supplier_id=int(motoboy_id),
-                    contract_type=CONTRACT_TYPE_MOTOBOY,
-                    other_supplier_id=int(client_id) if client_id else None,
-                    start_date=start_date_val,
-                    end_date=end_date_val,
-                    location=location or None,
-                    service_value=service_value,
-                    bonus_value=bonus_value,
-                    missing_value=missing_value,
-                    advance_value=advance_value,
-                )
-                db.session.add(contract)
-                db.session.commit()
-                flash("Contrato de motoboy criado com sucesso.", "success")
-                return redirect(url_for("admin.motoboy_contracts_list"))
+                try:
+                    client_pk = int(client_id_raw)
+                except ValueError:
+                    flash("Cliente inválido.", "danger")
+                else:
+                    client_row = Supplier.query.filter_by(id=client_pk, type=SUPPLIER_CLIENT).first()
+                    if not client_row:
+                        flash("Selecione um cliente válido (cadastro de cliente).", "danger")
+                    else:
+                        start_date_val = date.fromisoformat(start_date_str)
+                        end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
+                        contract = Contract(
+                            supplier_id=int(motoboy_id),
+                            contract_type=CONTRACT_TYPE_MOTOBOY,
+                            other_supplier_id=client_pk,
+                            start_date=start_date_val,
+                            end_date=end_date_val,
+                            location=location or None,
+                            service_value=service_value,
+                            bonus_value=bonus_value,
+                            missing_value=missing_value,
+                            advance_value=advance_value,
+                        )
+                        db.session.add(contract)
+                        db.session.commit()
+                        flash("Contrato de motoboy criado com sucesso.", "success")
+                        return redirect(url_for("admin.motoboy_contracts_list"))
 
         return render_template(
             "admin/motoboy_contracts/form.html",
@@ -249,7 +260,7 @@ def register_routes(bp: Blueprint) -> None:
 
         if request.method == "POST":
             contract.supplier_id = int(request.form.get("motoboy_id"))
-            contract.other_supplier_id = int(request.form.get("client_id")) if request.form.get("client_id") else None
+            client_id_raw = (request.form.get("client_id") or "").strip()
             start_date_str = request.form.get("start_date", "")
             end_date_str = request.form.get("end_date", "")
             contract.location = request.form.get("location", "").strip() or None
@@ -260,12 +271,24 @@ def register_routes(bp: Blueprint) -> None:
 
             if not contract.supplier_id or not start_date_str:
                 flash("Motoboy e data de início são obrigatórios.", "danger")
+            elif not client_id_raw:
+                flash("Cliente é obrigatório no contrato de motoboy.", "danger")
             else:
-                contract.start_date = date.fromisoformat(start_date_str)
-                contract.end_date = date.fromisoformat(end_date_str) if end_date_str else None
-                db.session.commit()
-                flash("Contrato de motoboy atualizado com sucesso.", "success")
-                return redirect(url_for("admin.motoboy_contracts_list"))
+                try:
+                    client_pk = int(client_id_raw)
+                except ValueError:
+                    flash("Cliente inválido.", "danger")
+                else:
+                    client_row = Supplier.query.filter_by(id=client_pk, type=SUPPLIER_CLIENT).first()
+                    if not client_row:
+                        flash("Selecione um cliente válido (cadastro de cliente).", "danger")
+                    else:
+                        contract.other_supplier_id = client_pk
+                        contract.start_date = date.fromisoformat(start_date_str)
+                        contract.end_date = date.fromisoformat(end_date_str) if end_date_str else None
+                        db.session.commit()
+                        flash("Contrato de motoboy atualizado com sucesso.", "success")
+                        return redirect(url_for("admin.motoboy_contracts_list"))
 
         return render_template(
             "admin/motoboy_contracts/form.html",

@@ -14,7 +14,8 @@ class Contract(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=False)
     contract_type = db.Column(db.String(20), nullable=False)  # client | motoboy
-    other_supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)  # client when contract_type=motoboy
+    # Cliente do contrato quando contract_type=motoboy (obrigatório na regra de negócio; coluna permanece nullable no BD).
+    other_supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)
 
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=True)

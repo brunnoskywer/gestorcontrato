@@ -91,7 +91,7 @@
       <th>Natureza</th>
       <th>Conta</th>
       <th class="text-end text-nowrap">Valor</th>
-      <th>Vencimento</th>
+      <th class="text-center text-nowrap">Vencimento</th>
       <th>Status</th>
     </tr>
   </thead>
@@ -113,7 +113,7 @@
       <td data-label="Natureza">{{ e.financial_nature.name }}</td>
       <td data-label="Conta">{{ e.account.name if e.account else "-" }}</td>
       <td data-label="Valor" class="text-end text-nowrap">R$ {{ e.amount|format_currency }}</td>
-      <td data-label="Vencimento">{{ e.due_date or "-" }}</td>
+      <td data-label="Vencimento" class="text-center text-nowrap">{{ e.due_date or "-" }}</td>
       <td data-label="Status">{% if e.settled_at %}Quitado ({{ e.settled_at.strftime('%d/%m/%Y') }}){% else %}Pendente{% endif %}</td>
     </tr>
     {% else %}
