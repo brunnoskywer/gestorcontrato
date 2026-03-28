@@ -196,6 +196,26 @@
   }
   window.showConfirmModal = showConfirmModal;
 
+  /**
+   * HTMLFormElement.submit() não dispara o evento submit — o Turbo não intercepta e a página recarrega inteira (perde abas).
+   * requestSubmit() dispara submit como um clique real no formulário.
+   */
+  function submitFormForTurbo(form) {
+    if (!form) return;
+    try {
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+        return;
+      }
+    } catch (e) {}
+    var btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.hidden = true;
+    form.appendChild(btn);
+    btn.click();
+    form.removeChild(btn);
+  }
+
   function initConfirmActionModal() {
     var modalEl = document.getElementById('adminConfirmActionModal');
     var btnEl = document.getElementById('adminConfirmActionBtn');
@@ -455,7 +475,7 @@
               form.appendChild(input);
             });
             document.body.appendChild(form);
-            form.submit();
+            submitFormForTurbo(form);
           }
         );
       });
@@ -688,12 +708,17 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     document.addEventListener('submit', function (e) {
       var form = e.target && e.target.closest && e.target.closest('form.admin-confirm-submit');
       if (!form) return;
+      if (form.getAttribute('data-confirm-bypass') === '1') {
+        form.removeAttribute('data-confirm-bypass');
+        return;
+      }
       e.preventDefault();
       var message = form.getAttribute('data-confirm-message') || 'Confirmar ação?';
       var title = form.getAttribute('data-confirm-title') || 'Confirmar';
       var confirmLabel = form.getAttribute('data-confirm-label') || 'Confirmar';
       showConfirmModal(message, title, confirmLabel, function () {
-        form.submit();
+        form.setAttribute('data-confirm-bypass', '1');
+        submitFormForTurbo(form);
       });
     }, true);
   }
