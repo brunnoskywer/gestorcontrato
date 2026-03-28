@@ -7,7 +7,7 @@
         {% if contract.other_supplier %} — <strong>{{ contract.other_supplier.legal_name or contract.other_supplier.name }}</strong>{% endif %}
       </p>
       <p class="text-muted small mb-0">
-        Valor falta do contrato (usado na conta a pagar do substituto): <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}— (defina no contrato){% endif %}</strong>
+        Valor falta do contrato (usado na conta a pagar do diarista): <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}— (defina no contrato){% endif %}</strong>
       </p>
     </div>
     <div class="col-12">
@@ -18,28 +18,18 @@
       <label class="form-label">Justificativa *</label>
       <textarea name="justification" class="form-control form-control-md" rows="3" required placeholder="Descreva o motivo da falta..."></textarea>
     </div>
-    <div class="col-12">
-      <label class="form-label">Motoboy diarista *</label>
-      <select name="diarist_supplier_id" class="form-select form-select-md" required>
-        <option value="">Selecione…</option>
+    <div class="col-12 mt-2">
+      <h6 class="mb-2 text-uppercase text-muted fw-bold">Diarista e financeiro</h6>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Motoboy diarista (quem cobriu)</label>
+      <select name="substitute_supplier_id" id="falta_substitute_id" class="form-select form-select-md">
+        <option value="">Nenhum — só registro de falta</option>
         {% for m in diarist_motoboys %}
         <option value="{{ m.id }}">{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
         {% endfor %}
       </select>
-      <div class="form-text">Apenas motoboys com <strong>Diarista</strong> marcado no cadastro.</div>
-    </div>
-    <div class="col-12 mt-2">
-      <h6 class="mb-2 text-uppercase text-muted fw-bold">Substituto e financeiro</h6>
-    </div>
-    <div class="col-12 col-md-6">
-      <label class="form-label">Motoboy substituto</label>
-      <select name="substitute_supplier_id" id="falta_substitute_id" class="form-select form-select-md">
-        <option value="">Nenhum</option>
-        {% for m in substitute_motoboys %}
-        <option value="{{ m.id }}">{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
-        {% endfor %}
-      </select>
-      <div class="form-text">Opcional. Se informado, será gerada uma <strong>conta a pagar</strong> no valor da falta do titular, para o substituto.</div>
+      <div class="form-text">Opcional. Apenas motoboys com <strong>Diarista</strong> no cadastro. Se informado, será gerada <strong>conta a pagar</strong> para ele no valor da falta do titular.</div>
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Natureza financeira</label>
@@ -49,7 +39,7 @@
         <option value="{{ n.id }}">{{ n.name }}</option>
         {% endfor %}
       </select>
-      <div class="form-text">Obrigatória se houver motoboy substituto.</div>
+      <div class="form-text">Obrigatória se houver motoboy diarista (quem cobriu).</div>
     </div>
   </div>
   <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">

@@ -18,13 +18,12 @@ class ContractAbsence(db.Model):
     substitute_pix = db.Column(db.String(255), nullable=True)
     substitute_amount = db.Column(db.Numeric(10, 2), nullable=True)
 
-    diarist_supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)
+    # Motoboy diarista que cobriu a rota (mesmo fornecedor da conta a pagar, se houver).
     substitute_supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)
     financial_nature_id = db.Column(db.Integer, db.ForeignKey("financial_natures.id"), nullable=True)
     payable_entry_id = db.Column(db.Integer, db.ForeignKey("financial_entries.id"), nullable=True)
 
     contract = db.relationship("Contract", back_populates="absences")
-    diarist_supplier = db.relationship("Supplier", foreign_keys=[diarist_supplier_id])
     substitute_supplier = db.relationship("Supplier", foreign_keys=[substitute_supplier_id])
     financial_nature = db.relationship("FinancialNature", foreign_keys=[financial_nature_id], lazy="joined")
     payable_entry = db.relationship("FinancialEntry", foreign_keys=[payable_entry_id], lazy="joined")
