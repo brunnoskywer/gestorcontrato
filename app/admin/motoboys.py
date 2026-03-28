@@ -89,6 +89,8 @@ def register_routes(bp: Blueprint) -> None:
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
             status = request.form.get("status", "active").strip() or "active"
             contact_phone = request.form.get("contact_phone", "").strip()
+            notes = request.form.get("notes", "").strip()
+            is_diarist = request.form.get("is_diarist") == "1"
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
@@ -105,6 +107,8 @@ def register_routes(bp: Blueprint) -> None:
                     document_secondary=cnpj or None,
                     status=status,
                     contact_phone=contact_phone or None,
+                    notes=notes or None,
+                    is_diarist=is_diarist,
                 )
                 db.session.add(motoboy)
                 db.session.commit()
@@ -129,6 +133,8 @@ def register_routes(bp: Blueprint) -> None:
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
             status = request.form.get("status", "active").strip() or "active"
             contact_phone = request.form.get("contact_phone", "").strip()
+            notes = request.form.get("notes", "").strip()
+            is_diarist = request.form.get("is_diarist") == "1"
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
@@ -142,6 +148,8 @@ def register_routes(bp: Blueprint) -> None:
                 motoboy.document_secondary = cnpj or None
                 motoboy.status = status
                 motoboy.contact_phone = contact_phone or None
+                motoboy.notes = notes or None
+                motoboy.is_diarist = is_diarist
                 db.session.commit()
                 flash("Motoboy atualizado com sucesso.", "success")
                 return redirect(url_for("admin.motoboys_list"))

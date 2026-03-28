@@ -6,6 +6,9 @@
         <strong>{{ contract.supplier.name }}</strong>
         {% if contract.other_supplier %} — <strong>{{ contract.other_supplier.legal_name or contract.other_supplier.name }}</strong>{% endif %}
       </p>
+      <p class="text-muted small mb-0">
+        Valor falta: <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}—{% endif %}</strong>
+      </p>
     </div>
     <div class="col-12">
       <label class="form-label">Data *</label>
@@ -15,28 +18,62 @@
       <label class="form-label">Justificativa *</label>
       <textarea name="justification" class="form-control form-control-md" rows="3" required placeholder="Descreva o motivo da falta...">{{ absence.justification }}</textarea>
     </div>
-    <div class="col-12 mt-3">
-      <h6 class="mb-2 text-uppercase text-muted fw-bold">Substituto</h6>
+    <div class="col-12">
+      <label class="form-label">Motoboy diarista *</label>
+      <select name="diarist_supplier_id" class="form-select form-select-md" required>
+        <option value="">Selecione…</option>
+        {% for m in diarist_motoboys %}
+        <option value="{{ m.id }}" {% if absence.diarist_supplier_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 mt-2">
+      <h6 class="mb-2 text-uppercase text-muted fw-bold">Substituto e financeiro</h6>
     </div>
     <div class="col-12 col-md-6">
-      <label class="form-label">Nome</label>
-      <input type="text" name="substitute_name" class="form-control form-control-md" value="{{ absence.substitute_name or '' }}" />
+      <label class="form-label">Motoboy substituto</label>
+      <select name="substitute_supplier_id" id="falta_substitute_id" class="form-select form-select-md" {% if absence.payable_entry and absence.payable_entry.settled_at %}disabled{% endif %}>
+        <option value="">Nenhum</option>
+        {% for m in substitute_motoboys %}
+        <option value="{{ m.id }}" {% if absence.substitute_supplier_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      {% if absence.payable_entry and absence.payable_entry.settled_at %}
+      <input type="hidden" name="substitute_supplier_id" value="{{ absence.substitute_supplier_id or '' }}" />
+      {% endif %}
     </div>
-    <div class="col-12 col-md-3">
-      <label class="form-label">Documento</label>
-      <input type="text" name="substitute_document" class="form-control form-control-md" value="{{ absence.substitute_document or '' }}" />
+    <div class="col-12 col-md-6">
+      <label class="form-label">Natureza financeira</label>
+      <select name="financial_nature_id" id="falta_financial_nature_id" class="form-select form-select-md" {% if absence.payable_entry and absence.payable_entry.settled_at %}disabled{% endif %}>
+        <option value="">—</option>
+        {% for n in financial_natures %}
+        <option value="{{ n.id }}" {% if absence.financial_nature_id == n.id %}selected{% endif %}>{{ n.name }}</option>
+        {% endfor %}
+      </select>
+      {% if absence.payable_entry and absence.payable_entry.settled_at %}
+      <input type="hidden" name="financial_nature_id" value="{{ absence.financial_nature_id or '' }}" />
+      {% endif %}
     </div>
-    <div class="col-12 col-md-3">
-      <label class="form-label">PIX</label>
-      <input type="text" name="substitute_pix" class="form-control form-control-md" value="{{ absence.substitute_pix or '' }}" />
+    {% if absence.payable_entry_id %}
+    <div class="col-12">
+      <p class="small text-muted mb-0">Lançamento vinculado: conta a pagar #{{ absence.payable_entry_id }}{% if absence.payable_entry and absence.payable_entry.settled_at %} (quitado — substituto e natureza não podem ser alterados){% endif %}</p>
     </div>
-    <div class="col-12 col-md-4">
-      <label class="form-label">Valor</label>
-      <input type="text" name="substitute_amount" class="form-control form-control-md" data-mask="currency" value="{{ absence.substitute_amount|format_currency if absence else '' }}" placeholder="0,00" />
-    </div>
+    {% endif %}
   </div>
   <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
     <button type="submit" class="btn btn-primary">Salvar</button>
   </div>
 </form>
+<script>
+(function () {
+  var sub = document.getElementById('falta_substitute_id');
+  var nat = document.getElementById('falta_financial_nature_id');
+  if (!sub || !nat) return;
+  function sync() {
+    nat.required = !!sub.value;
+  }
+  sub.addEventListener('change', sync);
+  sync();
+})();
+</script>

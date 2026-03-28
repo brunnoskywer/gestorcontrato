@@ -1,17 +1,116 @@
 """CRUD for Motoboy contracts: uses Contract with contract_type=motoboy."""
 import calendar
 from datetime import date
+from typing import Optional, Tuple
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, require_supervisor_or_admin, is_supervisor
 from app.extensions import db
-from app.models import Contract, ContractAbsence, CONTRACT_TYPE_MOTOBOY, Supplier, SUPPLIER_CLIENT, SUPPLIER_MOTOBOY
+from app.models import (
+    Contract,
+    ContractAbsence,
+    CONTRACT_TYPE_MOTOBOY,
+    FinancialEntry,
+    FinancialNature,
+    Supplier,
+    SUPPLIER_CLIENT,
+    SUPPLIER_MOTOBOY,
+)
+from app.models.financial_entry import ENTRY_PAYABLE
 from app.utils import parse_decimal_form
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
+
+
+def _billing_company_id_for_motoboy_contract(contract: Contract):
+    if contract.other_supplier and contract.other_supplier.billing_company_id:
+        return contract.other_supplier.billing_company_id
+    if contract.supplier and contract.supplier.billing_company_id:
+        return contract.supplier.billing_company_id
+    return None
+
+
+def _payable_natures_query():
+    return (
+        FinancialNature.query.filter(
+            FinancialNature.is_active.is_(True),
+            FinancialNature.kind.in_(["payable", "both"]),
+        )
+        .order_by(FinancialNature.name)
+    )
+
+
+def _delete_unsettled_payable(entry_id):
+    if not entry_id:
+        return
+    entry = FinancialEntry.query.get(entry_id)
+    if entry and entry.settled_at is None:
+        db.session.delete(entry)
+
+
+def _sync_absence_substitute_payable(contract: Contract, absence: ContractAbsence) -> Tuple[bool, Optional[str]]:
+    """
+    Cria/atualiza/remove conta a pagar conforme substituto e natureza.
+    Retorna (ok, mensagem_erro).
+    """
+    sub_id = absence.substitute_supplier_id
+    nature_id = absence.financial_nature_id
+
+    if not sub_id:
+        _delete_unsettled_payable(absence.payable_entry_id)
+        absence.payable_entry_id = None
+        absence.financial_nature_id = None
+        return True, None
+
+    if not nature_id:
+        return False, "Com motoboy substituto, a natureza financeira é obrigatória."
+
+    if contract.missing_value is None:
+        return False, "Contrato sem valor de falta (Valor falta). Defina no contrato para gerar a conta a pagar."
+
+    company_id = _billing_company_id_for_motoboy_contract(contract)
+    if not company_id:
+        return False, "Não foi possível determinar a empresa (faturamento do cliente ou do motoboy titular)."
+
+    desc = (
+        f"Substituição falta {absence.absence_date.strftime('%d/%m/%Y')} — "
+        f"titular {contract.supplier.name}"
+    )
+    ref = f"contract_absence:{absence.id}"
+
+    if absence.payable_entry_id:
+        pe = FinancialEntry.query.get(absence.payable_entry_id)
+        if pe:
+            if pe.settled_at is not None:
+                return True, None
+            pe.company_id = company_id
+            pe.financial_nature_id = nature_id
+            pe.entry_type = ENTRY_PAYABLE
+            pe.description = desc
+            pe.amount = contract.missing_value
+            pe.due_date = absence.absence_date
+            pe.supplier_id = sub_id
+            pe.reference = ref
+            return True, None
+
+    entry = FinancialEntry(
+        company_id=company_id,
+        account_id=None,
+        financial_nature_id=nature_id,
+        entry_type=ENTRY_PAYABLE,
+        description=desc,
+        amount=contract.missing_value,
+        due_date=absence.absence_date,
+        reference=ref,
+        supplier_id=sub_id,
+    )
+    db.session.add(entry)
+    db.session.flush()
+    absence.payable_entry_id = entry.id
+    return True, None
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -162,11 +261,23 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contract_falta_form(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
+        diarist_motoboys = (
+            Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True, is_diarist=True)
+            .order_by(Supplier.name)
+            .all()
+        )
+        substitute_motoboys = (
+            Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True).order_by(Supplier.name).all()
+        )
+        financial_natures = _payable_natures_query().all()
         return render_template(
             "admin/motoboy_contracts/_falta_form_fragment.html",
             contract=contract,
             action_url=url_for("admin.motoboy_contract_falta_create", contract_id=contract_id),
             default_date=date.today().isoformat(),
+            diarist_motoboys=diarist_motoboys,
+            substitute_motoboys=substitute_motoboys,
+            financial_natures=financial_natures,
         )
 
     @bp.route("/motoboy-contracts/<int:contract_id>/falta", methods=["POST"])
@@ -176,18 +287,48 @@ def register_routes(bp: Blueprint) -> None:
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
         absence_date_str = request.form.get("absence_date", "").strip()
         justification = request.form.get("justification", "").strip()
-        substitute_name = request.form.get("substitute_name", "").strip()
-        substitute_document = request.form.get("substitute_document", "").strip()
-        substitute_pix = request.form.get("substitute_pix", "").strip()
-        amount_val = parse_decimal_form(request.form.get("substitute_amount"))
+
+        def _parse_id(name):
+            raw = (request.form.get(name) or "").strip()
+            if not raw:
+                return None
+            try:
+                return int(raw)
+            except ValueError:
+                return None
+
+        diarist_id = _parse_id("diarist_supplier_id")
+        substitute_id = _parse_id("substitute_supplier_id")
+        nature_id = _parse_id("financial_nature_id")
+
         if not absence_date_str or not justification:
             flash("Dia e justificativa são obrigatórios.", "danger")
+            return redirect(url_for("admin.motoboy_contracts_list"))
+        if not diarist_id:
+            flash("Selecione o motoboy diarista (marcado como diarista no cadastro).", "danger")
             return redirect(url_for("admin.motoboy_contracts_list"))
         try:
             absence_date = date.fromisoformat(absence_date_str)
         except ValueError:
             flash("Data inválida.", "danger")
             return redirect(url_for("admin.motoboy_contracts_list"))
+
+        diarist = Supplier.query.filter_by(id=diarist_id, type=SUPPLIER_MOTOBOY).first()
+        if not diarist or not diarist.is_diarist:
+            flash("O motoboy selecionado como diarista deve estar marcado como Diarista no cadastro.", "danger")
+            return redirect(url_for("admin.motoboy_contracts_list"))
+
+        if substitute_id:
+            if not nature_id:
+                flash("Com motoboy substituto, a natureza financeira é obrigatória.", "danger")
+                return redirect(url_for("admin.motoboy_contracts_list"))
+            sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY, is_active=True).first()
+            if not sub:
+                flash("Motoboy substituto inválido ou inativo.", "danger")
+                return redirect(url_for("admin.motoboy_contracts_list"))
+        else:
+            nature_id = None
+
         existing = ContractAbsence.query.filter_by(
             contract_id=contract_id,
             absence_date=absence_date,
@@ -199,12 +340,28 @@ def register_routes(bp: Blueprint) -> None:
             contract_id=contract_id,
             absence_date=absence_date,
             justification=justification,
-            substitute_name=substitute_name or None,
-            substitute_document=substitute_document or None,
-            substitute_pix=substitute_pix or None,
-            substitute_amount=amount_val,
+            diarist_supplier_id=diarist_id,
+            substitute_supplier_id=substitute_id,
+            financial_nature_id=nature_id,
+            substitute_name=None,
+            substitute_document=None,
+            substitute_pix=None,
+            substitute_amount=None,
         )
         db.session.add(absence)
+        try:
+            db.session.flush()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Já existe uma falta registrada para este contrato nesta data.", "danger")
+            return redirect(url_for("admin.motoboy_contracts_list"))
+
+        ok, err = _sync_absence_substitute_payable(contract, absence)
+        if not ok:
+            db.session.rollback()
+            flash(err or "Não foi possível gerar a conta a pagar.", "danger")
+            return redirect(url_for("admin.motoboy_contracts_list"))
+
         try:
             db.session.commit()
         except IntegrityError:
@@ -212,6 +369,8 @@ def register_routes(bp: Blueprint) -> None:
             flash("Já existe uma falta registrada para este contrato nesta data.", "danger")
             return redirect(url_for("admin.motoboy_contracts_list"))
         flash("Falta registrada com sucesso.", "success")
+        if substitute_id:
+            flash("Conta a pagar gerada para o motoboy substituto.", "info")
         return redirect(url_for("admin.motoboy_contracts_list"))
 
     @bp.route("/motoboy-contracts/<int:contract_id>/falta/<int:absence_id>/form")
@@ -222,11 +381,23 @@ def register_routes(bp: Blueprint) -> None:
         absence = ContractAbsence.query.filter_by(
             id=absence_id, contract_id=contract_id
         ).first_or_404()
+        diarist_motoboys = (
+            Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True, is_diarist=True)
+            .order_by(Supplier.name)
+            .all()
+        )
+        substitute_motoboys = (
+            Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True).order_by(Supplier.name).all()
+        )
+        financial_natures = _payable_natures_query().all()
         return render_template(
             "admin/motoboy_contracts/_falta_edit_fragment.html",
             contract=contract,
             absence=absence,
             action_url=url_for("admin.motoboy_contract_falta_update", contract_id=contract_id, absence_id=absence_id),
+            diarist_motoboys=diarist_motoboys,
+            substitute_motoboys=substitute_motoboys,
+            financial_natures=financial_natures,
         )
 
     @bp.route("/motoboy-contracts/<int:contract_id>/falta/<int:absence_id>", methods=["POST"])
@@ -239,17 +410,56 @@ def register_routes(bp: Blueprint) -> None:
         ).first_or_404()
         absence_date_str = request.form.get("absence_date", "").strip()
         justification = request.form.get("justification", "").strip()
-        substitute_name = request.form.get("substitute_name", "").strip()
-        substitute_document = request.form.get("substitute_document", "").strip()
-        substitute_pix = request.form.get("substitute_pix", "").strip()
+
+        def _parse_id(name):
+            raw = (request.form.get(name) or "").strip()
+            if not raw:
+                return None
+            try:
+                return int(raw)
+            except ValueError:
+                return None
+
+        diarist_id = _parse_id("diarist_supplier_id")
+        substitute_id = _parse_id("substitute_supplier_id")
+        nature_id = _parse_id("financial_nature_id")
+
         if not absence_date_str or not justification:
             flash("Data e justificativa são obrigatórios.", "danger")
+            return redirect(url_for("admin.motoboy_contracts_list"))
+        if not diarist_id:
+            flash("Selecione o motoboy diarista.", "danger")
             return redirect(url_for("admin.motoboy_contracts_list"))
         try:
             absence_date = date.fromisoformat(absence_date_str)
         except ValueError:
             flash("Data inválida.", "danger")
             return redirect(url_for("admin.motoboy_contracts_list"))
+
+        diarist = Supplier.query.filter_by(id=diarist_id, type=SUPPLIER_MOTOBOY).first()
+        if not diarist or not diarist.is_diarist:
+            flash("O motoboy selecionado como diarista deve estar marcado como Diarista no cadastro.", "danger")
+            return redirect(url_for("admin.motoboy_contracts_list"))
+
+        settled_payable = None
+        if absence.payable_entry_id:
+            settled_payable = FinancialEntry.query.get(absence.payable_entry_id)
+
+        if settled_payable and settled_payable.settled_at is not None:
+            substitute_id = absence.substitute_supplier_id
+            nature_id = absence.financial_nature_id
+        else:
+            if substitute_id:
+                if not nature_id:
+                    flash("Com motoboy substituto, a natureza financeira é obrigatória.", "danger")
+                    return redirect(url_for("admin.motoboy_contracts_list"))
+                sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY, is_active=True).first()
+                if not sub:
+                    flash("Motoboy substituto inválido ou inativo.", "danger")
+                    return redirect(url_for("admin.motoboy_contracts_list"))
+            else:
+                nature_id = None
+
         other = ContractAbsence.query.filter_by(
             contract_id=contract_id,
             absence_date=absence_date,
@@ -259,10 +469,16 @@ def register_routes(bp: Blueprint) -> None:
             return redirect(url_for("admin.motoboy_contracts_list"))
         absence.absence_date = absence_date
         absence.justification = justification
-        absence.substitute_name = substitute_name or None
-        absence.substitute_document = substitute_document or None
-        absence.substitute_pix = substitute_pix or None
-        absence.substitute_amount = parse_decimal_form(request.form.get("substitute_amount"))
+        absence.diarist_supplier_id = diarist_id
+        absence.substitute_supplier_id = substitute_id
+        absence.financial_nature_id = nature_id
+
+        ok, err = _sync_absence_substitute_payable(contract, absence)
+        if not ok:
+            db.session.rollback()
+            flash(err or "Não foi possível atualizar a conta a pagar.", "danger")
+            return redirect(url_for("admin.motoboy_contracts_list"))
+
         db.session.commit()
         flash("Falta atualizada com sucesso.", "success")
         return redirect(url_for("admin.motoboy_contracts_list"))
@@ -275,6 +491,7 @@ def register_routes(bp: Blueprint) -> None:
         absence = ContractAbsence.query.filter_by(
             id=absence_id, contract_id=contract_id
         ).first_or_404()
+        _delete_unsettled_payable(absence.payable_entry_id)
         db.session.delete(absence)
         db.session.commit()
         flash("Falta excluída.", "info")

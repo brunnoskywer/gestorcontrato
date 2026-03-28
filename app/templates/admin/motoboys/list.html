@@ -39,6 +39,7 @@
     <tr>
       <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
       <th>Nome completo</th>
+      <th>Diarista</th>
       <th>CPF</th>
       <th>CNPJ</th>
       <th>Placa moto</th>
@@ -50,13 +51,14 @@
     <tr data-id="{{ motoboy.id }}">
       <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ motoboy.id }}" aria-label="Selecionar" /></td>
       <td data-label="Nome completo">{{ motoboy.name }}</td>
+      <td data-label="Diarista">{% if motoboy.is_diarist %}Sim{% else %}Não{% endif %}</td>
       <td data-label="CPF">{{ motoboy.document or '-' }}</td>
       <td data-label="CNPJ">{{ motoboy.document_secondary or '-' }}</td>
       <td data-label="Placa moto">{{ motoboy.bike_plate or '-' }}</td>
       <td data-label="Conta bancária / PIX">{{ motoboy.bank_account_pix or '-' }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="6" class="text-center text-muted">Nenhum motoboy cadastrado.</td></tr>
+    <tr><td colspan="7" class="text-center text-muted">Nenhum motoboy cadastrado.</td></tr>
     {% endfor %}
   </tbody>
 </table>

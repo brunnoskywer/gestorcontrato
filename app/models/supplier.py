@@ -36,6 +36,8 @@ class Supplier(db.Model):
     # Motoboy-specific fields
     status = db.Column(db.String(20), nullable=False, default="active")  # active | inactive
     contact_phone = db.Column(db.String(50), nullable=True)
+    # Motoboy pode ser marcado como diarista (cobre faltas de titulares em contratos).
+    is_diarist = db.Column(db.Boolean, nullable=False, default=False)
 
     billing_company = db.relationship("Company", back_populates="billing_suppliers", foreign_keys=[billing_company_id])
 
