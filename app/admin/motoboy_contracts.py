@@ -531,12 +531,15 @@ def register_routes(bp: Blueprint) -> None:
         )
         absence_days = {a.absence_date.day for a in absences}
         absences_by_day = {a.absence_date.day: a for a in absences}
-        weeks_raw = calendar.monthcalendar(year, month)
-        # Sunday first: reorder each week to [Sun, Mon, ..., Sat]
+        # Semanas começando no domingo (cabeçalho Dom–Sáb). monthcalendar() é Seg–Dom;
+        # só rotacionar w[6] pra frente quebra a ordem (coloca o domingo *final* da semana ISO na 1ª coluna).
+        cal_sun = calendar.Calendar(firstweekday=calendar.SUNDAY)
+        weeks_raw = cal_sun.monthdayscalendar(year, month)
         weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
-        weeks = []
-        for w in weeks_raw:
-            weeks.append([(w[6], w[6] in absence_days if w[6] else False), (w[0], w[0] in absence_days if w[0] else False), (w[1], w[1] in absence_days if w[1] else False), (w[2], w[2] in absence_days if w[2] else False), (w[3], w[3] in absence_days if w[3] else False), (w[4], w[4] in absence_days if w[4] else False), (w[5], w[5] in absence_days if w[5] else False)])
+        weeks = [
+            [(d, d in absence_days if d else False) for d in w]
+            for w in weeks_raw
+        ]
         prev_month = date(year - 1, 12, 1) if month == 1 else date(year, month - 1, 1)
         next_month = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
         _MONTH_NAMES = ("", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
