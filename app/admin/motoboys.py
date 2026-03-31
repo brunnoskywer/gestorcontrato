@@ -132,7 +132,7 @@ def register_routes(bp: Blueprint) -> None:
                     db.session.commit()
                 except IntegrityError:
                     db.session.rollback()
-                    flash("Não foi possível salvar o motoboy (CPF já cadastrado).", "danger")
+                    flash("Não foi possível salvar o motoboy.", "danger")
                 else:
                     flash("Motoboy criado com sucesso.", "success")
                     return redirect(url_for("admin.motoboys_list"))
@@ -179,7 +179,7 @@ def register_routes(bp: Blueprint) -> None:
                     db.session.commit()
                 except IntegrityError:
                     db.session.rollback()
-                    flash("Não foi possível atualizar o motoboy (CPF já cadastrado).", "danger")
+                    flash("Não foi possível atualizar o motoboy.", "danger")
                 else:
                     flash("Motoboy atualizado com sucesso.", "success")
                     return redirect(url_for("admin.motoboys_list"))

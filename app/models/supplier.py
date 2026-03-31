@@ -13,7 +13,8 @@ class Supplier(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
-    document = db.Column(db.String(20), nullable=True, unique=True)
+    # Documento (CPF/CNPJ) sem unicidade global por decisão de negócio.
+    document = db.Column(db.String(20), nullable=True)
     type = db.Column(db.String(20), nullable=False)  # client | supplier | motoboy
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
