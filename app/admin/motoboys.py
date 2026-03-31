@@ -1,5 +1,4 @@
 """CRUD for Motoboys: uses Supplier with type=motoboy."""
-import re
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
@@ -10,8 +9,20 @@ from app.extensions import db
 from app.models import Supplier, SUPPLIER_MOTOBOY
 
 
-def _only_digits(value: str) -> str:
-    return re.sub(r"\D+", "", value or "")
+def _render_motoboy_form(motoboy, action_url: str):
+    # Quando o formulário é aberto em modal, precisamos retornar só o fragmento.
+    # Se retornar página completa aqui, o modal fica "quebrado" visualmente.
+    is_modal_request = (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or request.headers.get("Turbo-Frame") == "main-content"
+    )
+    if is_modal_request:
+        return render_template(
+            "admin/motoboys/_form_fragment.html",
+            motoboy=motoboy,
+            action_url=action_url,
+        )
+    return render_template("admin/motoboys/form.html", motoboy=motoboy)
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -87,8 +98,8 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         if request.method == "POST":
             full_name = request.form.get("full_name", "").strip()
-            cpf = _only_digits(request.form.get("cpf", "").strip())
-            cnpj = _only_digits(request.form.get("cnpj", "").strip())
+            cpf = request.form.get("cpf", "").strip()
+            cnpj = request.form.get("cnpj", "").strip()
             address = request.form.get("address", "").strip()
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
@@ -100,10 +111,6 @@ def register_routes(bp: Blueprint) -> None:
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
-            elif len(cpf) != 11:
-                flash("CPF inválido. Informe 11 dígitos.", "danger")
-            elif Supplier.query.filter(Supplier.document == cpf).first():
-                flash("Já existe um cadastro com este CPF.", "danger")
             else:
                 motoboy = Supplier(
                     name=full_name,
@@ -126,10 +133,14 @@ def register_routes(bp: Blueprint) -> None:
                 except IntegrityError:
                     db.session.rollback()
                     flash("Não foi possível salvar o motoboy (CPF já cadastrado).", "danger")
-                flash("Motoboy criado com sucesso.", "success")
-                return redirect(url_for("admin.motoboys_list"))
+                else:
+                    flash("Motoboy criado com sucesso.", "success")
+                    return redirect(url_for("admin.motoboys_list"))
 
-        return render_template("admin/motoboys/form.html", motoboy=None)
+        return _render_motoboy_form(
+            motoboy=None,
+            action_url=url_for("admin.motoboys_create"),
+        )
 
     @bp.route("/motoboys/<int:motoboy_id>/edit", methods=["GET", "POST"])
     @login_required
@@ -139,8 +150,8 @@ def register_routes(bp: Blueprint) -> None:
 
         if request.method == "POST":
             full_name = request.form.get("full_name", "").strip()
-            cpf = _only_digits(request.form.get("cpf", "").strip())
-            cnpj = _only_digits(request.form.get("cnpj", "").strip())
+            cpf = request.form.get("cpf", "").strip()
+            cnpj = request.form.get("cnpj", "").strip()
             address = request.form.get("address", "").strip()
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
@@ -152,10 +163,6 @@ def register_routes(bp: Blueprint) -> None:
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
-            elif len(cpf) != 11:
-                flash("CPF inválido. Informe 11 dígitos.", "danger")
-            elif Supplier.query.filter(Supplier.document == cpf, Supplier.id != motoboy.id).first():
-                flash("Já existe outro cadastro com este CPF.", "danger")
             else:
                 motoboy.name = full_name
                 motoboy.document = cpf
@@ -173,10 +180,14 @@ def register_routes(bp: Blueprint) -> None:
                 except IntegrityError:
                     db.session.rollback()
                     flash("Não foi possível atualizar o motoboy (CPF já cadastrado).", "danger")
-                flash("Motoboy atualizado com sucesso.", "success")
-                return redirect(url_for("admin.motoboys_list"))
+                else:
+                    flash("Motoboy atualizado com sucesso.", "success")
+                    return redirect(url_for("admin.motoboys_list"))
 
-        return render_template("admin/motoboys/form.html", motoboy=motoboy)
+        return _render_motoboy_form(
+            motoboy=motoboy,
+            action_url=url_for("admin.motoboys_edit", motoboy_id=motoboy_id),
+        )
 
     @bp.post("/motoboys/<int:motoboy_id>/delete")
     @login_required
