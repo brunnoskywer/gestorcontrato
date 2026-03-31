@@ -5,6 +5,9 @@
  * O elemento #admin-tab-bar-wrap no base.html usa data-turbo-permanent para que,
  * após navegações Turbo (redirect pós-formulário em modal, etc.), a barra de abas
  * não seja substituída pelo template vazio do servidor.
+ *
+ * Deduplicação por pathname: a mesma tela com query distinta (ex.: filtros GET) é
+ * uma única aba; abrir o item de menu sem query reutiliza a aba e atualiza a URL.
  */
 (function () {
   'use strict';
@@ -34,6 +37,36 @@
     }
   }
 
+  /** Chave estável para deduplicar abas: mesmo pathname sem query (filtros GET mudam só o search). */
+  function pathDedupeKey(hrefOrPath) {
+    if (!hrefOrPath) return '';
+    try {
+      var u = new URL(hrefOrPath, window.location.origin);
+      var p = u.pathname || '';
+      if (p.length > 1 && p.charAt(p.length - 1) === '/') {
+        p = p.slice(0, -1);
+      }
+      return p.toLowerCase();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function findTabForHref(href) {
+    var norm = normalizePath(href);
+    var key = pathDedupeKey(norm || href);
+    if (!key) return null;
+    var exact = tabs.find(function (t) {
+      return t.path === norm;
+    });
+    if (exact) return exact;
+    return (
+      tabs.find(function (t) {
+        return pathDedupeKey(t.path) === key;
+      }) || null
+    );
+  }
+
   function toAbsoluteUrl(url) {
     try {
       return new URL(url, window.location.origin).toString();
@@ -44,10 +77,6 @@
 
   function getFrame() {
     return document.getElementById(FRAME_ID);
-  }
-
-  function findTabByPath(path) {
-    return tabs.find(function (t) { return t.path === path; });
   }
 
   function saveTabsState() {
@@ -275,11 +304,21 @@
       var list = document.getElementById(TAB_LIST_ID);
       if (!list) return false;
 
+      var seenKeys = {};
+      var merged = [];
+      data.tabs.forEach(function (t) {
+        if (!t || !t.id || !t.path) return;
+        var k = pathDedupeKey(t.path);
+        if (!k || seenKeys[k]) return;
+        seenKeys[k] = true;
+        merged.push(t);
+      });
+      if (!merged.length) return false;
+
       tabs = [];
       list.innerHTML = '';
 
-      data.tabs.forEach(function (t) {
-        if (!t || !t.id || !t.path) return;
+      merged.forEach(function (t) {
         var tab = { id: t.id, path: t.path, title: t.title || t.path };
         tabs.push(tab);
         list.appendChild(createTabListItem(tab));
@@ -305,10 +344,19 @@
     var norm = normalizePath(path);
     if (!norm) return null;
 
-    var existing = findTabByPath(norm);
+    var existing = findTabForHref(path);
     if (existing) {
       setActiveTab(existing.id);
-      if (focus !== false) loadTabContent(existing, function () {});
+      if (existing.path !== norm) {
+        setTabPath(existing.id, norm);
+        if (focus !== false) {
+          loadUrlInFrame(toAbsoluteUrl(norm), function (ok) {
+            if (ok) updateTabTitleFromFrame(existing);
+          });
+        }
+      } else if (focus !== false) {
+        loadTabContent(existing, function () {});
+      }
       return existing;
     }
 
