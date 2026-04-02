@@ -3,7 +3,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import User
 
@@ -110,9 +110,10 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def users_delete(user_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.users_list")
         if current_user.id == user_id:
             flash("Você não pode excluir a si mesmo.", "danger")
-            return redirect(url_for("admin.users_list"))
+            return redirect(next_url)
 
         user = User.query.get_or_404(user_id)
         try:
@@ -121,7 +122,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Usuário excluído.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.users_list"))
+        return redirect(next_url)
 
     @bp.post("/users/bulk-delete")
     @login_required

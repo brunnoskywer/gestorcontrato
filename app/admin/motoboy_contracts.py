@@ -6,7 +6,13 @@ from typing import Optional, Tuple
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, require_supervisor_or_admin, is_supervisor
+from app.admin.auth_helpers import (
+    require_admin,
+    handle_delete_constraint_error,
+    require_supervisor_or_admin,
+    is_supervisor,
+    resolve_next_url,
+)
 from app.extensions import db
 from app.models import (
     Contract,
@@ -492,6 +498,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboy_contract_falta_delete(contract_id: int, absence_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.motoboy_contracts_list")
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
         absence = ContractAbsence.query.filter_by(
             id=absence_id, contract_id=contract_id
@@ -500,7 +507,7 @@ def register_routes(bp: Blueprint) -> None:
         db.session.delete(absence)
         db.session.commit()
         flash("Falta excluída.", "info")
-        return redirect(url_for("admin.motoboy_contracts_list"))
+        return redirect(next_url)
 
     @bp.route("/motoboy-contracts/<int:contract_id>/calendar")
     @login_required
@@ -565,6 +572,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboy_contracts_delete(contract_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.motoboy_contracts_list")
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
         try:
             db.session.delete(contract)
@@ -572,7 +580,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Contrato de motoboy excluído.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.motoboy_contracts_list"))
+        return redirect(next_url)
 
     @bp.post("/motoboy-contracts/bulk-delete")
     @login_required

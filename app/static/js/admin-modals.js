@@ -123,6 +123,16 @@
       var form = document.getElementById('adminConfirmForm');
       var msgEl = document.getElementById('adminConfirmMessage');
       if (form && action) form.setAttribute('action', action);
+      if (form) {
+        var nextInput = form.querySelector('input[name="next"]');
+        if (!nextInput) {
+          nextInput = document.createElement('input');
+          nextInput.type = 'hidden';
+          nextInput.name = 'next';
+          form.appendChild(nextInput);
+        }
+        nextInput.value = window.location.pathname + window.location.search;
+      }
       if (msgEl && message) msgEl.textContent = message;
     });
   }
@@ -708,6 +718,14 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     document.addEventListener('submit', function (e) {
       var form = e.target && e.target.closest && e.target.closest('form.admin-confirm-submit');
       if (!form) return;
+      var nextInput = form.querySelector('input[name="next"]');
+      if (!nextInput) {
+        nextInput = document.createElement('input');
+        nextInput.type = 'hidden';
+        nextInput.name = 'next';
+        form.appendChild(nextInput);
+      }
+      nextInput.value = window.location.pathname + window.location.search;
       if (form.getAttribute('data-confirm-bypass') === '1') {
         form.removeAttribute('data-confirm-bypass');
         return;

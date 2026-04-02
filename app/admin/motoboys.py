@@ -4,7 +4,7 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import Supplier, SUPPLIER_MOTOBOY
 
@@ -193,6 +193,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboys_delete(motoboy_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.motoboys_list")
         motoboy = Supplier.query.filter_by(id=motoboy_id, type=SUPPLIER_MOTOBOY).first_or_404()
         try:
             db.session.delete(motoboy)
@@ -200,7 +201,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Motoboy excluído.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.motoboys_list"))
+        return redirect(next_url)
 
     @bp.post("/motoboys/bulk-delete")
     @login_required

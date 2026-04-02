@@ -3,7 +3,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import FinancialNature
 
@@ -93,6 +93,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def financial_natures_delete(nature_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.financial_natures_list")
         nature = FinancialNature.query.get_or_404(nature_id)
         try:
             db.session.delete(nature)
@@ -100,7 +101,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Natureza financeira excluída.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.financial_natures_list"))
+        return redirect(next_url)
 
     @bp.post("/financial-natures/bulk-delete")
     @login_required

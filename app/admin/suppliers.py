@@ -3,7 +3,7 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import Supplier, SUPPLIER_CLIENT, SUPPLIER_SUPPLIER, SUPPLIER_MOTOBOY
 
@@ -92,6 +92,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def suppliers_delete(supplier_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.suppliers_list")
         supplier = Supplier.query.get_or_404(supplier_id)
         try:
             db.session.delete(supplier)
@@ -99,23 +100,24 @@ def register_routes(bp: Blueprint) -> None:
             flash("Fornecedor excluído.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.suppliers_list"))
+        return redirect(next_url)
 
     @bp.post("/suppliers/bulk-delete")
     @login_required
     def suppliers_bulk_delete():
         require_admin()
+        next_url = resolve_next_url("admin.suppliers_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum fornecedor selecionado.", "warning")
-            return redirect(url_for("admin.suppliers_list"))
+            return redirect(next_url)
         try:
             count = Supplier.query.filter(Supplier.id.in_(ids)).delete(synchronize_session=False)
             db.session.commit()
             flash(f"{count} fornecedor(es) excluído(s).", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.suppliers_list"))
+        return redirect(next_url)
 
     @bp.get("/suppliers/search")
     @login_required

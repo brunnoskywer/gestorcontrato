@@ -3,7 +3,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import Company
 
@@ -103,6 +103,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def companies_delete(company_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.companies_list")
         company = Company.query.get_or_404(company_id)
         try:
             db.session.delete(company)
@@ -110,7 +111,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Empresa excluída.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.companies_list"))
+        return redirect(next_url)
 
     @bp.post("/companies/bulk-delete")
     @login_required

@@ -1,5 +1,5 @@
 """Helpers compartilhados para as rotas do admin (ex.: exigir usuário admin)."""
-from flask import abort, flash
+from flask import abort, flash, request, url_for
 from flask_login import current_user
 
 from app.extensions import db
@@ -34,3 +34,11 @@ def handle_delete_constraint_error() -> None:
         "Não é possível excluir: existe(m) registro(s) dependente(s) vinculado(s).",
         "error",
     )
+
+
+def resolve_next_url(default_endpoint: str) -> str:
+    """Resolve URL de retorno seguro (aba atual), com fallback para endpoint padrão."""
+    next_url = request.form.get("next") or request.args.get("next")
+    if next_url and isinstance(next_url, str) and next_url.startswith("/"):
+        return next_url
+    return url_for(default_endpoint)

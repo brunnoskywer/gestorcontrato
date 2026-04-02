@@ -5,7 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import Contract, CONTRACT_TYPE_CLIENT, FinancialNature, Supplier, SUPPLIER_CLIENT
 from app.utils import parse_decimal_form
@@ -150,6 +150,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def client_contracts_delete(contract_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.client_contracts_list")
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_CLIENT).first_or_404()
         try:
             db.session.delete(contract)
@@ -157,7 +158,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Contrato de cliente excluído.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.client_contracts_list"))
+        return redirect(next_url)
 
     @bp.post("/client-contracts/bulk-delete")
     @login_required

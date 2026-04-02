@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for,
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
-from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
+from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import (
     Account,
@@ -429,7 +429,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_batch_delete(batch_id: int):
         require_admin()
-        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        next_url = resolve_next_url("admin.finance_manual_entry")
         batch = FinancialBatch.query.get_or_404(batch_id)
         any_settled = (
             FinancialEntry.query.filter_by(financial_batch_id=batch.id)
@@ -1119,6 +1119,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_delete_entry(entry_id: int):
         require_admin()
+        next_url = resolve_next_url("admin.finance_manual_entry")
         entry = FinancialEntry.query.get_or_404(entry_id)
         try:
             db.session.delete(entry)
@@ -1126,7 +1127,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Lançamento excluído.", "info")
         except IntegrityError:
             handle_delete_constraint_error()
-        return redirect(url_for("admin.finance_manual_entry"))
+        return redirect(next_url)
 
     @bp.post("/financeiro/lancamento/bulk-delete")
     @login_required
