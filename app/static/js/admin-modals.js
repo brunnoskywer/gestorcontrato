@@ -1,6 +1,8 @@
 /**
  * Modais reutilizáveis do admin: confirmação (excluir), formulário (criar/editar) e mensagens (flash).
  * Máscaras CPF e CNPJ. Compatível com Turbo Drive.
+ * Após carregar um formulário no modal, injeta hidden `next` (path+query da página atual) em todo POST,
+ * para redirects no servidor preservarem filtros da lista (resolve_next_url).
  */
 (function () {
   'use strict';
@@ -148,6 +150,28 @@
     });
   }
 
+  /**
+   * Garante campo hidden `next` em formulários POST do modal, com a URL da lista atual
+   * (path + query), para o backend redirecionar mantendo filtros após inserir/editar.
+   */
+  function injectListReturnNextOnPostForms(container) {
+    if (!container || !container.querySelectorAll) return;
+    var path = window.location.pathname + window.location.search;
+    if (!path || path.charAt(0) !== '/') return;
+    container.querySelectorAll('form').forEach(function (form) {
+      var method = (form.getAttribute('method') || 'get').toLowerCase();
+      if (method !== 'post') return;
+      var nextInput = form.querySelector('input[name="next"]');
+      if (!nextInput) {
+        nextInput = document.createElement('input');
+        nextInput.type = 'hidden';
+        nextInput.name = 'next';
+        form.insertBefore(nextInput, form.firstChild);
+      }
+      nextInput.value = path;
+    });
+  }
+
   function openFormModal(url, title, size) {
     var modalEl = document.getElementById('adminFormModal');
     var bodyEl = document.getElementById('adminFormModalBody');
@@ -170,6 +194,7 @@
         bodyEl.innerHTML = html;
         runScriptsInElement(bodyEl);
         applyMasks(bodyEl);
+        injectListReturnNextOnPostForms(bodyEl);
         initSearchInputs(bodyEl);
       })
       .catch(function () {
@@ -450,7 +475,15 @@
           showMessageModal('Selecione apenas um registro para editar.', 'Atenção');
           return;
         }
-        openFormModal(editTpl.replace('{id}', ids[0]), 'Editar');
+        var url = editTpl.replace('{id}', ids[0]);
+        if (toolbar.getAttribute('data-finance-actions') === '1') {
+          var row = getFirstSelectedRow();
+          if (row && row.getAttribute('data-settled') === '1') {
+            showMessageModal('Não é possível editar lançamento quitado. Reabra-o antes.', 'Atenção');
+            return;
+          }
+        }
+        openFormModal(url, 'Editar');
       });
 
       var deleteUrl = toolbar.getAttribute('data-delete-bulk-url');

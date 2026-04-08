@@ -135,7 +135,7 @@ def register_routes(bp: Blueprint) -> None:
                     flash("Não foi possível salvar o motoboy.", "danger")
                 else:
                     flash("Motoboy criado com sucesso.", "success")
-                    return redirect(url_for("admin.motoboys_list"))
+                    return redirect(resolve_next_url("admin.motoboys_list"))
 
         return _render_motoboy_form(
             motoboy=None,
@@ -182,7 +182,7 @@ def register_routes(bp: Blueprint) -> None:
                     flash("Não foi possível atualizar o motoboy.", "danger")
                 else:
                     flash("Motoboy atualizado com sucesso.", "success")
-                    return redirect(url_for("admin.motoboys_list"))
+                    return redirect(resolve_next_url("admin.motoboys_list"))
 
         return _render_motoboy_form(
             motoboy=motoboy,
@@ -207,7 +207,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboys_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.motoboys_list")
+        next_url = resolve_next_url("admin.motoboys_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum motoboy selecionado.", "warning")

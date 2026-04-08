@@ -127,7 +127,7 @@ def register_routes(bp: Blueprint) -> None:
                 db.session.add(client)
                 db.session.commit()
                 flash("Cliente criado com sucesso.", "success")
-                return redirect(url_for("admin.clients_list"))
+                return redirect(resolve_next_url("admin.clients_list"))
 
         return render_template(
             "admin/clients/form.html",
@@ -166,7 +166,7 @@ def register_routes(bp: Blueprint) -> None:
                 client.notes = notes or None
                 db.session.commit()
                 flash("Cliente atualizado com sucesso.", "success")
-                return redirect(url_for("admin.clients_list"))
+                return redirect(resolve_next_url("admin.clients_list"))
 
         return render_template(
             "admin/clients/form.html",
@@ -192,7 +192,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def clients_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.clients_list")
+        next_url = resolve_next_url("admin.clients_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum cliente selecionado.", "warning")

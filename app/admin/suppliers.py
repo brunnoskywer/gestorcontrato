@@ -68,7 +68,7 @@ def register_routes(bp: Blueprint) -> None:
                 db.session.add(supplier)
                 db.session.commit()
                 flash("Fornecedor criado com sucesso.", "success")
-                return redirect(url_for("admin.suppliers_list"))
+                return redirect(resolve_next_url("admin.suppliers_list"))
         return render_template("admin/suppliers/form.html", supplier=None)
 
     @bp.route("/suppliers/<int:supplier_id>/edit", methods=["GET", "POST"])
@@ -85,7 +85,7 @@ def register_routes(bp: Blueprint) -> None:
             else:
                 db.session.commit()
                 flash("Fornecedor atualizado com sucesso.", "success")
-                return redirect(url_for("admin.suppliers_list"))
+                return redirect(resolve_next_url("admin.suppliers_list"))
         return render_template("admin/suppliers/form.html", supplier=supplier)
 
     @bp.post("/suppliers/<int:supplier_id>/delete")

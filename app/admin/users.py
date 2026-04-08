@@ -73,7 +73,7 @@ def register_routes(bp: Blueprint) -> None:
                     db.session.add(user)
                     db.session.commit()
                     flash("Usuário criado com sucesso.", "success")
-                    return redirect(url_for("admin.users_list"))
+                    return redirect(resolve_next_url("admin.users_list"))
 
         return render_template("admin/users/form.html", user=None)
 
@@ -102,7 +102,7 @@ def register_routes(bp: Blueprint) -> None:
             else:
                 db.session.commit()
                 flash("Usuário atualizado com sucesso.", "success")
-                return redirect(url_for("admin.users_list"))
+                return redirect(resolve_next_url("admin.users_list"))
 
         return render_template("admin/users/form.html", user=user)
 
@@ -128,7 +128,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def users_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.users_list")
+        next_url = resolve_next_url("admin.users_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum usuário selecionado.", "warning")

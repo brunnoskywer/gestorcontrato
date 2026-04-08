@@ -85,7 +85,7 @@ def register_routes(bp: Blueprint) -> None:
                 db.session.add(account)
                 db.session.commit()
                 flash("Conta criada com sucesso.", "success")
-                return redirect(url_for("admin.accounts_list"))
+                return redirect(resolve_next_url("admin.accounts_list"))
 
         return render_template("admin/accounts/form.html", account=None, companies=companies)
 
@@ -109,7 +109,7 @@ def register_routes(bp: Blueprint) -> None:
             else:
                 db.session.commit()
                 flash("Conta atualizada com sucesso.", "success")
-                return redirect(url_for("admin.accounts_list"))
+                return redirect(resolve_next_url("admin.accounts_list"))
 
         return render_template("admin/accounts/form.html", account=account, companies=companies)
 
@@ -131,7 +131,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def accounts_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.accounts_list")
+        next_url = resolve_next_url("admin.accounts_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhuma conta selecionada.", "warning")

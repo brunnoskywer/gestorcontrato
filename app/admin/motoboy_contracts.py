@@ -247,7 +247,7 @@ def register_routes(bp: Blueprint) -> None:
                         db.session.add(contract)
                         db.session.commit()
                         flash("Contrato de motoboy criado com sucesso.", "success")
-                        return redirect(url_for("admin.motoboy_contracts_list"))
+                        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         return render_template(
             "admin/motoboy_contracts/form.html",
@@ -294,7 +294,7 @@ def register_routes(bp: Blueprint) -> None:
                         contract.end_date = date.fromisoformat(end_date_str) if end_date_str else None
                         db.session.commit()
                         flash("Contrato de motoboy atualizado com sucesso.", "success")
-                        return redirect(url_for("admin.motoboy_contracts_list"))
+                        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         return render_template(
             "admin/motoboy_contracts/form.html",
@@ -341,21 +341,21 @@ def register_routes(bp: Blueprint) -> None:
 
         if not absence_date_str or not justification:
             flash("Dia e justificativa são obrigatórios.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         try:
             absence_date = date.fromisoformat(absence_date_str)
         except ValueError:
             flash("Data inválida.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         if substitute_id:
             if not nature_id:
                 flash("Com motoboy diarista (quem cobriu), a natureza financeira é obrigatória.", "danger")
-                return redirect(url_for("admin.motoboy_contracts_list"))
+                return redirect(resolve_next_url("admin.motoboy_contracts_list"))
             sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY, is_active=True).first()
             if not sub or not sub.is_diarist:
                 flash("O motoboy selecionado deve estar ativo e marcado como Diarista no cadastro.", "danger")
-                return redirect(url_for("admin.motoboy_contracts_list"))
+                return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         else:
             nature_id = None
 
@@ -365,7 +365,7 @@ def register_routes(bp: Blueprint) -> None:
         ).first()
         if existing:
             flash("Já existe uma falta registrada para este contrato nesta data.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         absence = ContractAbsence(
             contract_id=contract_id,
             absence_date=absence_date,
@@ -383,24 +383,24 @@ def register_routes(bp: Blueprint) -> None:
         except IntegrityError:
             db.session.rollback()
             flash("Já existe uma falta registrada para este contrato nesta data.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         ok, err = _sync_absence_substitute_payable(contract, absence)
         if not ok:
             db.session.rollback()
             flash(err or "Não foi possível gerar a conta a pagar.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         try:
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
             flash("Já existe uma falta registrada para este contrato nesta data.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         flash("Falta registrada com sucesso.", "success")
         if substitute_id:
             flash("Conta a pagar gerada para o motoboy diarista (quem cobriu).", "info")
-        return redirect(url_for("admin.motoboy_contracts_list"))
+        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
     @bp.route("/motoboy-contracts/<int:contract_id>/falta/<int:absence_id>/form")
     @login_required
@@ -446,12 +446,12 @@ def register_routes(bp: Blueprint) -> None:
 
         if not absence_date_str or not justification:
             flash("Data e justificativa são obrigatórios.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         try:
             absence_date = date.fromisoformat(absence_date_str)
         except ValueError:
             flash("Data inválida.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         settled_payable = None
         if absence.payable_entry_id:
@@ -464,11 +464,11 @@ def register_routes(bp: Blueprint) -> None:
             if substitute_id:
                 if not nature_id:
                     flash("Com motoboy diarista (quem cobriu), a natureza financeira é obrigatória.", "danger")
-                    return redirect(url_for("admin.motoboy_contracts_list"))
+                    return redirect(resolve_next_url("admin.motoboy_contracts_list"))
                 sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY, is_active=True).first()
                 if not sub or not sub.is_diarist:
                     flash("O motoboy selecionado deve estar ativo e marcado como Diarista no cadastro.", "danger")
-                    return redirect(url_for("admin.motoboy_contracts_list"))
+                    return redirect(resolve_next_url("admin.motoboy_contracts_list"))
             else:
                 nature_id = None
 
@@ -478,7 +478,7 @@ def register_routes(bp: Blueprint) -> None:
         ).filter(ContractAbsence.id != absence_id).first()
         if other:
             flash("Já existe outra falta para este contrato nesta data.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         absence.absence_date = absence_date
         absence.justification = justification
         absence.substitute_supplier_id = substitute_id
@@ -488,11 +488,11 @@ def register_routes(bp: Blueprint) -> None:
         if not ok:
             db.session.rollback()
             flash(err or "Não foi possível atualizar a conta a pagar.", "danger")
-            return redirect(url_for("admin.motoboy_contracts_list"))
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         db.session.commit()
         flash("Falta atualizada com sucesso.", "success")
-        return redirect(url_for("admin.motoboy_contracts_list"))
+        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
     @bp.post("/motoboy-contracts/<int:contract_id>/falta/<int:absence_id>/delete")
     @login_required
@@ -586,7 +586,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboy_contracts_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.motoboy_contracts_list")
+        next_url = resolve_next_url("admin.motoboy_contracts_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum contrato selecionado.", "warning")

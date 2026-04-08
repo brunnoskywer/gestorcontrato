@@ -102,7 +102,7 @@ def register_routes(bp: Blueprint) -> None:
                 db.session.add(contract)
                 db.session.commit()
                 flash("Client contract created successfully.", "success")
-                return redirect(url_for("admin.client_contracts_list"))
+                return redirect(resolve_next_url("admin.client_contracts_list"))
 
         return render_template(
             "admin/client_contracts/form.html",
@@ -136,7 +136,7 @@ def register_routes(bp: Blueprint) -> None:
                 contract.revenue_financial_nature_id = int(revenue_financial_nature_id) if revenue_financial_nature_id else None
                 db.session.commit()
                 flash("Contrato de cliente atualizado com sucesso.", "success")
-                return redirect(url_for("admin.client_contracts_list"))
+                return redirect(resolve_next_url("admin.client_contracts_list"))
 
         natures = _revenue_natures()
         return render_template(
@@ -164,7 +164,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def client_contracts_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.client_contracts_list")
+        next_url = resolve_next_url("admin.client_contracts_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum contrato selecionado.", "warning")

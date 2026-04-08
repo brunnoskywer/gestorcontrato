@@ -62,6 +62,10 @@ def _suggest_charge_date(year: int, month: int) -> date:
     return d
 
 
+def _manual_entry_redirect():
+    return redirect(resolve_next_url("admin.finance_manual_entry"))
+
+
 def _suggest_advance_charge_date(year: int, month: int) -> date:
     # mesmo mês, dia 20, ajustando para segunda-feira se cair em fim de semana
     d = date(year, month, 20)
@@ -115,6 +119,9 @@ def register_routes(bp: Blueprint) -> None:
     def finance_entry_form_edit(entry_id: int):
         require_admin()
         entry = FinancialEntry.query.get_or_404(entry_id)
+        if entry.settled_at:
+            flash("Não é possível editar lançamento já quitado. Reabra-o antes.", "warning")
+            return _manual_entry_redirect()
         companies = _companies_with_accounts()
         natures = _financial_natures()
         accounts_by_company = _accounts_by_company(companies)
@@ -135,11 +142,11 @@ def register_routes(bp: Blueprint) -> None:
         entry = FinancialEntry.query.get_or_404(entry_id)
         if entry.settled_at:
             flash("Não é possível editar lançamento já quitado. Reabra-o antes.", "warning")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         entry_type = request.form.get("entry_type")
         if entry_type not in (ENTRY_PAYABLE, ENTRY_RECEIVABLE):
             flash("Tipo de lançamento inválido.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         return _update_entry(entry)
 
     @bp.route("/financeiro/lancamento/create", methods=["POST"])
@@ -149,7 +156,7 @@ def register_routes(bp: Blueprint) -> None:
         entry_type = request.form.get("entry_type")
         if entry_type not in (ENTRY_PAYABLE, ENTRY_RECEIVABLE):
             flash("Tipo de lançamento inválido.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         label = "Conta a pagar" if entry_type == ENTRY_PAYABLE else "Conta a receber"
         return _create_entry(entry_type, "admin.finance_manual_entry", label)
 
@@ -313,7 +320,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_revenue_process():
         require_admin()
-        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        next_url = resolve_next_url("admin.finance_manual_entry")
         year = request.form.get("year", type=int)
         month = request.form.get("month", type=int)
         charge_date_str = request.form.get("charge_date", "").strip()
@@ -388,7 +395,8 @@ def register_routes(bp: Blueprint) -> None:
             days_in_month = (month_end - month_start).days + 1
             effective_days = (eff_end - eff_start).days + 1
             proportion = effective_days / days_in_month if days_in_month > 0 else 1
-            amount = float(c.contract_value) * proportion
+            motoboy_qty = int(c.motoboy_quantity) if c.motoboy_quantity is not None else 1
+            amount = float(c.contract_value) * motoboy_qty * proportion
 
             entry = FinancialEntry(
                 company_id=company_id,
@@ -474,7 +482,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_payment_process():
         require_admin()
-        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        next_url = resolve_next_url("admin.finance_manual_entry")
         year = request.form.get("year", type=int)
         month = request.form.get("month", type=int)
         charge_date_str = request.form.get("charge_date", "").strip()
@@ -554,7 +562,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_advance_process():
         require_admin()
-        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        next_url = resolve_next_url("admin.finance_manual_entry")
         year = request.form.get("year", type=int)
         month = request.form.get("month", type=int)
         charge_date_str = request.form.get("charge_date", "").strip()
@@ -802,7 +810,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_residual_process():
         require_admin()
-        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
+        next_url = resolve_next_url("admin.finance_manual_entry")
         year = request.form.get("year", type=int)
         month = request.form.get("month", type=int)
         charge_date_str = request.form.get("charge_date", "").strip()
@@ -1041,8 +1049,8 @@ def register_routes(bp: Blueprint) -> None:
         entry = FinancialEntry.query.get_or_404(entry_id)
         if entry.settled_at:
             flash("Lançamento já quitado.", "warning")
-            return redirect(url_for("admin.finance_manual_entry"))
-        next_url = request.args.get("next") or url_for("admin.finance_manual_entry")
+            return _manual_entry_redirect()
+        next_url = resolve_next_url("admin.finance_manual_entry")
         return render_template(
             "admin/financeiro/_approve_form_fragment.html",
             entry=entry,
@@ -1059,12 +1067,12 @@ def register_routes(bp: Blueprint) -> None:
         settled_date_str = request.form.get("settled_date", "").strip()
         if not settled_date_str:
             flash("Data de baixa é obrigatória.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         try:
             settled_date = date.fromisoformat(settled_date_str)
         except ValueError:
             flash("Data de baixa inválida.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         entry.settled_at = datetime.combine(settled_date, time(0, 0))
         account_id = request.form.get("account_id", "").strip()
         if account_id:
@@ -1081,8 +1089,7 @@ def register_routes(bp: Blueprint) -> None:
             entry.account_id = None
         db.session.commit()
         flash("Lançamento aprovado (quitado).", "success")
-        next_url = request.form.get("next") or url_for("admin.finance_manual_entry")
-        return redirect(next_url)
+        return _manual_entry_redirect()
 
     # ---- Reabrir (voltar a pendente) ----
     @bp.post("/financeiro/lancamento/<int:entry_id>/reabrir")
@@ -1093,14 +1100,13 @@ def register_routes(bp: Blueprint) -> None:
         entry.settled_at = None
         db.session.commit()
         flash("Lançamento reaberto (pendente).", "info")
-        next_url = request.form.get("next") or request.referrer or url_for("admin.finance_manual_entry")
-        return redirect(next_url)
+        return _manual_entry_redirect()
 
     @bp.post("/financeiro/lancamento/bulk-reopen")
     @login_required
     def finance_bulk_reopen():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.finance_manual_entry")
+        next_url = resolve_next_url("admin.finance_manual_entry")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum lançamento selecionado.", "warning")
@@ -1133,7 +1139,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.finance_manual_entry")
+        next_url = resolve_next_url("admin.finance_manual_entry")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhum lançamento selecionado.", "warning")
@@ -1162,7 +1168,7 @@ def register_routes(bp: Blueprint) -> None:
                 "Geração de PDF indisponível: instale o pacote 'reportlab' no ambiente.",
                 "danger",
             )
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
 
         # Preparar dados agrupados: Empresa -> Cliente -> [motoboys]
         grouped: dict[str, dict[str, list[dict]]] = {}
@@ -1420,17 +1426,17 @@ def register_routes(bp: Blueprint) -> None:
 
         if not account_from_id or not account_to_id or not nature_id or not transfer_date_str or not amount_str:
             flash("Preencha conta origem, conta destino, natureza, data e valor.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
 
         if account_from_id == account_to_id:
             flash("Contas de origem e destino devem ser diferentes.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
 
         try:
             transfer_date = date.fromisoformat(transfer_date_str)
         except ValueError:
             flash("Data inválida.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
 
         try:
             amount_val = float(amount_str.replace(",", "."))
@@ -1438,21 +1444,21 @@ def register_routes(bp: Blueprint) -> None:
                 raise ValueError("Valor deve ser positivo")
         except (ValueError, TypeError):
             flash("Valor inválido.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
 
         nature = FinancialNature.query.get(int(nature_id))
         if not nature or not nature.is_active:
             flash("Natureza inválida ou inativa.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
 
         acc_from = Account.query.get(int(account_from_id))
         acc_to = Account.query.get(int(account_to_id))
         if not acc_from or not acc_from.is_active:
             flash("Conta origem inválida ou inativa.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         if not acc_to or not acc_to.is_active:
             flash("Conta destino inválida ou inativa.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
 
         settled_dt = datetime.combine(transfer_date, time(0, 0))
 
@@ -1482,7 +1488,7 @@ def register_routes(bp: Blueprint) -> None:
         db.session.add(in_entry)
         db.session.commit()
         flash("Transferência registrada. Dois lançamentos quitados foram criados.", "success")
-        return redirect(url_for("admin.finance_manual_entry"))
+        return _manual_entry_redirect()
 
 
 def _add_months(d: date, months: int) -> date:
@@ -1508,29 +1514,29 @@ def _create_entry(entry_type: str, list_route: str, label: str):
 
     if not description or not amount or not nature_id or not supplier_id:
         flash("Natureza, fornecedor, descrição e valor são obrigatórios.", "danger")
-        return redirect(url_for(list_route))
+        return redirect(resolve_next_url(list_route))
 
     if account_id:
         acc = Account.query.get(int(account_id))
         if not acc or not acc.is_active:
             flash("Conta inválida ou inativa.", "danger")
-            return redirect(url_for(list_route))
+            return redirect(resolve_next_url(list_route))
         company_id_int = acc.company_id
         account_id_int = int(account_id)
     else:
         if not company_id:
             flash("Informe a empresa ou selecione uma conta.", "danger")
-            return redirect(url_for(list_route))
+            return redirect(resolve_next_url(list_route))
         company_id_int = int(company_id)
         account_id_int = None
 
     nature = FinancialNature.query.get(int(nature_id))
     if not nature or not nature.is_active:
         flash("Natureza inválida ou inativa.", "danger")
-        return redirect(url_for(list_route))
+        return redirect(resolve_next_url(list_route))
     if nature.kind != entry_type:
         flash("A natureza selecionada não corresponde ao tipo (contas a pagar/receber).", "danger")
-        return redirect(url_for(list_route))
+        return redirect(resolve_next_url(list_route))
 
     try:
         amount_val = float(amount.replace(",", "."))
@@ -1538,17 +1544,17 @@ def _create_entry(entry_type: str, list_route: str, label: str):
             raise ValueError("Valor deve ser positivo")
     except (ValueError, TypeError):
         flash("Valor inválido.", "danger")
-        return redirect(url_for(list_route))
+        return redirect(resolve_next_url(list_route))
 
     supplier = Supplier.query.get(int(supplier_id))
     if not supplier or not supplier.is_active:
         flash("Fornecedor inválido ou inativo.", "danger")
-        return redirect(url_for(list_route))
+        return redirect(resolve_next_url(list_route))
 
     due_date = date.fromisoformat(due_date_str) if due_date_str else None
     if not due_date:
         flash("Data de vencimento é obrigatória.", "danger")
-        return redirect(url_for(list_route))
+        return redirect(resolve_next_url(list_route))
 
     recurrence_count = 1
     if recurrence_str and recurrence_str.isdigit():
@@ -1572,7 +1578,7 @@ def _create_entry(entry_type: str, list_route: str, label: str):
         flash(f"{recurrence_count} lançamentos cadastrados (recorrência mensal).", "success")
     else:
         flash(f"{label} cadastrada com sucesso.", "success")
-    return redirect(url_for(list_route))
+    return redirect(resolve_next_url(list_route))
 
 
 def _update_entry(entry: FinancialEntry):
@@ -1587,29 +1593,29 @@ def _update_entry(entry: FinancialEntry):
 
     if not description or not amount or not nature_id or not supplier_id:
         flash("Natureza, fornecedor, descrição e valor são obrigatórios.", "danger")
-        return redirect(url_for("admin.finance_manual_entry"))
+        return _manual_entry_redirect()
 
     if account_id:
         acc = Account.query.get(int(account_id))
         if not acc or not acc.is_active:
             flash("Conta inválida ou inativa.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         company_id_int = acc.company_id
         entry.account_id = int(account_id)
     else:
         if not company_id:
             flash("Informe a empresa ou selecione uma conta.", "danger")
-            return redirect(url_for("admin.finance_manual_entry"))
+            return _manual_entry_redirect()
         company_id_int = int(company_id)
         entry.account_id = None
 
     nature = FinancialNature.query.get(int(nature_id))
     if not nature or not nature.is_active:
         flash("Natureza inválida ou inativa.", "danger")
-        return redirect(url_for("admin.finance_manual_entry"))
+        return _manual_entry_redirect()
     if nature.kind != entry_type:
         flash("A natureza selecionada não corresponde ao tipo (contas a pagar/receber).", "danger")
-        return redirect(url_for("admin.finance_manual_entry"))
+        return _manual_entry_redirect()
 
     try:
         amount_val = float(amount.replace(",", "."))
@@ -1617,12 +1623,12 @@ def _update_entry(entry: FinancialEntry):
             raise ValueError("Valor deve ser positivo")
     except (ValueError, TypeError):
         flash("Valor inválido.", "danger")
-        return redirect(url_for("admin.finance_manual_entry"))
+        return _manual_entry_redirect()
 
     supplier = Supplier.query.get(int(supplier_id))
     if not supplier or not supplier.is_active:
         flash("Fornecedor inválido ou inativo.", "danger")
-        return redirect(url_for("admin.finance_manual_entry"))
+        return _manual_entry_redirect()
 
     due_date = date.fromisoformat(due_date_str) if due_date_str else None
     entry.company_id = company_id_int
@@ -1634,4 +1640,4 @@ def _update_entry(entry: FinancialEntry):
     entry.due_date = due_date
     db.session.commit()
     flash("Lançamento alterado com sucesso.", "success")
-    return redirect(url_for("admin.finance_manual_entry"))
+    return _manual_entry_redirect()

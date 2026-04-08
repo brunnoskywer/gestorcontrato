@@ -64,7 +64,7 @@ def register_routes(bp: Blueprint) -> None:
                 db.session.add(nature)
                 db.session.commit()
                 flash("Natureza financeira criada com sucesso.", "success")
-                return redirect(url_for("admin.financial_natures_list"))
+                return redirect(resolve_next_url("admin.financial_natures_list"))
 
         return render_template("admin/financial_natures/form.html", nature=None)
 
@@ -85,7 +85,7 @@ def register_routes(bp: Blueprint) -> None:
                 nature.kind = kind
                 db.session.commit()
                 flash("Natureza financeira atualizada com sucesso.", "success")
-                return redirect(url_for("admin.financial_natures_list"))
+                return redirect(resolve_next_url("admin.financial_natures_list"))
 
         return render_template("admin/financial_natures/form.html", nature=nature)
 
@@ -107,7 +107,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def financial_natures_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.financial_natures_list")
+        next_url = resolve_next_url("admin.financial_natures_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhuma natureza selecionada.", "warning")

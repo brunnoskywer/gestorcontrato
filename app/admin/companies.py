@@ -74,7 +74,7 @@ def register_routes(bp: Blueprint) -> None:
                 db.session.add(company)
                 db.session.commit()
                 flash("Empresa criada com sucesso.", "success")
-                return redirect(url_for("admin.companies_list"))
+                return redirect(resolve_next_url("admin.companies_list"))
 
         return render_template("admin/companies/form.html", company=None)
 
@@ -95,7 +95,7 @@ def register_routes(bp: Blueprint) -> None:
             else:
                 db.session.commit()
                 flash("Empresa atualizada com sucesso.", "success")
-                return redirect(url_for("admin.companies_list"))
+                return redirect(resolve_next_url("admin.companies_list"))
 
         return render_template("admin/companies/form.html", company=company)
 
@@ -117,7 +117,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def companies_bulk_delete():
         require_admin()
-        next_url = request.form.get("next") or request.args.get("next") or url_for("admin.companies_list")
+        next_url = resolve_next_url("admin.companies_list")
         ids = request.form.getlist("ids", type=int)
         if not ids:
             flash("Nenhuma empresa selecionada.", "warning")
