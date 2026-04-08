@@ -26,10 +26,19 @@ def create_app(config_class: type[Config] | None = None) -> Flask:
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(api_v1_bp, url_prefix="/api/v1")
 
-    from .filters import format_currency, jinja_finalize
+    from .filters import (
+        format_currency,
+        finance_entry_stripe_class,
+        jinja_finalize,
+        motoboy_status_label_pt,
+        motoboy_status_stripe_class,
+    )
 
     app.jinja_env.finalize = jinja_finalize
     app.jinja_env.filters["format_currency"] = format_currency
+    app.jinja_env.filters["motoboy_status_stripe_class"] = motoboy_status_stripe_class
+    app.jinja_env.filters["motoboy_status_label_pt"] = motoboy_status_label_pt
+    app.jinja_env.filters["finance_entry_stripe_class"] = finance_entry_stripe_class
 
     return app
 

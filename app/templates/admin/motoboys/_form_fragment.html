@@ -37,10 +37,12 @@
     <div class="col-12 col-md-4 mb-3">
       <label class="form-label">Status</label>
       <select name="status" class="form-select">
-        {% set current_status = motoboy.status if motoboy else 'active' %}
-        <option value="active" {% if current_status == 'active' %}selected{% endif %}>Active</option>
-        <option value="inactive" {% if current_status == 'inactive' %}selected{% endif %}>Inactive</option>
+        {% set raw_st = (motoboy.status if motoboy else 'active')|lower %}
+        <option value="active" {% if raw_st == 'active' %}selected{% endif %}>Ativo</option>
+        <option value="pending" {% if raw_st == 'pending' %}selected{% endif %}>Pendente</option>
+        <option value="terminated" {% if raw_st in ['terminated', 'inactive'] %}selected{% endif %}>Encerrado</option>
       </select>
+      <div class="form-text text-muted small">Use a barra de ferramentas na lista para encerrar/reativar com um clique.</div>
     </div>
     <div class="col-12 col-md-8 mb-3">
       <label class="form-label">Telefone de contato</label>

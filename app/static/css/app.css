@@ -52,7 +52,17 @@ body {
 }
 
 [data-bs-theme="dark"] .table-list tbody tr:hover {
-  background-color: rgba(13, 110, 253, 0.18);
+  background-color: rgba(59, 130, 246, 0.22) !important;
+  box-shadow: inset 0 0 0 2px rgba(96, 165, 250, 0.45);
+}
+
+[data-bs-theme="dark"] .table-list tbody tr.table-active {
+  background-color: rgba(59, 130, 246, 0.32) !important;
+  box-shadow: inset 0 0 0 2px rgba(96, 165, 250, 0.65);
+}
+
+[data-bs-theme="dark"] .status-stripe {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 [data-bs-theme="dark"] .hover-shadow:hover {
@@ -201,8 +211,13 @@ main.container {
   border-bottom-color: #fff;
 }
 
+.table-list tbody tr {
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
 .table-list tbody tr:hover {
-  background-color: #eef4ff;
+  background-color: #dbeafe !important;
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.28);
 }
 
 .table-list tbody tr:nth-child(odd) {
@@ -211,6 +226,54 @@ main.container {
 
 .table-list tbody tr:nth-child(even) {
   background-color: #f9fafb;
+}
+
+.table-list tbody tr.table-active {
+  background-color: #bfdbfe !important;
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.5);
+}
+
+/* Faixa de status (primeira coluna): motoboy e financeiro */
+.table-list thead th.table-status-stripe-th {
+  width: 10px;
+  min-width: 10px;
+  max-width: 10px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.table-list td.table-status-stripe-cell {
+  width: 10px;
+  min-width: 10px;
+  max-width: 10px;
+  padding: 0 !important;
+  vertical-align: middle;
+  border-left: none;
+}
+
+.status-stripe {
+  display: block;
+  width: 6px;
+  min-height: 2.1rem;
+  margin: 3px auto;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.status-stripe-ativo {
+  background: #22c55e;
+}
+
+.status-stripe-pendente {
+  background: #eab308;
+}
+
+.status-stripe-encerrado {
+  background: #ef4444;
+}
+
+.status-stripe-quitado {
+  background: #3b82f6;
 }
 
 .table-list tbody td {

@@ -341,6 +341,7 @@
       headers.forEach(function (th, index) {
         var hasSelectAll = th.querySelector('.select-all');
         if (hasSelectAll) return; // skip checkbox column
+        if (th.getAttribute('data-sort-skip') === '1') return;
         th.style.cursor = 'pointer';
         th.addEventListener('click', function () {
           var tbody = table.querySelector('tbody');
@@ -452,6 +453,9 @@
         table.querySelectorAll('.row-select').forEach(function (cb) {
           cb.checked = false;
         });
+        table.querySelectorAll('tbody tr').forEach(function (tr) {
+          tr.classList.remove('table-active');
+        });
         var selectAll = table.querySelector('thead .select-all');
         if (selectAll) selectAll.checked = false;
       });
@@ -521,6 +525,45 @@
             submitFormForTurbo(form);
           }
         );
+      });
+
+      function postSingleRowAction(actionTpl, confirmMsg, confirmBtnLabel) {
+        if (!actionTpl) return;
+        var ids = getSelectedIds();
+        if (ids.length === 0) {
+          showMessageModal('Selecione um registro.', 'Atenção');
+          return;
+        }
+        if (ids.length > 1) {
+          showMessageModal('Selecione apenas um registro.', 'Atenção');
+          return;
+        }
+        showConfirmModal(confirmMsg, 'Confirmar', confirmBtnLabel || 'Confirmar', function () {
+          var form = document.createElement('form');
+          form.method = 'POST';
+          form.action = actionTpl.replace('{id}', ids[0]);
+          form.setAttribute('data-turbo-frame', 'main-content');
+          var nextInput = document.createElement('input');
+          nextInput.type = 'hidden';
+          nextInput.name = 'next';
+          nextInput.value = window.location.pathname + window.location.search;
+          form.appendChild(nextInput);
+          document.body.appendChild(form);
+          submitFormForTurbo(form);
+        });
+      }
+
+      var mbCloseTpl = toolbar.getAttribute('data-motoboy-close-url-template');
+      toolbar.querySelector('.admin-toolbar-motoboy-close')?.addEventListener('click', function () {
+        postSingleRowAction(
+          mbCloseTpl,
+          'Encerrar o motoboy selecionado? Ele deixa de aparecer em contratos, faltas e financeiro.',
+          'Encerrar'
+        );
+      });
+      var mbActTpl = toolbar.getAttribute('data-motoboy-activate-url-template');
+      toolbar.querySelector('.admin-toolbar-motoboy-activate')?.addEventListener('click', function () {
+        postSingleRowAction(mbActTpl, 'Reativar o motoboy selecionado?', 'Ativar');
       });
 
       var faltaTpl = toolbar.getAttribute('data-falta-url-template');

@@ -6,7 +6,27 @@ from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
-from app.models import Supplier, SUPPLIER_MOTOBOY
+from app.models import (
+    Supplier,
+    SUPPLIER_MOTOBOY,
+    MOTOBOY_STATUS_ACTIVE,
+    MOTOBOY_STATUS_PENDING,
+    MOTOBOY_STATUS_TERMINATED,
+    MOTOBOY_TERMINATED_STATUSES,
+)
+
+_ALLOWED_MOTOBOY_STATUS = frozenset(
+    {MOTOBOY_STATUS_ACTIVE, MOTOBOY_STATUS_PENDING, MOTOBOY_STATUS_TERMINATED}
+)
+
+
+def _normalize_motoboy_status(raw: str | None) -> str:
+    s = (raw or MOTOBOY_STATUS_ACTIVE).strip().lower()
+    if s == "inactive":
+        return MOTOBOY_STATUS_TERMINATED
+    if s in _ALLOWED_MOTOBOY_STATUS:
+        return s
+    return MOTOBOY_STATUS_ACTIVE
 
 
 def _render_motoboy_form(motoboy, action_url: str):
@@ -77,7 +97,8 @@ def register_routes(bp: Blueprint) -> None:
             return jsonify([])
 
         query = (
-            Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True)
+            Supplier.query.filter_by(type=SUPPLIER_MOTOBOY)
+            .filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
             .filter(Supplier.name.ilike(f"%{term}%"))
             .order_by(Supplier.name)
         )
@@ -104,7 +125,7 @@ def register_routes(bp: Blueprint) -> None:
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
-            status = request.form.get("status", "active").strip() or "active"
+            status = _normalize_motoboy_status(request.form.get("status"))
             contact_phone = request.form.get("contact_phone", "").strip()
             notes = request.form.get("notes", "").strip()
             is_diarist = request.form.get("is_diarist") == "1"
@@ -116,7 +137,7 @@ def register_routes(bp: Blueprint) -> None:
                     name=full_name,
                     document=cpf,
                     type=SUPPLIER_MOTOBOY,
-                    is_active=True,
+                    is_active=status not in MOTOBOY_TERMINATED_STATUSES,
                     address=address or None,
                     reference_contact=reference_contact or None,
                     bike_plate=bike_plate or None,
@@ -156,7 +177,7 @@ def register_routes(bp: Blueprint) -> None:
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
-            status = request.form.get("status", "active").strip() or "active"
+            status = _normalize_motoboy_status(request.form.get("status"))
             contact_phone = request.form.get("contact_phone", "").strip()
             notes = request.form.get("notes", "").strip()
             is_diarist = request.form.get("is_diarist") == "1"
@@ -172,6 +193,7 @@ def register_routes(bp: Blueprint) -> None:
                 motoboy.bank_account_pix = bank_account_pix or None
                 motoboy.document_secondary = cnpj or None
                 motoboy.status = status
+                motoboy.is_active = status not in MOTOBOY_TERMINATED_STATUSES
                 motoboy.contact_phone = contact_phone or None
                 motoboy.notes = notes or None
                 motoboy.is_diarist = is_diarist
@@ -202,6 +224,34 @@ def register_routes(bp: Blueprint) -> None:
         except IntegrityError:
             handle_delete_constraint_error()
         return redirect(next_url)
+
+    @bp.post("/motoboys/<int:motoboy_id>/encerrar")
+    @login_required
+    def motoboys_encerrar(motoboy_id: int):
+        require_admin()
+        motoboy = Supplier.query.filter_by(id=motoboy_id, type=SUPPLIER_MOTOBOY).first_or_404()
+        if motoboy.status in MOTOBOY_TERMINATED_STATUSES:
+            flash("Este motoboy já está encerrado.", "warning")
+            return redirect(resolve_next_url("admin.motoboys_list"))
+        motoboy.status = MOTOBOY_STATUS_TERMINATED
+        motoboy.is_active = False
+        db.session.commit()
+        flash("Motoboy encerrado. Ele deixa de aparecer em contratos, faltas e financeiro.", "info")
+        return redirect(resolve_next_url("admin.motoboys_list"))
+
+    @bp.post("/motoboys/<int:motoboy_id>/ativar")
+    @login_required
+    def motoboys_ativar(motoboy_id: int):
+        require_admin()
+        motoboy = Supplier.query.filter_by(id=motoboy_id, type=SUPPLIER_MOTOBOY).first_or_404()
+        if motoboy.status not in MOTOBOY_TERMINATED_STATUSES:
+            flash("Este motoboy já está ativo (não encerrado).", "warning")
+            return redirect(resolve_next_url("admin.motoboys_list"))
+        motoboy.status = MOTOBOY_STATUS_ACTIVE
+        motoboy.is_active = True
+        db.session.commit()
+        flash("Motoboy ativado novamente.", "success")
+        return redirect(resolve_next_url("admin.motoboys_list"))
 
     @bp.post("/motoboys/bulk-delete")
     @login_required

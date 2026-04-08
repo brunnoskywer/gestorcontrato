@@ -28,6 +28,7 @@ from app.models import (
     CONTRACT_TYPE_CLIENT,
     CONTRACT_TYPE_MOTOBOY,
     ContractAbsence,
+    motoboy_supplier_operational,
 )
 from io import BytesIO
 
@@ -640,8 +641,12 @@ def register_routes(bp: Blueprint) -> None:
         skipped_no_advance_value = 0
         skipped_distrato_after_cutoff = 0
         skipped_distrato_fully_paid = 0
+        skipped_motoboy_encerrado = 0
 
         for c in contracts:
+            if c.supplier and not motoboy_supplier_operational(c.supplier):
+                skipped_motoboy_encerrado += 1
+                continue
             if not c.advance_value:
                 skipped_no_advance_value += 1
                 continue
@@ -771,6 +776,10 @@ def register_routes(bp: Blueprint) -> None:
             msg_parts.append(f"{skipped_distrato_after_cutoff} contrato(s) com distrato após o dia 15 foram ignorados para este processamento.")
         if skipped_distrato_fully_paid:
             msg_parts.append(f"{skipped_distrato_fully_paid} contrato(s) já totalmente pagos no período de 15 dias foram ignorados.")
+        if skipped_motoboy_encerrado:
+            msg_parts.append(
+                f"{skipped_motoboy_encerrado} contrato(s) ignorados: motoboy encerrado no cadastro."
+            )
 
         if not msg_parts:
             flash("Nenhum lançamento de adiantamento ou distrato foi gerado.", "warning")
@@ -887,10 +896,14 @@ def register_routes(bp: Blueprint) -> None:
         skipped_no_company = 0
         skipped_no_base = 0
         skipped_fully_paid = 0
+        skipped_motoboy_encerrado = 0
 
         days_in_month = (month_end - month_start).days + 1
 
         for c in contracts:
+            if c.supplier and not motoboy_supplier_operational(c.supplier):
+                skipped_motoboy_encerrado += 1
+                continue
             # Base: precisa ter valor prestação ou premiação para ter o que calcular
             base_service = float(c.service_value or 0)
             base_bonus = float(c.bonus_value or 0)
@@ -1033,6 +1046,10 @@ def register_routes(bp: Blueprint) -> None:
             msg_parts.append(f"{skipped_no_company} contrato(s) sem empresa de cobrança foram ignorados.")
         if skipped_fully_paid:
             msg_parts.append(f"{skipped_fully_paid} contrato(s) já totalmente pagos no mês foram ignorados.")
+        if skipped_motoboy_encerrado:
+            msg_parts.append(
+                f"{skipped_motoboy_encerrado} contrato(s) ignorados: motoboy encerrado no cadastro."
+            )
 
         if not msg_parts:
             flash("Nenhum lançamento residual foi gerado.", "warning")

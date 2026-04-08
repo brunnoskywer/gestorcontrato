@@ -5,7 +5,13 @@ from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
-from app.models import Supplier, SUPPLIER_CLIENT, SUPPLIER_SUPPLIER, SUPPLIER_MOTOBOY
+from app.models import (
+    Supplier,
+    SUPPLIER_CLIENT,
+    SUPPLIER_SUPPLIER,
+    SUPPLIER_MOTOBOY,
+    MOTOBOY_TERMINATED_STATUSES,
+)
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -132,6 +138,8 @@ def register_routes(bp: Blueprint) -> None:
         query = Supplier.query.filter(Supplier.is_active.is_(True))
         if supplier_type in (SUPPLIER_CLIENT, SUPPLIER_SUPPLIER, SUPPLIER_MOTOBOY):
             query = query.filter(Supplier.type == supplier_type)
+            if supplier_type == SUPPLIER_MOTOBOY:
+                query = query.filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
         if term:
             query = query.filter(Supplier.name.ilike(f"%{term}%"))
 

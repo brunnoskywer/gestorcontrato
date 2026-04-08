@@ -7,6 +7,20 @@ SUPPLIER_CLIENT = "client"
 SUPPLIER_SUPPLIER = "supplier"
 SUPPLIER_MOTOBOY = "motoboy"
 
+# Status operacional do motoboy (cadastro). "inactive" é legado → tratar como encerrado.
+MOTOBOY_STATUS_ACTIVE = "active"
+MOTOBOY_STATUS_PENDING = "pending"
+MOTOBOY_STATUS_TERMINATED = "terminated"
+MOTOBOY_TERMINATED_STATUSES = frozenset({MOTOBOY_STATUS_TERMINATED, "inactive"})
+
+
+def motoboy_supplier_operational(supplier: "Supplier") -> bool:
+    """Motoboy disponível para contratos, faltas, buscas e processamentos financeiros."""
+    if not supplier or supplier.type != SUPPLIER_MOTOBOY:
+        return True
+    st = (supplier.status or MOTOBOY_STATUS_ACTIVE).strip().lower()
+    return st not in MOTOBOY_TERMINATED_STATUSES
+
 
 class Supplier(db.Model):
     __tablename__ = "suppliers"
@@ -35,7 +49,7 @@ class Supplier(db.Model):
     bank_account_pix = db.Column(db.String(120), nullable=True)
     document_secondary = db.Column(db.String(20), nullable=True)  # e.g. motoboy CNPJ
     # Motoboy-specific fields
-    status = db.Column(db.String(20), nullable=False, default="active")  # active | inactive
+    status = db.Column(db.String(20), nullable=False, default=MOTOBOY_STATUS_ACTIVE)  # active | pending | terminated
     contact_phone = db.Column(db.String(50), nullable=True)
     # Motoboy pode ser marcado como diarista (cobre faltas de titulares em contratos).
     is_diarist = db.Column(db.Boolean, nullable=False, default=False)

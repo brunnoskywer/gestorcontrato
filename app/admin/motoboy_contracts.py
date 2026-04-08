@@ -23,6 +23,8 @@ from app.models import (
     Supplier,
     SUPPLIER_CLIENT,
     SUPPLIER_MOTOBOY,
+    MOTOBOY_TERMINATED_STATUSES,
+    motoboy_supplier_operational,
 )
 from app.models.financial_entry import ENTRY_PAYABLE
 from app.utils import parse_decimal_form
@@ -57,10 +59,25 @@ def _delete_unsettled_payable(entry_id):
         db.session.delete(entry)
 
 
+def _motoboys_for_contract_select(contract: Optional[Contract] = None):
+    rows = (
+        Supplier.query.filter_by(type=SUPPLIER_MOTOBOY)
+        .filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
+        .order_by(Supplier.name)
+        .all()
+    )
+    if contract and contract.supplier_id:
+        cur = contract.supplier
+        if cur and cur.type == SUPPLIER_MOTOBOY and cur.id not in {m.id for m in rows}:
+            return [cur] + rows
+    return rows
+
+
 def _diarist_motoboys_for_select(absence: Optional[ContractAbsence] = None):
     """Motoboys ativos marcados como diarista; na edição inclui o atual se não estiver na lista."""
     rows = (
         Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True, is_diarist=True)
+        .filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
         .order_by(Supplier.name)
         .all()
     )
@@ -89,8 +106,8 @@ def _sync_absence_substitute_payable(contract: Contract, absence: ContractAbsenc
         return False, "Com motoboy diarista (quem cobriu), a natureza financeira é obrigatória."
 
     sub = Supplier.query.filter_by(id=sub_id, type=SUPPLIER_MOTOBOY).first()
-    if not sub or not sub.is_diarist:
-        return False, "O motoboy que recebe a conta a pagar deve estar marcado como Diarista no cadastro."
+    if not sub or not sub.is_diarist or not motoboy_supplier_operational(sub):
+        return False, "O motoboy que recebe a conta a pagar deve ser diarista ativo (não encerrado) no cadastro."
 
     if contract.missing_value is None:
         return False, "Contrato sem valor de falta (Valor falta). Defina no contrato para gerar a conta a pagar."
@@ -142,7 +159,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboy_contracts_form_new():
         require_admin()
-        motoboys = Supplier.query.filter_by(type=SUPPLIER_MOTOBOY).order_by(Supplier.name).all()
+        motoboys = _motoboys_for_contract_select()
         clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
         return render_template(
             "admin/motoboy_contracts/_form_fragment.html",
@@ -157,7 +174,7 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contracts_form_edit(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
-        motoboys = Supplier.query.filter_by(type=SUPPLIER_MOTOBOY).order_by(Supplier.name).all()
+        motoboys = _motoboys_for_contract_select(contract)
         clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
         return render_template(
             "admin/motoboy_contracts/_form_fragment.html",
@@ -202,7 +219,7 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def motoboy_contracts_create():
         require_admin()
-        motoboys = Supplier.query.filter_by(type=SUPPLIER_MOTOBOY).order_by(Supplier.name).all()
+        motoboys = _motoboys_for_contract_select()
         clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
 
         if request.method == "POST":
@@ -230,24 +247,28 @@ def register_routes(bp: Blueprint) -> None:
                     if not client_row:
                         flash("Selecione um cliente válido (cadastro de cliente).", "danger")
                     else:
-                        start_date_val = date.fromisoformat(start_date_str)
-                        end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
-                        contract = Contract(
-                            supplier_id=int(motoboy_id),
-                            contract_type=CONTRACT_TYPE_MOTOBOY,
-                            other_supplier_id=client_pk,
-                            start_date=start_date_val,
-                            end_date=end_date_val,
-                            location=location or None,
-                            service_value=service_value,
-                            bonus_value=bonus_value,
-                            missing_value=missing_value,
-                            advance_value=advance_value,
-                        )
-                        db.session.add(contract)
-                        db.session.commit()
-                        flash("Contrato de motoboy criado com sucesso.", "success")
-                        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+                        mb = Supplier.query.filter_by(id=int(motoboy_id), type=SUPPLIER_MOTOBOY).first()
+                        if not mb or not motoboy_supplier_operational(mb):
+                            flash("Motoboy inválido ou encerrado no cadastro.", "danger")
+                        else:
+                            start_date_val = date.fromisoformat(start_date_str)
+                            end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
+                            contract = Contract(
+                                supplier_id=int(motoboy_id),
+                                contract_type=CONTRACT_TYPE_MOTOBOY,
+                                other_supplier_id=client_pk,
+                                start_date=start_date_val,
+                                end_date=end_date_val,
+                                location=location or None,
+                                service_value=service_value,
+                                bonus_value=bonus_value,
+                                missing_value=missing_value,
+                                advance_value=advance_value,
+                            )
+                            db.session.add(contract)
+                            db.session.commit()
+                            flash("Contrato de motoboy criado com sucesso.", "success")
+                            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         return render_template(
             "admin/motoboy_contracts/form.html",
@@ -261,7 +282,7 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contracts_edit(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
-        motoboys = Supplier.query.filter_by(type=SUPPLIER_MOTOBOY).order_by(Supplier.name).all()
+        motoboys = _motoboys_for_contract_select(contract)
         clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
 
         if request.method == "POST":
@@ -289,12 +310,16 @@ def register_routes(bp: Blueprint) -> None:
                     if not client_row:
                         flash("Selecione um cliente válido (cadastro de cliente).", "danger")
                     else:
-                        contract.other_supplier_id = client_pk
-                        contract.start_date = date.fromisoformat(start_date_str)
-                        contract.end_date = date.fromisoformat(end_date_str) if end_date_str else None
-                        db.session.commit()
-                        flash("Contrato de motoboy atualizado com sucesso.", "success")
-                        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+                        mb = Supplier.query.filter_by(id=contract.supplier_id, type=SUPPLIER_MOTOBOY).first()
+                        if not mb or not motoboy_supplier_operational(mb):
+                            flash("Motoboy inválido ou encerrado no cadastro.", "danger")
+                        else:
+                            contract.other_supplier_id = client_pk
+                            contract.start_date = date.fromisoformat(start_date_str)
+                            contract.end_date = date.fromisoformat(end_date_str) if end_date_str else None
+                            db.session.commit()
+                            flash("Contrato de motoboy atualizado com sucesso.", "success")
+                            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
         return render_template(
             "admin/motoboy_contracts/form.html",
@@ -352,9 +377,12 @@ def register_routes(bp: Blueprint) -> None:
             if not nature_id:
                 flash("Com motoboy diarista (quem cobriu), a natureza financeira é obrigatória.", "danger")
                 return redirect(resolve_next_url("admin.motoboy_contracts_list"))
-            sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY, is_active=True).first()
-            if not sub or not sub.is_diarist:
-                flash("O motoboy selecionado deve estar ativo e marcado como Diarista no cadastro.", "danger")
+            sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY).first()
+            if not sub or not sub.is_diarist or not motoboy_supplier_operational(sub):
+                flash(
+                    "O motoboy selecionado deve ser diarista ativo (não encerrado) no cadastro.",
+                    "danger",
+                )
                 return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         else:
             nature_id = None
@@ -465,9 +493,12 @@ def register_routes(bp: Blueprint) -> None:
                 if not nature_id:
                     flash("Com motoboy diarista (quem cobriu), a natureza financeira é obrigatória.", "danger")
                     return redirect(resolve_next_url("admin.motoboy_contracts_list"))
-                sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY, is_active=True).first()
-                if not sub or not sub.is_diarist:
-                    flash("O motoboy selecionado deve estar ativo e marcado como Diarista no cadastro.", "danger")
+                sub = Supplier.query.filter_by(id=substitute_id, type=SUPPLIER_MOTOBOY).first()
+                if not sub or not sub.is_diarist or not motoboy_supplier_operational(sub):
+                    flash(
+                        "O motoboy selecionado deve ser diarista ativo (não encerrado) no cadastro.",
+                        "danger",
+                    )
                     return redirect(resolve_next_url("admin.motoboy_contracts_list"))
             else:
                 nature_id = None
