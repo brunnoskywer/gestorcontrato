@@ -99,6 +99,9 @@
   <tbody>
     {% for e in entries %}
     <tr data-id="{{ e.id }}" data-settled="{{ '1' if e.settled_at else '0' }}">
+      <td class="table-status-stripe-cell p-0 align-middle" aria-hidden="true">
+        <span class="status-stripe {{ e|finance_entry_stripe_class }}" title="{% if e.settled_at %}Quitado{% else %}Pendente{% endif %}"></span>
+      </td>
       <td data-label="Selecionar">
         <input type="checkbox" class="form-check-input row-select" value="{{ e.id }}" aria-label="Selecionar" />
       </td>
@@ -125,19 +128,4 @@
   </tbody>
 </table>
 </div>
-
-<script>
-(function() {
-  var table = document.getElementById('list-table');
-  if (!table) return;
-  var theadSelectAll = table.querySelector('thead .select-all');
-  if (theadSelectAll) {
-    theadSelectAll.addEventListener('change', function() {
-      table.querySelectorAll('tbody .row-select').forEach(function(cb) {
-        cb.checked = theadSelectAll.checked;
-      });
-    });
-  }
-})();
-</script>
 {% endblock %}

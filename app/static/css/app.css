@@ -52,13 +52,13 @@ body {
 }
 
 [data-bs-theme="dark"] .table-list tbody tr:hover {
-  background-color: rgba(59, 130, 246, 0.22) !important;
-  box-shadow: inset 0 0 0 2px rgba(96, 165, 250, 0.45);
+  background-color: rgba(14, 165, 233, 0.2) !important;
+  box-shadow: inset 5px 0 0 0 #38bdf8, inset 0 0 0 1px rgba(56, 189, 248, 0.5);
 }
 
 [data-bs-theme="dark"] .table-list tbody tr.table-active {
-  background-color: rgba(59, 130, 246, 0.32) !important;
-  box-shadow: inset 0 0 0 2px rgba(96, 165, 250, 0.65);
+  background-color: rgba(14, 165, 233, 0.35) !important;
+  box-shadow: inset 5px 0 0 0 #0ea5e9, inset 0 0 0 2px #7dd3fc;
 }
 
 [data-bs-theme="dark"] .status-stripe {
@@ -211,13 +211,20 @@ main.container {
   border-bottom-color: #fff;
 }
 
+/* Evita que o hover do Bootstrap (.table-hover) pinte cada <td> e “apague” o destaque da linha */
+.table.table-list.table-hover > tbody > tr:hover > td,
+.table.table-list.table-hover > tbody > tr:hover > th {
+  background-color: transparent !important;
+  --bs-table-hover-bg: transparent;
+}
+
 .table-list tbody tr {
-  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .table-list tbody tr:hover {
-  background-color: #dbeafe !important;
-  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.28);
+  background-color: #cffafe !important;
+  box-shadow: inset 5px 0 0 0 #0ea5e9, inset 0 0 0 1px rgba(14, 165, 233, 0.45);
 }
 
 .table-list tbody tr:nth-child(odd) {
@@ -229,8 +236,8 @@ main.container {
 }
 
 .table-list tbody tr.table-active {
-  background-color: #bfdbfe !important;
-  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.5);
+  background-color: #a5f3fc !important;
+  box-shadow: inset 5px 0 0 0 #0284c7, inset 0 0 0 2px #0369a1;
 }
 
 /* Faixa de status (primeira coluna): motoboy e financeiro */

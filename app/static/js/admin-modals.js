@@ -150,6 +150,26 @@
     });
   }
 
+  /** Atualiza só o turbo-frame principal a partir do HTML da resposta (mantém abas e URL com filtros). */
+  function mergeTurboMainContentFromHtml(html) {
+    var frame = document.getElementById('main-content');
+    if (!frame) return;
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, 'text/html');
+    var newFrame = doc.querySelector('turbo-frame#main-content');
+    if (!newFrame) return;
+    frame.innerHTML = newFrame.innerHTML;
+    runScriptsInElement(frame);
+    setTimeout(function () {
+      initToolbar();
+      initTableListRowClick(frame);
+      initSearchInputs(frame);
+      if (typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('admin:frame-updated', { detail: { frame: frame } }));
+      }
+    }, 0);
+  }
+
   /**
    * Garante campo hidden `next` em formulários POST do modal, com a URL da lista atual
    * (path + query), para o backend redirecionar mantendo filtros após inserir/editar.
@@ -539,17 +559,27 @@
           return;
         }
         showConfirmModal(confirmMsg, 'Confirmar', confirmBtnLabel || 'Confirmar', function () {
-          var form = document.createElement('form');
-          form.method = 'POST';
-          form.action = actionTpl.replace('{id}', ids[0]);
-          form.setAttribute('data-turbo-frame', 'main-content');
-          var nextInput = document.createElement('input');
-          nextInput.type = 'hidden';
-          nextInput.name = 'next';
-          nextInput.value = window.location.pathname + window.location.search;
-          form.appendChild(nextInput);
-          document.body.appendChild(form);
-          submitFormForTurbo(form);
+          var url = actionTpl.replace('{id}', ids[0]);
+          var formData = new FormData();
+          formData.append('next', window.location.pathname + window.location.search);
+          fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              Accept: 'text/html',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            redirect: 'follow'
+          })
+            .then(function (r) {
+              return r.text();
+            })
+            .then(function (html) {
+              mergeTurboMainContentFromHtml(html);
+            })
+            .catch(function () {
+              showMessageModal('Erro ao executar a ação. Tente novamente.', 'Erro');
+            });
         });
       }
 
@@ -657,25 +687,11 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
                 },
                 redirect: 'follow'
               })
-                .then(function (r) { return r.text(); })
+                .then(function (r) {
+                  return r.text();
+                })
                 .then(function (html) {
-                  var frame = document.getElementById('main-content');
-                  if (!frame) return;
-                  var parser = new DOMParser();
-                  var doc = parser.parseFromString(html, 'text/html');
-                  var newFrame = doc.querySelector('turbo-frame#main-content');
-                  if (newFrame) {
-                    frame.innerHTML = newFrame.innerHTML;
-                    runScriptsInElement(frame);
-                    setTimeout(function () {
-                      initToolbar();
-                      initTableListRowClick(frame);
-                      initSearchInputs(frame);
-                      if (typeof window.dispatchEvent === 'function') {
-                        window.dispatchEvent(new CustomEvent('admin:frame-updated', { detail: { frame: frame } }));
-                      }
-                    }, 0);
-                  }
+                  mergeTurboMainContentFromHtml(html);
                 })
                 .catch(function () {
                   showMessageModal('Erro ao reabrir lançamento(s). Tente novamente.', 'Erro');
