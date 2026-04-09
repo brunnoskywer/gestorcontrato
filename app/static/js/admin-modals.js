@@ -360,6 +360,21 @@
     selectAll.checked = all.length > 0 && all.length === checked.length;
   }
 
+  function setRowSelected(table, cb, checked) {
+    if (!cb) return;
+    cb.checked = !!checked;
+    var tr = cb.closest('tr');
+    if (tr) tr.classList.toggle('table-active', !!checked);
+    if (table) syncSelectAllState(table);
+  }
+
+  function setAllRowsSelected(table, checked) {
+    if (!table) return;
+    table.querySelectorAll('tbody .row-select').forEach(function (cb) {
+      setRowSelected(table, cb, checked);
+    });
+  }
+
   function initTableListRowClick(container) {
     var root = container || document;
     root.querySelectorAll('table.table-list').forEach(function (table) {
@@ -422,31 +437,19 @@
         tr.addEventListener('click', function (e) {
           if (e.target.closest('a, button, .btn') || e.target === cb || e.target.closest('input[type="checkbox"]')) return;
           e.preventDefault();
-          cb.checked = !cb.checked;
-          if (cb.checked) tr.classList.add('table-active'); else tr.classList.remove('table-active');
-          syncSelectAllState(table);
+          setRowSelected(table, cb, !cb.checked);
         });
       });
       table.querySelectorAll('tbody .row-select').forEach(function (cb) {
         cb.addEventListener('change', function () {
-          var tr = cb.closest('tr');
-          if (tr) {
-            if (cb.checked) tr.classList.add('table-active'); else tr.classList.remove('table-active');
-          }
-          syncSelectAllState(table);
+          setRowSelected(table, cb, cb.checked);
         });
-        var tr = cb.closest('tr');
-        if (cb.checked && tr) tr.classList.add('table-active');
+        setRowSelected(table, cb, cb.checked);
       });
       var selectAll = table.querySelector('thead .select-all');
       if (selectAll) {
         selectAll.addEventListener('change', function () {
-          table.querySelectorAll('tbody tr').forEach(function (tr) {
-            var cb = tr.querySelector('.row-select');
-            if (cb) {
-              if (selectAll.checked) tr.classList.add('table-active'); else tr.classList.remove('table-active');
-            }
-          });
+          setAllRowsSelected(table, selectAll.checked);
         });
       }
     });
@@ -472,22 +475,11 @@
       }
 
       toolbar.querySelector('.admin-toolbar-select-all')?.addEventListener('click', function () {
-        table.querySelectorAll('tbody .row-select').forEach(function (cb) {
-          cb.checked = true;
-        });
-        var selectAll = table.querySelector('thead .select-all');
-        if (selectAll) selectAll.checked = true;
+        setAllRowsSelected(table, true);
       });
 
       toolbar.querySelector('.admin-toolbar-deselect')?.addEventListener('click', function () {
-        table.querySelectorAll('.row-select').forEach(function (cb) {
-          cb.checked = false;
-        });
-        table.querySelectorAll('tbody tr').forEach(function (tr) {
-          tr.classList.remove('table-active');
-        });
-        var selectAll = table.querySelector('thead .select-all');
-        if (selectAll) selectAll.checked = false;
+        setAllRowsSelected(table, false);
       });
 
       var insertUrl = toolbar.getAttribute('data-insert-url');
