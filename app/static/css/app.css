@@ -459,6 +459,23 @@ main.container {
   }
 }
 
+/* Bootstrap 5 não define modal-md; usado por openFormModal (admin-modals.js) */
+@media (min-width: 576px) {
+  .modal-dialog.modal-md {
+    max-width: 560px;
+  }
+}
+
+/* Modal extra-largo: garante margem em viewports estreitos */
+#adminFormModal .modal-dialog.modal-xl {
+  max-width: min(1140px, calc(100vw - 2rem));
+}
+
+/* Processar receitas / adiantamentos / residual */
+#adminFormModal .admin-process-form .form-label {
+  font-weight: 500;
+}
+
 /* Modals: full width with small margin on mobile */
 @media (max-width: 575.98px) {
   .modal-dialog {

@@ -1,54 +1,68 @@
-<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="row g-3 align-items-end">
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-process-form">
   <input type="hidden" name="next" value="{{ next_url }}">
-  <div class="col-12 col-md-2">
-    <label class="form-label mb-1">Ano</label>
-    <input type="number" name="year" class="form-control form-control-sm" required value="{{ default_year }}">
-  </div>
-  <div class="col-12 col-md-2">
-    <label class="form-label mb-1">Mês</label>
-    <input type="number" name="month" class="form-control form-control-sm" min="1" max="12" required value="{{ default_month }}">
-  </div>
-  <div class="col-12 col-md-3">
-    <label class="form-label mb-1">Data de cobrança *</label>
-    <input type="date" name="charge_date" class="form-control form-control-sm" required value="{{ suggested_charge_date }}">
-  </div>
-  <div class="col-12 col-md-3">
-    <label class="form-label mb-1">Cliente</label>
-    <select name="client_supplier_id" class="form-select form-select-sm">
-      <option value="">Todos</option>
-      {% for c in clients %}
-      <option value="{{ c.id }}">{{ c.legal_name or c.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-12 col-md-2">
-    <label class="form-label mb-1">Empresa (lançamento)</label>
-    <select name="company_id" class="form-select form-select-sm">
-      <option value="">Padrão do contrato</option>
-      {% for c in companies %}
-      <option value="{{ c.id }}">{{ c.legal_name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-12 col-md-6">
-    <label class="form-label mb-1">Natureza residual *</label>
-    <select name="residual_nature_id" class="form-select form-select-sm" required>
-      <option value="">— Selecione —</option>
-      {% for n in natures %}
-      <option value="{{ n.id }}">{{ n.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-12 col-md-6">
-    <label class="form-label mb-1">Natureza distrato *</label>
-    <select name="distrato_nature_id" class="form-select form-select-sm" required>
-      <option value="">— Selecione —</option>
-      {% for n in natures %}
-      <option value="{{ n.id }}">{{ n.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-12 d-flex justify-content-end">
-    <button type="submit" class="btn btn-primary btn-sm">Processar</button>
+  <div class="row g-3">
+    <div class="col-12">
+      <span class="d-block small text-secondary text-uppercase fw-semibold">Período</span>
+    </div>
+    <div class="col-6 col-sm-4 col-md-2">
+      <label class="form-label mb-1" for="proc-res-year">Ano</label>
+      <input type="number" id="proc-res-year" name="year" class="form-control" required value="{{ default_year }}">
+    </div>
+    <div class="col-6 col-sm-4 col-md-2">
+      <label class="form-label mb-1" for="proc-res-month">Mês</label>
+      <input type="number" id="proc-res-month" name="month" class="form-control" min="1" max="12" required value="{{ default_month }}">
+    </div>
+    <div class="col-12 col-sm-4 col-md-4">
+      <label class="form-label mb-1" for="proc-res-charge">Data de cobrança *</label>
+      <input type="date" id="proc-res-charge" name="charge_date" class="form-control" required value="{{ suggested_charge_date }}">
+    </div>
+
+    <div class="col-12 pt-1">
+      <span class="d-block small text-secondary text-uppercase fw-semibold">Escopo do processamento</span>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label mb-1" for="proc-res-client">Cliente</label>
+      <select id="proc-res-client" name="client_supplier_id" class="form-select">
+        <option value="">Todos</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}">{{ c.legal_name or c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label mb-1" for="proc-res-company">Empresa (lançamento)</label>
+      <select id="proc-res-company" name="company_id" class="form-select">
+        <option value="">Padrão do contrato</option>
+        {% for c in companies %}
+        <option value="{{ c.id }}">{{ c.legal_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-12 pt-1">
+      <span class="d-block small text-secondary text-uppercase fw-semibold">Naturezas financeiras</span>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label mb-1" for="proc-res-nature-res">Natureza residual *</label>
+      <select id="proc-res-nature-res" name="residual_nature_id" class="form-select" required>
+        <option value="">— Selecione —</option>
+        {% for n in natures %}
+        <option value="{{ n.id }}">{{ n.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label mb-1" for="proc-res-nature-dis">Natureza distrato *</label>
+      <select id="proc-res-nature-dis" name="distrato_nature_id" class="form-select" required>
+        <option value="">— Selecione —</option>
+        {% for n in natures %}
+        <option value="{{ n.id }}">{{ n.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-12 pt-3 mt-1 border-top d-flex justify-content-end gap-2">
+      <button type="submit" class="btn btn-primary px-4">Processar</button>
+    </div>
   </div>
 </form>

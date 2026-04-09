@@ -211,9 +211,10 @@
     bodyEl.innerHTML = '<p class="text-muted text-center py-3">Carregando...</p>';
     if (titleEl) titleEl.textContent = title || 'Formulário';
     if (dialogEl) {
-      dialogEl.classList.remove('modal-sm', 'modal-md', 'modal-lg');
+      dialogEl.classList.remove('modal-sm', 'modal-md', 'modal-lg', 'modal-xl');
       if (size === 'sm') dialogEl.classList.add('modal-sm');
       else if (size === 'md') dialogEl.classList.add('modal-md');
+      else if (size === 'xl') dialogEl.classList.add('modal-xl');
       else dialogEl.classList.add('modal-lg');
     }
     var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
