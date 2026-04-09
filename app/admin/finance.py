@@ -44,6 +44,26 @@ def _companies_with_accounts():
     return Company.query.order_by(Company.legal_name).all()
 
 
+def _all_companies():
+    return Company.query.order_by(Company.legal_name).all()
+
+
+def _active_clients():
+    return (
+        Supplier.query.filter_by(type=SUPPLIER_CLIENT, is_active=True)
+        .order_by(Supplier.legal_name, Supplier.name)
+        .all()
+    )
+
+
+def _active_suppliers():
+    return (
+        Supplier.query.filter_by(is_active=True)
+        .order_by(Supplier.name)
+        .all()
+    )
+
+
 def _financial_natures():
     # Retorna todas as naturezas ativas (payable, receivable e both).
     return FinancialNature.query.filter_by(is_active=True).order_by(FinancialNature.name).all()
@@ -174,6 +194,7 @@ def register_routes(bp: Blueprint) -> None:
         company_id = request.args.get("company_id", type=int)
         entry_type = request.args.get("entry_type", "").strip()
         supplier_type = request.args.get("supplier_type", "").strip()
+        supplier_id = request.args.get("supplier_id", type=int)
         supplier_name = request.args.get("supplier_name", "").strip()
         status = request.args.get("status", "").strip()  # '', pending, settled
 
@@ -208,6 +229,8 @@ def register_routes(bp: Blueprint) -> None:
             query = query.filter(FinancialEntry.entry_type == entry_type)
         if supplier_type in (SUPPLIER_CLIENT, SUPPLIER_SUPPLIER, SUPPLIER_MOTOBOY):
             query = query.filter(Supplier.type == supplier_type)
+        if supplier_id:
+            query = query.filter(FinancialEntry.supplier_id == supplier_id)
         if supplier_name:
             query = query.filter(Supplier.name.ilike(f"%{supplier_name}%"))
         if status == "pending":
@@ -222,6 +245,7 @@ def register_routes(bp: Blueprint) -> None:
             "admin/financeiro/manual_entry.html",
             companies=companies,
             natures=natures,
+            suppliers=_active_suppliers(),
             entries=entries,
             filters={
                 "date_from": date_from_str,
@@ -229,6 +253,7 @@ def register_routes(bp: Blueprint) -> None:
                 "company_id": company_id,
                 "entry_type": entry_type,
                 "supplier_type": supplier_type,
+                "supplier_id": supplier_id,
                 "supplier_name": supplier_name,
                 "status": status,
             },
@@ -313,6 +338,8 @@ def register_routes(bp: Blueprint) -> None:
             default_year=default_year,
             default_month=default_month,
             suggested_charge_date=suggested_charge_date.isoformat(),
+            clients=_active_clients(),
+            companies=_all_companies(),
             action_url=url_for("admin.finance_revenue_process"),
             next_url=next_url,
         )
@@ -325,9 +352,14 @@ def register_routes(bp: Blueprint) -> None:
         year = request.form.get("year", type=int)
         month = request.form.get("month", type=int)
         charge_date_str = request.form.get("charge_date", "").strip()
+        client_supplier_id = request.form.get("client_supplier_id", type=int)
+        company_id_override = request.form.get("company_id", type=int)
 
         if not year or not month or not charge_date_str:
             flash("Ano, mês e data de cobrança são obrigatórios.", "danger")
+            return redirect(next_url)
+        if not client_supplier_id and not company_id_override:
+            flash("Informe pelo menos um Cliente ou uma Empresa para processar.", "danger")
             return redirect(next_url)
 
         try:
@@ -346,6 +378,8 @@ def register_routes(bp: Blueprint) -> None:
             batch_type=BATCH_TYPE_REVENUE,
             year=year,
             month=month,
+            client_supplier_id=client_supplier_id,
+            company_id=company_id_override,
         ).first()
         if existing:
             flash("Já existe um processamento de receitas para este mês/ano.", "warning")
@@ -355,8 +389,10 @@ def register_routes(bp: Blueprint) -> None:
             Contract.query.filter(Contract.contract_type == CONTRACT_TYPE_CLIENT)
             .filter(Contract.start_date <= month_end)
             .filter((Contract.end_date.is_(None)) | (Contract.end_date >= month_start))
-            .all()
         )
+        if client_supplier_id:
+            contracts = contracts.filter(Contract.supplier_id == client_supplier_id)
+        contracts = contracts.all()
 
         created = 0
         skipped_no_company = 0
@@ -372,8 +408,8 @@ def register_routes(bp: Blueprint) -> None:
                 skipped_no_nature += 1
                 continue
             # Usar a empresa associada ao cliente para emissão de nota (billing_company_id)
-            company_id = None
-            if c.supplier and c.supplier.billing_company_id:
+            company_id = company_id_override
+            if company_id is None and c.supplier and c.supplier.billing_company_id:
                 company_id = c.supplier.billing_company_id
             if company_id is None:
                 skipped_no_company += 1
@@ -386,6 +422,8 @@ def register_routes(bp: Blueprint) -> None:
                     month=month,
                     financial_nature_id=nature.id,
                     charge_date=charge_date,
+                    company_id=company_id_override,
+                    client_supplier_id=client_supplier_id,
                     created_by_id=getattr(current_user, "id", None),
                 )
                 db.session.add(batch)
@@ -555,6 +593,8 @@ def register_routes(bp: Blueprint) -> None:
             default_month=default_month,
             suggested_charge_date=suggested_charge_date.isoformat(),
             natures=natures,
+            clients=_active_clients(),
+            companies=_all_companies(),
             action_url=url_for("admin.finance_advance_process"),
             next_url=next_url,
         )
@@ -569,9 +609,14 @@ def register_routes(bp: Blueprint) -> None:
         charge_date_str = request.form.get("charge_date", "").strip()
         advance_nature_id = request.form.get("advance_nature_id", type=int)
         distrato_nature_id = request.form.get("distrato_nature_id", type=int)
+        client_supplier_id = request.form.get("client_supplier_id", type=int)
+        company_id_override = request.form.get("company_id", type=int)
 
         if not year or not month or not charge_date_str or not advance_nature_id or not distrato_nature_id:
             flash("Ano, mês, data de cobrança e naturezas de adiantamento e distrato são obrigatórios.", "danger")
+            return redirect(next_url)
+        if not client_supplier_id and not company_id_override:
+            flash("Informe pelo menos um Cliente ou uma Empresa para processar.", "danger")
             return redirect(next_url)
 
         try:
@@ -609,8 +654,10 @@ def register_routes(bp: Blueprint) -> None:
             Contract.query.filter(Contract.contract_type == CONTRACT_TYPE_MOTOBOY)
             .filter(Contract.start_date <= month_end)
             .filter((Contract.end_date.is_(None)) | (Contract.end_date >= month_start))
-            .all()
         )
+        if client_supplier_id:
+            contracts = contracts.filter(Contract.other_supplier_id == client_supplier_id)
+        contracts = contracts.all()
 
         if not contracts:
             flash("Nenhum contrato de motoboy ativo no período selecionado.", "warning")
@@ -622,12 +669,16 @@ def register_routes(bp: Blueprint) -> None:
             year=year,
             month=month,
             financial_nature_id=advance_nature_id,
+            client_supplier_id=client_supplier_id,
+            company_id=company_id_override,
         ).first()
         existing_dis = FinancialBatch.query.filter_by(
             batch_type=BATCH_TYPE_ADVANCE,
             year=year,
             month=month,
             financial_nature_id=distrato_nature_id,
+            client_supplier_id=client_supplier_id,
+            company_id=company_id_override,
         ).first()
         if existing_adv or existing_dis:
             flash("Já existe um processamento de adiantamentos/distratos para este mês/naturezas.", "warning")
@@ -653,10 +704,10 @@ def register_routes(bp: Blueprint) -> None:
 
             # Empresa pagadora: billing_company_id do CLIENTE vinculado ao contrato de motoboy.
             # Se não houver cliente, tenta cair para a empresa do próprio motoboy (caso exista).
-            company_id = None
-            if c.other_supplier and c.other_supplier.billing_company_id:
+            company_id = company_id_override
+            if company_id is None and c.other_supplier and c.other_supplier.billing_company_id:
                 company_id = c.other_supplier.billing_company_id
-            elif c.supplier and c.supplier.billing_company_id:
+            elif company_id is None and c.supplier and c.supplier.billing_company_id:
                 company_id = c.supplier.billing_company_id
             if company_id is None:
                 skipped_no_company += 1
@@ -715,6 +766,8 @@ def register_routes(bp: Blueprint) -> None:
                         month=month,
                         financial_nature_id=distrato_nature_id,
                         charge_date=charge_date,
+                        company_id=company_id_override,
+                        client_supplier_id=client_supplier_id,
                         created_by_id=getattr(current_user, "id", None),
                     )
                     db.session.add(batch_dis)
@@ -729,6 +782,8 @@ def register_routes(bp: Blueprint) -> None:
                         month=month,
                         financial_nature_id=advance_nature_id,
                         charge_date=charge_date,
+                        company_id=company_id_override,
+                        client_supplier_id=client_supplier_id,
                         created_by_id=getattr(current_user, "id", None),
                     )
                     db.session.add(batch_adv)
@@ -811,6 +866,8 @@ def register_routes(bp: Blueprint) -> None:
             default_month=default_month,
             suggested_charge_date=suggested_charge_date.isoformat(),
             natures=natures,
+            clients=_active_clients(),
+            companies=_all_companies(),
             action_url=url_for("admin.finance_residual_process"),
             next_url=next_url,
         )
@@ -825,9 +882,14 @@ def register_routes(bp: Blueprint) -> None:
         charge_date_str = request.form.get("charge_date", "").strip()
         residual_nature_id = request.form.get("residual_nature_id", type=int)
         distrato_nature_id = request.form.get("distrato_nature_id", type=int)
+        client_supplier_id = request.form.get("client_supplier_id", type=int)
+        company_id_override = request.form.get("company_id", type=int)
 
         if not year or not month or not charge_date_str or not residual_nature_id or not distrato_nature_id:
             flash("Ano, mês, data de cobrança e naturezas residual e de distrato são obrigatórios.", "danger")
+            return redirect(next_url)
+        if not client_supplier_id and not company_id_override:
+            flash("Informe pelo menos um Cliente ou uma Empresa para processar.", "danger")
             return redirect(next_url)
 
         try:
@@ -865,8 +927,10 @@ def register_routes(bp: Blueprint) -> None:
             Contract.query.filter(Contract.contract_type == CONTRACT_TYPE_MOTOBOY)
             .filter(Contract.start_date <= month_end)
             .filter((Contract.end_date.is_(None)) | (Contract.end_date >= month_start))
-            .all()
         )
+        if client_supplier_id:
+            contracts = contracts.filter(Contract.other_supplier_id == client_supplier_id)
+        contracts = contracts.all()
 
         if not contracts:
             flash("Nenhum contrato de motoboy ativo no período selecionado.", "warning")
@@ -878,12 +942,16 @@ def register_routes(bp: Blueprint) -> None:
             year=year,
             month=month,
             financial_nature_id=residual_nature_id,
+            client_supplier_id=client_supplier_id,
+            company_id=company_id_override,
         ).first()
         existing_dis = FinancialBatch.query.filter_by(
             batch_type=BATCH_TYPE_RESIDUAL,
             year=year,
             month=month,
             financial_nature_id=distrato_nature_id,
+            client_supplier_id=client_supplier_id,
+            company_id=company_id_override,
         ).first()
         if existing_res or existing_dis:
             flash("Já existe um processamento residual/distrato para este mês/naturezas.", "warning")
@@ -912,10 +980,10 @@ def register_routes(bp: Blueprint) -> None:
                 continue
 
             # Empresa pagadora: cliente vinculado ao contrato; se não houver, fallback para motoboy
-            company_id = None
-            if c.other_supplier and c.other_supplier.billing_company_id:
+            company_id = company_id_override
+            if company_id is None and c.other_supplier and c.other_supplier.billing_company_id:
                 company_id = c.other_supplier.billing_company_id
-            elif c.supplier and c.supplier.billing_company_id:
+            elif company_id is None and c.supplier and c.supplier.billing_company_id:
                 company_id = c.supplier.billing_company_id
             if company_id is None:
                 skipped_no_company += 1
@@ -995,6 +1063,8 @@ def register_routes(bp: Blueprint) -> None:
                         month=month,
                         financial_nature_id=distrato_nature_id,
                         charge_date=charge_date,
+                        company_id=company_id_override,
+                        client_supplier_id=client_supplier_id,
                         created_by_id=getattr(current_user, "id", None),
                     )
                     db.session.add(batch_dis)
@@ -1010,6 +1080,8 @@ def register_routes(bp: Blueprint) -> None:
                         month=month,
                         financial_nature_id=residual_nature_id,
                         charge_date=charge_date,
+                        company_id=company_id_override,
+                        client_supplier_id=client_supplier_id,
                         created_by_id=getattr(current_user, "id", None),
                     )
                     db.session.add(batch_res)
@@ -1144,6 +1216,9 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         next_url = resolve_next_url("admin.finance_manual_entry")
         entry = FinancialEntry.query.get_or_404(entry_id)
+        if entry.settled_at:
+            flash("Não é possível excluir lançamento quitado. Reabra-o antes.", "warning")
+            return redirect(next_url)
         try:
             db.session.delete(entry)
             db.session.commit()
@@ -1162,9 +1237,28 @@ def register_routes(bp: Blueprint) -> None:
             flash("Nenhum lançamento selecionado.", "warning")
             return redirect(next_url)
         try:
-            count = FinancialEntry.query.filter(FinancialEntry.id.in_(ids)).delete(synchronize_session=False)
+            settled_ids = [
+                e.id
+                for e in FinancialEntry.query.filter(FinancialEntry.id.in_(ids))
+                .filter(FinancialEntry.settled_at.isnot(None))
+                .all()
+            ]
+            pending_ids = [x for x in ids if x not in settled_ids]
+            count = 0
+            if pending_ids:
+                count = FinancialEntry.query.filter(FinancialEntry.id.in_(pending_ids)).delete(
+                    synchronize_session=False
+                )
             db.session.commit()
-            flash(f"{count} lançamento(s) excluído(s).", "info")
+            if settled_ids and count:
+                flash(
+                    f"{count} lançamento(s) pendente(s) excluído(s). {len(settled_ids)} quitado(s) não foram excluídos.",
+                    "warning",
+                )
+            elif settled_ids and not count:
+                flash("Nenhum lançamento excluído: registros quitados não podem ser excluídos.", "warning")
+            else:
+                flash(f"{count} lançamento(s) excluído(s).", "info")
         except IntegrityError:
             handle_delete_constraint_error()
         return redirect(next_url)

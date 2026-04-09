@@ -47,6 +47,8 @@
         <th>ID</th>
         <th>Tipo</th>
         <th>Referência</th>
+        <th>Cliente</th>
+        <th>Empresa</th>
         <th>Data de cobrança</th>
         <th>Criado em</th>
         <th>Lançamentos</th>
@@ -69,6 +71,8 @@
           {% endif %}
         </td>
         <td>{{ "%04d-%02d"|format(b.year, b.month) }}</td>
+        <td>{{ (b.client_supplier.legal_name or b.client_supplier.name) if b.client_supplier else "-" }}</td>
+        <td>{{ b.company.legal_name if b.company else "-" }}</td>
         <td>{{ b.charge_date.strftime("%d/%m/%Y") }}</td>
         <td>{{ b.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
         <td>{{ b.entries.count() }}</td>
@@ -89,7 +93,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" class="text-center text-muted">Nenhum processamento encontrado.</td></tr>
+      <tr><td colspan="9" class="text-center text-muted">Nenhum processamento encontrado.</td></tr>
       {% endfor %}
     </tbody>
   </table>

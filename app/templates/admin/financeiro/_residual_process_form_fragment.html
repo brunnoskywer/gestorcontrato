@@ -13,6 +13,24 @@
     <input type="date" name="charge_date" class="form-control form-control-sm" required value="{{ suggested_charge_date }}">
   </div>
   <div class="col-auto">
+    <label class="form-label mb-1">Cliente</label>
+    <select name="client_supplier_id" class="form-select form-select-sm">
+      <option value="">Todos</option>
+      {% for c in clients %}
+      <option value="{{ c.id }}">{{ c.legal_name or c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1">Empresa (lançamento)</label>
+    <select name="company_id" class="form-select form-select-sm">
+      <option value="">Padrão do contrato</option>
+      {% for c in companies %}
+      <option value="{{ c.id }}">{{ c.legal_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
     <label class="form-label mb-1">Natureza residual *</label>
     <select name="residual_nature_id" class="form-select form-select-sm" required>
       <option value="">— Selecione —</option>

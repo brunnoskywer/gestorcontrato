@@ -67,6 +67,17 @@
               <option value="motoboy" {% if filters.supplier_type == 'motoboy' %}selected{% endif %}>Motoboy</option>
             </select>
           </div>
+          <div class="col-md-2">
+            <label class="form-label mb-1">Fornecedor</label>
+            <select name="supplier_id" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              {% for s in suppliers %}
+              <option value="{{ s.id }}" {% if filters.supplier_id == s.id %}selected{% endif %}>
+                {{ s.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
       </div>
       <div class="col-auto d-flex align-items-end">
