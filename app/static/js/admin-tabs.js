@@ -67,6 +67,27 @@
     );
   }
 
+  /**
+   * Após F5 (ou visita full-page), o HTML vem da URL do browser; a sessão pode ainda marcar
+   * outra aba como ativa. Alinha aba ativa e data-path ao documento atual.
+   */
+  function syncActiveTabWithDocumentUrl() {
+    if (!tabs.length) return;
+    var current = (window.location.pathname || '/') + (window.location.search || '');
+    var tab = findTabForHref(current);
+    if (tab) {
+      if (tab.path !== current) {
+        setTabPath(tab.id, current);
+      }
+      setActiveTab(tab.id);
+      return;
+    }
+    var rawTitle = document.title || current;
+    var parts = rawTitle.split(' - ');
+    var title = parts[parts.length - 1].trim();
+    addTab(current, title, false);
+  }
+
   function toAbsoluteUrl(url) {
     try {
       return new URL(url, window.location.origin).toString();
@@ -333,7 +354,7 @@
       list.querySelectorAll('.nav-link').forEach(function (el) {
         el.classList.toggle('active', el.getAttribute('data-tab-id') === aid);
       });
-      saveTabsState();
+      syncActiveTabWithDocumentUrl();
       return true;
     } catch (e) {
       return false;
@@ -446,6 +467,7 @@
       el.classList.toggle('active', el.getAttribute('data-tab-id') === aid);
     });
     ensureTabBar();
+    syncActiveTabWithDocumentUrl();
     saveTabsState();
   }
 
@@ -473,4 +495,22 @@
     init();
     syncTabBarDomIfEmpty();
   });
+
+  /**
+   * Path relativo (pathname + query) do conteúdo da aba ativa.
+   * A URL do browser muitas vezes não reflete a aba em foco — usar isto em POST `next` / redirects.
+   */
+  function getAdminActiveContentPath() {
+    var list = document.getElementById(TAB_LIST_ID);
+    if (list) {
+      var link = list.querySelector('.nav-link.active');
+      if (link) {
+        var p = (link.getAttribute('data-path') || '').trim();
+        if (p && p.charAt(0) === '/') return p;
+      }
+    }
+    return (window.location.pathname || '/') + (window.location.search || '');
+  }
+
+  window.getAdminActiveContentPath = getAdminActiveContentPath;
 })();

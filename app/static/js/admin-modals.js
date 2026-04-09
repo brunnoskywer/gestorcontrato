@@ -1,11 +1,21 @@
 /**
  * Modais reutilizáveis do admin: confirmação (excluir), formulário (criar/editar) e mensagens (flash).
  * Máscaras CPF e CNPJ. Compatível com Turbo Drive.
- * Após carregar um formulário no modal, injeta hidden `next` (path+query da página atual) em todo POST,
- * para redirects no servidor preservarem filtros da lista (resolve_next_url).
+ * Após carregar um formulário no modal, injeta hidden `next` (path+query do contexto ativo) em todo POST.
+ * Com abas admin, o path vem de getAdminActiveContentPath() — a URL do browser nem sempre é a da aba.
  */
 (function () {
   'use strict';
+
+  function listReturnNextPath() {
+    if (typeof window.getAdminActiveContentPath === 'function') {
+      try {
+        var p = window.getAdminActiveContentPath();
+        if (p && typeof p === 'string' && p.charAt(0) === '/') return p;
+      } catch (err) {}
+    }
+    return (window.location.pathname || '/') + (window.location.search || '');
+  }
 
   function maskCpf(value) {
     var d = (value || '').replace(/\D/g, '').slice(0, 11);
@@ -133,7 +143,7 @@
           nextInput.name = 'next';
           form.appendChild(nextInput);
         }
-        nextInput.value = window.location.pathname + window.location.search;
+        nextInput.value = listReturnNextPath();
       }
       if (msgEl && message) msgEl.textContent = message;
     });
@@ -176,7 +186,7 @@
    */
   function injectListReturnNextOnPostForms(container) {
     if (!container || !container.querySelectorAll) return;
-    var path = window.location.pathname + window.location.search;
+    var path = listReturnNextPath();
     if (!path || path.charAt(0) !== '/') return;
     container.querySelectorAll('form').forEach(function (form) {
       var method = (form.getAttribute('method') || 'get').toLowerCase();
@@ -532,7 +542,7 @@
             var nextInput = document.createElement('input');
             nextInput.type = 'hidden';
             nextInput.name = 'next';
-            nextInput.value = window.location.pathname + window.location.search;
+            nextInput.value = listReturnNextPath();
             form.appendChild(nextInput);
             ids.forEach(function (id) {
               var input = document.createElement('input');
@@ -561,7 +571,7 @@
         showConfirmModal(confirmMsg, 'Confirmar', confirmBtnLabel || 'Confirmar', function () {
           var url = actionTpl.replace('{id}', ids[0]);
           var formData = new FormData();
-          formData.append('next', window.location.pathname + window.location.search);
+          formData.append('next', listReturnNextPath());
           fetch(url, {
             method: 'POST',
             body: formData,
@@ -649,7 +659,7 @@
             return;
           }
           var id = cb.closest('tr').getAttribute('data-id');
-          var next = window.location.pathname + window.location.search;
+          var next = listReturnNextPath();
           var url = approveTpl.replace('{id}', id) + '?next=' + encodeURIComponent(next);
           openFormModal(url, 'Aprovar lançamento');
         });
@@ -674,7 +684,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
             'Reabrir',
             function () {
               var formData = new FormData();
-              formData.append('next', window.location.pathname + window.location.search);
+              formData.append('next', listReturnNextPath());
               ids.forEach(function (id) {
                 formData.append('ids', id);
               });
@@ -817,7 +827,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
         nextInput.name = 'next';
         form.appendChild(nextInput);
       }
-      nextInput.value = window.location.pathname + window.location.search;
+      nextInput.value = listReturnNextPath();
       if (form.getAttribute('data-confirm-bypass') === '1') {
         form.removeAttribute('data-confirm-bypass');
         return;

@@ -56,9 +56,19 @@ body {
   box-shadow: inset 5px 0 0 0 #38bdf8, inset 0 0 0 1px rgba(56, 189, 248, 0.5);
 }
 
+[data-bs-theme="dark"] .table-list tbody tr.table-active > td,
+[data-bs-theme="dark"] .table-list tbody tr.table-active > th {
+  background-color: rgba(56, 189, 248, 0.52) !important;
+  color: var(--bs-body-color);
+}
+
 [data-bs-theme="dark"] .table-list tbody tr.table-active {
-  background-color: rgba(14, 165, 233, 0.35) !important;
-  box-shadow: inset 5px 0 0 0 #0ea5e9, inset 0 0 0 2px #7dd3fc;
+  box-shadow: inset 6px 0 0 0 #38bdf8, inset 0 0 0 2px #bae6fd;
+}
+
+[data-bs-theme="dark"] .table.table-list.table-hover > tbody > tr.table-active:hover > td,
+[data-bs-theme="dark"] .table.table-list.table-hover > tbody > tr.table-active:hover > th {
+  background-color: rgba(56, 189, 248, 0.62) !important;
 }
 
 [data-bs-theme="dark"] .status-stripe {
@@ -235,9 +245,21 @@ main.container {
   background-color: #f9fafb;
 }
 
+/* Seleção (checkbox): cor nas células — listras do Bootstrap pintam td, não o tr */
+.table.table-list > tbody > tr.table-active > td,
+.table.table-list > tbody > tr.table-active > th {
+  background-color: #38bdf8 !important;
+  color: #0c4a6e;
+}
+
 .table-list tbody tr.table-active {
-  background-color: #a5f3fc !important;
-  box-shadow: inset 5px 0 0 0 #0284c7, inset 0 0 0 2px #0369a1;
+  box-shadow: inset 6px 0 0 0 #0369a1, inset 0 0 0 2px #0c4a6e;
+}
+
+.table.table-list.table-hover > tbody > tr.table-active:hover > td,
+.table.table-list.table-hover > tbody > tr.table-active:hover > th {
+  background-color: #0ea5e9 !important;
+  color: #082f49;
 }
 
 /* Faixa de status (primeira coluna): motoboy e financeiro */
