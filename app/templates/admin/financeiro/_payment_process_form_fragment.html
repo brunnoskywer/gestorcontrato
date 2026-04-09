@@ -1,18 +1,18 @@
-<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="row g-2 align-items-end">
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="row g-3 align-items-end">
   <input type="hidden" name="next" value="{{ next_url }}">
-  <div class="col-auto">
+  <div class="col-12 col-md-3">
     <label class="form-label mb-1">Ano</label>
     <input type="number" name="year" class="form-control form-control-sm" required value="{{ default_year }}">
   </div>
-  <div class="col-auto">
+  <div class="col-12 col-md-3">
     <label class="form-label mb-1">Mês</label>
     <input type="number" name="month" class="form-control form-control-sm" min="1" max="12" required value="{{ default_month }}">
   </div>
-  <div class="col-auto">
+  <div class="col-12 col-md-4">
     <label class="form-label mb-1">Data de cobrança *</label>
     <input type="date" name="charge_date" class="form-control form-control-sm" required value="{{ suggested_charge_date }}">
   </div>
-  <div class="col-auto">
+  <div class="col-12 col-md-2 d-flex justify-content-md-end">
     <button type="submit" class="btn btn-primary btn-sm">Processar</button>
   </div>
 </form>

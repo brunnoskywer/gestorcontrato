@@ -18,11 +18,8 @@
   <table class="table table-striped table-hover table-sm align-middle mb-0 shadow-sm bg-white table-list">
     <thead>
       <tr>
-        <th>ID</th>
         <th>Referência</th>
         <th>Natureza</th>
-        <th>Data de cobrança</th>
-        <th>Criado em</th>
         <th>Lançamentos</th>
         <th></th>
       </tr>
@@ -30,11 +27,8 @@
     <tbody>
       {% for b in batches %}
       <tr>
-        <td>{{ b.id }}</td>
         <td>{{ "%04d-%02d"|format(b.year, b.month) }}</td>
         <td>{{ b.financial_nature.name }}</td>
-        <td>{{ b.charge_date.strftime("%d/%m/%Y") }}</td>
-        <td>{{ b.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
         <td>{{ b.entries.count() }}</td>
         <td class="text-end">
           <form method="post" action="{{ url_for('admin.finance_revenue_batch_delete', batch_id=b.id) }}" data-turbo-frame="main-content" class="d-inline admin-confirm-submit" data-confirm-message="Excluir este processamento e todos os lançamentos pendentes gerados por ele?" data-confirm-label="Excluir">
@@ -43,7 +37,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" class="text-center text-muted">Nenhum processamento de receita encontrado.</td></tr>
+      <tr><td colspan="4" class="text-center text-muted">Nenhum processamento de receita encontrado.</td></tr>
       {% endfor %}
     </tbody>
   </table>

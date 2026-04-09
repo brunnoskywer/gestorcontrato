@@ -60,7 +60,7 @@
           </div>
           <div class="col-md-2">
             <label class="form-label mb-1">Tipo de fornecedor</label>
-            <select name="supplier_type" class="form-select form-select-sm">
+            <select name="supplier_type" id="finance-filter-supplier-type" class="form-select form-select-sm" aria-controls="finance-filter-supplier-id">
               <option value="">Todos</option>
               <option value="client" {% if filters.supplier_type == 'client' %}selected{% endif %}>Cliente</option>
               <option value="supplier" {% if filters.supplier_type == 'supplier' %}selected{% endif %}>Fornecedor</option>
@@ -69,10 +69,10 @@
           </div>
           <div class="col-md-2">
             <label class="form-label mb-1">Fornecedor</label>
-            <select name="supplier_id" class="form-select form-select-sm">
+            <select name="supplier_id" id="finance-filter-supplier-id" class="form-select form-select-sm">
               <option value="">Todos</option>
               {% for s in suppliers %}
-              <option value="{{ s.id }}" {% if filters.supplier_id == s.id %}selected{% endif %}>
+              <option value="{{ s.id }}" data-supplier-type="{{ s.type }}" {% if filters.supplier_id == s.id %}selected{% endif %}>
                 {{ s.name }}
               </option>
               {% endfor %}
@@ -87,6 +87,40 @@
     </form>
   </div>
 </div>
+<script>
+(function () {
+  var typeSel = document.getElementById('finance-filter-supplier-type');
+  var supSel = document.getElementById('finance-filter-supplier-id');
+  if (!typeSel || !supSel) return;
+  function applySupplierTypeToList() {
+    var t = (typeSel.value || '').trim();
+    var i;
+    var opt;
+    for (i = 0; i < supSel.options.length; i++) {
+      opt = supSel.options[i];
+      if (!opt.value) {
+        opt.hidden = false;
+        opt.disabled = false;
+        continue;
+      }
+      var st = (opt.getAttribute('data-supplier-type') || '').trim();
+      var show = !t || st === t;
+      opt.hidden = !show;
+      opt.disabled = !show;
+    }
+    opt = supSel.options[supSel.selectedIndex];
+    if (opt && opt.value && (opt.hidden || opt.disabled)) {
+      supSel.value = '';
+    }
+  }
+  typeSel.addEventListener('change', applySupplierTypeToList);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applySupplierTypeToList);
+  } else {
+    applySupplierTypeToList();
+  }
+})();
+</script>
 
 {% include "admin/_toolbar.html" with context %}
 <div class="table-responsive">
