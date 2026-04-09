@@ -1,7 +1,7 @@
 """add client/company scope to financial batches
 
 Revision ID: d009_financial_batch_scope_client_company
-Revises: d008_motoboy_inactive_to_terminated
+Revises: d008_motoboy_term
 Create Date: 2026-04-09
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "d009_financial_batch_scope_client_company"
-down_revision = "d008_motoboy_inactive_to_terminated"
+down_revision = "d008_motoboy_term"
 branch_labels = None
 depends_on = None
 
