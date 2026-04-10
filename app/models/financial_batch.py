@@ -7,7 +7,9 @@ BATCH_TYPE_REVENUE = "revenue"
 BATCH_TYPE_PAYMENT = "payment"
 BATCH_TYPE_ADVANCE = "advance"
 BATCH_TYPE_RESIDUAL = "residual"
-# Lançamentos de distrato gerados por contrato (não entram no critério de “já existe batch” do processamento em massa).
+# Distrato gerado pela tela do contrato (não colide com batches de adiantamento/residual em massa).
+BATCH_TYPE_MOTOBOY_DISTRATO = "motoboy_distrato"
+# Legado (lançamentos antigos antes da unificação).
 BATCH_TYPE_ADVANCE_DISTRATO = "advance_distrato"
 BATCH_TYPE_RESIDUAL_DISTRATO = "residual_distrato"
 

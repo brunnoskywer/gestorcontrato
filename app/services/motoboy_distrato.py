@@ -1,4 +1,4 @@
-"""Cálculo de valores de distrato (adiantamento proporcional e residual proporcional) para contratos de motoboy."""
+"""Cálculo de valor de distrato para contratos de motoboy (regra única, proporcional no mês)."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -26,57 +26,13 @@ def contract_has_distrato_in_month(c: "Contract", year: int, month: int) -> bool
     return month_start <= c.end_date <= month_end
 
 
-def compute_advance_distrato_net(c: "Contract") -> Tuple[Optional[float], Optional[str]]:
+def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Optional[str]]:
     """
-    Mesmas regras do antigo processamento em massa (adiantamento + distrato):
-    proporcional aos dias até 15; deduz pagamentos quitados no mês entre dia 1 e 15;
-    distrato após dia 15 não gera valor.
+    Proporcional do início do mês (ou do início do contrato, o que for mais tardio) até a data de
+    distrato: base mensal = prestação + premiação (premiação zerada se houver falta no mês),
+    proporcional em até 30 dias; desconta valor de faltas no período e contas a pagar já quitadas
+    com vencimento entre o dia 1 do mês e a data de distrato (inclusive).
     """
-    if not c.end_date:
-        return None, "Cadastre a data de distrato no contrato antes de gerar o lançamento."
-    year, month = c.end_date.year, c.end_date.month
-    month_start = date(year, month, 1)
-    month_end = _month_end(year, month)
-    if not (month_start <= c.end_date <= month_end):
-        return None, "Data de distrato fora do mês de referência."
-
-    if c.end_date.day > 15:
-        return None, "Distrato após o dia 15: pela regra vigente não gera adiantamento proporcional."
-
-    if not c.advance_value:
-        return None, "Contrato sem valor de adiantamento."
-
-    effective_days = min(max(c.end_date.day, 0), 15)
-    proportion = effective_days / 15.0 if effective_days > 0 else 0.0
-    gross_amount = float(c.advance_value) * proportion if proportion > 0 else 0.0
-    if gross_amount <= 0:
-        return None, "Valor proporcional de adiantamento é zero."
-
-    period_start = date(year, month, 1)
-    period_end = date(year, month, 15)
-    paid_qs = (
-        FinancialEntry.query.filter(
-            FinancialEntry.supplier_id == c.supplier_id,
-            FinancialEntry.entry_type == ENTRY_PAYABLE,
-            FinancialEntry.settled_at.isnot(None),
-        )
-        .filter(FinancialEntry.due_date >= period_start)
-        .filter(FinancialEntry.due_date <= period_end)
-    )
-    paid_total = 0.0
-    for e in paid_qs.all():
-        try:
-            paid_total += float(e.amount)
-        except (TypeError, ValueError):
-            continue
-    net_amount = gross_amount - paid_total
-    if net_amount <= 0:
-        return None, "Valor líquido zero ou negativo após deduzir pagamentos já quitados no período (dias 1–15)."
-    return net_amount, None
-
-
-def compute_residual_distrato_net(c: "Contract") -> Tuple[Optional[float], Optional[str]]:
-    """Mesmas regras do antigo residual com distrato no mês (proporcional 30 dias, faltas, pagos no mês)."""
     if not c.end_date:
         return None, "Cadastre a data de distrato no contrato antes de gerar o lançamento."
     year, month = c.end_date.year, c.end_date.month
@@ -91,10 +47,13 @@ def compute_residual_distrato_net(c: "Contract") -> Tuple[Optional[float], Optio
         return None, "Contrato sem valor de prestação ou premiação."
 
     eff_start = max(c.start_date, month_start)
-    eff_end = min(c.end_date, month_end)
+    eff_end = c.end_date
+    if eff_start > eff_end:
+        return None, "Período inválido: início do contrato após a data de distrato."
+
     effective_days = (eff_end - eff_start).days + 1
     if effective_days <= 0:
-        return None, "Não há dias efetivos no período para calcular o residual."
+        return None, "Não há dias efetivos no período para calcular o distrato."
 
     absences = (
         ContractAbsence.query.filter(
@@ -105,13 +64,12 @@ def compute_residual_distrato_net(c: "Contract") -> Tuple[Optional[float], Optio
         .all()
     )
     has_absences = len(absences) > 0
-
     base_for_30 = base_service + (0 if has_absences else base_bonus)
     eff_days_30 = min(max(effective_days, 0), 30)
     proportion = eff_days_30 / 30.0 if eff_days_30 > 0 else 0.0
     gross_amount = base_for_30 * proportion
     if gross_amount <= 0:
-        return None, "Valor bruto residual proporcional é zero."
+        return None, "Valor bruto proporcional é zero."
 
     missing_total = 0.0
     if c.missing_value:
@@ -127,7 +85,7 @@ def compute_residual_distrato_net(c: "Contract") -> Tuple[Optional[float], Optio
             FinancialEntry.settled_at.isnot(None),
         )
         .filter(FinancialEntry.due_date >= month_start)
-        .filter(FinancialEntry.due_date <= month_end)
+        .filter(FinancialEntry.due_date <= eff_end)
     )
     paid_total = 0.0
     for e in paid_qs.all():
@@ -138,5 +96,8 @@ def compute_residual_distrato_net(c: "Contract") -> Tuple[Optional[float], Optio
 
     net_amount = gross_amount - missing_total - paid_total
     if net_amount <= 0:
-        return None, "Valor líquido zero ou negativo após descontar faltas e pagamentos quitados no mês."
+        return None, (
+            "Valor líquido zero ou negativo após descontar faltas e pagamentos já quitados "
+            "no período (do dia 1 do mês até a data de distrato)."
+        )
     return net_amount, None

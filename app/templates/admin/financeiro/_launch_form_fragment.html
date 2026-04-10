@@ -1,8 +1,8 @@
-<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
-  <div class="row g-3">
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal admin-finance-modal-form">
+  <div class="row g-2">
     <div class="col-12">
       <label class="form-label">Entre (Empresa)</label>
-      <select name="company_id" id="entry_company_id" class="form-select form-select-md">
+      <select name="company_id" id="entry_company_id" class="form-select form-select-sm">
         <option value="">Selecione a empresa</option>
         {% for c in companies %}
         <option value="{{ c.id }}" {% if entry and entry.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
@@ -13,14 +13,14 @@
       <div class="row g-2 align-items-end">
         <div class="col-md-6">
           <label class="form-label">Tipo *</label>
-          <select name="entry_type" id="entry_type_select" class="form-select form-select-md" required>
+          <select name="entry_type" id="entry_type_select" class="form-select form-select-sm" required>
             <option value="payable" {% if entry and entry.entry_type == 'payable' %}selected{% endif %}>Contas a pagar</option>
             <option value="receivable" {% if entry and entry.entry_type == 'receivable' %}selected{% endif %}>Contas a receber</option>
           </select>
         </div>
         <div class="col-md-6">
           <label class="form-label">Natureza *</label>
-          <select name="financial_nature_id" id="entry_nature_id" class="form-select form-select-md" required>
+          <select name="financial_nature_id" id="entry_nature_id" class="form-select form-select-sm" required>
             <option value="">Selecione a natureza</option>
             {% for n in natures %}
             <option value="{{ n.id }}" data-kind="{{ n.kind }}" {% if entry and entry.financial_nature_id == n.id %}selected{% endif %}>{{ n.name }}</option>
@@ -33,7 +33,7 @@
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
           <label class="form-label">Tipo de fornecedor *</label>
-          <select name="supplier_type" id="entry_supplier_type" class="form-select form-select-md" required>
+          <select name="supplier_type" id="entry_supplier_type" class="form-select form-select-sm" required>
             <option value="">Selecione</option>
             <option value="client" {% if entry and entry.supplier and entry.supplier.type == 'client' %}selected{% endif %}>Cliente</option>
             <option value="supplier" {% if entry and entry.supplier and entry.supplier.type == 'supplier' %}selected{% endif %}>Fornecedor</option>
@@ -47,7 +47,7 @@
             <input
               type="text"
               id="entry_supplier_name"
-              class="form-control form-control-md search-entity-input"
+              class="form-control form-control-sm search-entity-input"
               data-search-url="{{ url_for('admin.suppliers_search') }}"
               data-target-hidden="supplier_id"
               data-supplier-type-source="entry_supplier_type"
@@ -62,21 +62,21 @@
     </div>
     <div class="col-12">
       <label class="form-label">Descrição *</label>
-      <input type="text" name="description" class="form-control form-control-md" required placeholder="Ex.: Pagamento fornecedor, recebimento contrato" value="{{ entry.description if entry else '' }}" />
+      <input type="text" name="description" class="form-control form-control-sm" required placeholder="Ex.: Pagamento fornecedor, recebimento contrato" value="{{ entry.description if entry else '' }}" />
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Valor (R$) *</label>
-      <input type="text" name="amount" class="form-control form-control-md" data-mask="currency" required placeholder="0,00" value="{{ entry.amount|format_currency if entry else '' }}" />
+      <input type="text" name="amount" class="form-control form-control-sm" data-mask="currency" required placeholder="0,00" value="{{ entry.amount|format_currency if entry else '' }}" />
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Vencimento *</label>
-      <input type="date" name="due_date" class="form-control form-control-md" required value="{{ entry.due_date.strftime('%Y-%m-%d') if entry and entry.due_date else default_date }}" />
+      <input type="date" name="due_date" class="form-control form-control-sm" required value="{{ entry.due_date.strftime('%Y-%m-%d') if entry and entry.due_date else default_date }}" />
     </div>
     <div class="col-12">
       <div class="row g-2 align-items-end">
         <div class="col-md-8">
           <label class="form-label">Conta</label>
-          <select name="account_id" id="entry_account_id" class="form-select form-select-md" data-initial-account-id="{{ entry.account_id if entry and entry.account_id else '' }}">
+          <select name="account_id" id="entry_account_id" class="form-select form-select-sm" data-initial-account-id="{{ entry.account_id if entry and entry.account_id else '' }}">
             <option value="">Nenhuma</option>
           </select>
         </div>
@@ -87,9 +87,9 @@
       </div>
     </div>
   </div>
-  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-    <button type="submit" class="btn btn-primary">Salvar</button>
+  <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
   </div>
 </form>
 <script type="application/json" id="accounts-by-company-data">{{ accounts_by_company | tojson }}</script>

@@ -462,6 +462,9 @@
       var table = document.getElementById(tableId);
       if (!table) return;
 
+      var financeModalSize =
+        toolbar.getAttribute('data-finance-actions') === '1' ? 'md' : '';
+
       function getSelectedIds() {
         var ids = [];
         table.querySelectorAll('tbody .row-select:checked').forEach(function (cb) {
@@ -487,7 +490,7 @@
       var insertTitle = toolbar.getAttribute('data-insert-title');
       toolbar.querySelector('.admin-toolbar-insert')?.addEventListener('click', function () {
         if (!insertUrl) return;
-        openFormModal(insertUrl, insertTitle || 'Inserir');
+        openFormModal(insertUrl, insertTitle || 'Inserir', financeModalSize || undefined);
       });
 
       var editTpl = toolbar.getAttribute('data-edit-url-template');
@@ -510,7 +513,7 @@
             return;
           }
         }
-        openFormModal(url, 'Editar');
+        openFormModal(url, 'Editar', financeModalSize || undefined);
       });
 
       var deleteUrl = toolbar.getAttribute('data-delete-bulk-url');
@@ -628,7 +631,16 @@
           showMessageModal('Selecione apenas um contrato para gerar o distrato.', 'Atenção');
           return;
         }
-        openFormModal(distratoTpl.replace('{id}', ids[0]), distratoTitle);
+        var row = getFirstSelectedRow();
+        var d = row && row.getAttribute('data-distrato-date');
+        if (!d || !String(d).trim()) {
+          showMessageModal(
+            'Cadastre a data de distrato no contrato antes de gerar o lançamento.',
+            'Atenção'
+          );
+          return;
+        }
+        openFormModal(distratoTpl.replace('{id}', ids[0]), distratoTitle, 'md');
       });
 
       var calendarTpl = toolbar.getAttribute('data-calendar-url-template');
@@ -650,13 +662,13 @@
       var revenueBatchesUrl = toolbar.getAttribute('data-revenue-batches-url');
       var revenueBatchesTitle = toolbar.getAttribute('data-revenue-batches-title') || 'Processar receitas';
       toolbar.querySelector('.admin-toolbar-revenue-batches')?.addEventListener('click', function () {
-        if (revenueBatchesUrl) openFormModal(revenueBatchesUrl, revenueBatchesTitle);
+        if (revenueBatchesUrl) openFormModal(revenueBatchesUrl, revenueBatchesTitle, 'md');
       });
 
       if (toolbar.getAttribute('data-finance-actions') === '1') {
         var transferUrl = toolbar.getAttribute('data-transfer-url');
         toolbar.querySelector('.admin-toolbar-transfer')?.addEventListener('click', function () {
-          if (transferUrl) openFormModal(transferUrl, 'Transferência entre contas');
+          if (transferUrl) openFormModal(transferUrl, 'Transferência entre contas', 'md');
         });
 
         var approveTpl = toolbar.getAttribute('data-approve-url-template');
@@ -670,7 +682,7 @@
           var id = cb.closest('tr').getAttribute('data-id');
           var next = listReturnNextPath();
           var url = approveTpl.replace('{id}', id) + '?next=' + encodeURIComponent(next);
-          openFormModal(url, 'Aprovar lançamento');
+          openFormModal(url, 'Aprovar lançamento', 'md');
         });
 
         var reopenUrl = toolbar.getAttribute('data-reopen-bulk-url');

@@ -1,14 +1,14 @@
-<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal admin-finance-modal-form">
   <input type="hidden" name="next" value="{{ next_url }}" />
-  <div class="row g-3">
+  <div class="row g-2">
     <div class="col-12">
-      <label class="form-label">Data de baixa *</label>
-      <input type="date" name="settled_date" class="form-control form-control-md" required value="{{ default_date }}" />
+      <label class="form-label mb-0">Data de baixa *</label>
+      <input type="date" name="settled_date" class="form-control form-control-sm" required value="{{ default_date }}" />
       <p class="form-text small text-muted mb-0">Sugestão: data de hoje. Altere se necessário.</p>
     </div>
     <div class="col-12">
-      <label class="form-label">Conta</label>
-      <select name="account_id" class="form-select form-select-md">
+      <label class="form-label mb-0">Conta</label>
+      <select name="account_id" class="form-select form-select-sm">
         <option value="">Nenhuma</option>
         {% for acc in entry.company.accounts %}
         {% if acc.is_active %}
@@ -19,8 +19,8 @@
       <p class="form-text small text-muted mb-0">Se já informada no lançamento, já vem carregada.</p>
     </div>
   </div>
-  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-    <button type="submit" class="btn btn-primary">Aprovar</button>
+  <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary btn-sm">Aprovar</button>
   </div>
 </form>

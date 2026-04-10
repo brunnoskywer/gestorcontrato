@@ -1,28 +1,28 @@
-<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-process-form">
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-process-form admin-modal-form-compact admin-finance-modal-form">
   <input type="hidden" name="next" value="{{ next_url }}">
-  <div class="row g-3">
+  <div class="row g-2">
     <div class="col-12">
-      <span class="d-block small text-secondary text-uppercase fw-semibold">Período</span>
+      <span class="d-block small text-secondary text-uppercase fw-semibold mb-1">Período</span>
     </div>
-    <div class="col-6 col-sm-4 col-md-2">
-      <label class="form-label mb-1" for="proc-adv-year">Ano</label>
-      <input type="number" id="proc-adv-year" name="year" class="form-control" required value="{{ default_year }}">
+    <div class="col-auto" style="width: 5.25rem;">
+      <label class="form-label mb-0" for="proc-adv-year">Ano</label>
+      <input type="number" id="proc-adv-year" name="year" class="form-control form-control-sm" required value="{{ default_year }}">
     </div>
-    <div class="col-6 col-sm-4 col-md-2">
-      <label class="form-label mb-1" for="proc-adv-month">Mês</label>
-      <input type="number" id="proc-adv-month" name="month" class="form-control" min="1" max="12" required value="{{ default_month }}">
+    <div class="col-auto" style="width: 4.25rem;">
+      <label class="form-label mb-0" for="proc-adv-month">Mês</label>
+      <input type="number" id="proc-adv-month" name="month" class="form-control form-control-sm" min="1" max="12" required value="{{ default_month }}">
     </div>
-    <div class="col-12 col-sm-4 col-md-4">
-      <label class="form-label mb-1" for="proc-adv-charge">Data de cobrança *</label>
-      <input type="date" id="proc-adv-charge" name="charge_date" class="form-control" required value="{{ suggested_charge_date }}">
+    <div class="col-auto" style="min-width: 10.5rem; max-width: 11rem;">
+      <label class="form-label mb-0" for="proc-adv-charge">Cobrança *</label>
+      <input type="date" id="proc-adv-charge" name="charge_date" class="form-control form-control-sm" required value="{{ suggested_charge_date }}">
     </div>
 
     <div class="col-12 pt-1">
-      <span class="d-block small text-secondary text-uppercase fw-semibold">Escopo do processamento</span>
+      <span class="d-block small text-secondary text-uppercase fw-semibold mb-1">Escopo</span>
     </div>
     <div class="col-12 col-md-6">
-      <label class="form-label mb-1" for="proc-adv-client">Cliente</label>
-      <select id="proc-adv-client" name="client_supplier_id" class="form-select">
+      <label class="form-label mb-0" for="proc-adv-client">Cliente</label>
+      <select id="proc-adv-client" name="client_supplier_id" class="form-select form-select-sm">
         <option value="">Todos</option>
         {% for c in clients %}
         <option value="{{ c.id }}">{{ c.legal_name or c.name }}</option>
@@ -30,8 +30,8 @@
       </select>
     </div>
     <div class="col-12 col-md-6">
-      <label class="form-label mb-1" for="proc-adv-company">Empresa (lançamento)</label>
-      <select id="proc-adv-company" name="company_id" class="form-select">
+      <label class="form-label mb-0" for="proc-adv-company">Empresa</label>
+      <select id="proc-adv-company" name="company_id" class="form-select form-select-sm">
         <option value="">Padrão do contrato</option>
         {% for c in companies %}
         <option value="{{ c.id }}">{{ c.legal_name }}</option>
@@ -40,11 +40,11 @@
     </div>
 
     <div class="col-12 pt-1">
-      <span class="d-block small text-secondary text-uppercase fw-semibold">Naturezas financeiras</span>
+      <span class="d-block small text-secondary text-uppercase fw-semibold mb-1">Natureza</span>
     </div>
-    <div class="col-12 col-md-6">
-      <label class="form-label mb-1" for="proc-adv-nature-adv">Natureza adiantamento *</label>
-      <select id="proc-adv-nature-adv" name="advance_nature_id" class="form-select" required>
+    <div class="col-12">
+      <label class="form-label mb-0" for="proc-adv-nature-adv">Adiantamento *</label>
+      <select id="proc-adv-nature-adv" name="advance_nature_id" class="form-select form-select-sm" required>
         <option value="">— Selecione —</option>
         {% for n in natures %}
         <option value="{{ n.id }}">{{ n.name }}</option>
@@ -52,8 +52,8 @@
       </select>
     </div>
 
-    <div class="col-12 pt-3 mt-1 border-top d-flex justify-content-end gap-2">
-      <button type="submit" class="btn btn-primary px-4">Processar</button>
+    <div class="col-12 pt-2 mt-1 border-top d-flex justify-content-end gap-2">
+      <button type="submit" class="btn btn-primary btn-sm px-3">Processar</button>
     </div>
   </div>
 </form>

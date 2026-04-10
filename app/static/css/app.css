@@ -471,7 +471,18 @@ main.container {
   max-width: min(1140px, calc(100vw - 2rem));
 }
 
-/* Processar receitas / adiantamentos / residual */
+/* Formulários compactos no modal admin (financeiro, processamentos) */
+#adminFormModal .admin-finance-modal-form .form-label,
+#adminFormModal .admin-modal-form-compact .form-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+#adminFormModal .admin-modal-form-compact .row {
+  --bs-gutter-x: 0.5rem;
+  --bs-gutter-y: 0.5rem;
+}
+
 #adminFormModal .admin-process-form .form-label {
   font-weight: 500;
 }

@@ -24,6 +24,7 @@ from app.models import (
     BATCH_TYPE_PAYMENT,
     BATCH_TYPE_ADVANCE,
     BATCH_TYPE_RESIDUAL,
+    BATCH_TYPE_MOTOBOY_DISTRATO,
     BATCH_TYPE_ADVANCE_DISTRATO,
     BATCH_TYPE_RESIDUAL_DISTRATO,
     Contract,
@@ -306,6 +307,7 @@ def register_routes(bp: Blueprint) -> None:
                         BATCH_TYPE_PAYMENT,
                         BATCH_TYPE_ADVANCE,
                         BATCH_TYPE_RESIDUAL,
+                        BATCH_TYPE_MOTOBOY_DISTRATO,
                         BATCH_TYPE_ADVANCE_DISTRATO,
                         BATCH_TYPE_RESIDUAL_DISTRATO,
                     ]
@@ -1179,6 +1181,7 @@ def register_routes(bp: Blueprint) -> None:
                     if batch.batch_type in (
                         BATCH_TYPE_ADVANCE,
                         BATCH_TYPE_RESIDUAL,
+                        BATCH_TYPE_MOTOBOY_DISTRATO,
                         BATCH_TYPE_ADVANCE_DISTRATO,
                         BATCH_TYPE_RESIDUAL_DISTRATO,
                     ):
@@ -1228,6 +1231,7 @@ def register_routes(bp: Blueprint) -> None:
             BATCH_TYPE_PAYMENT: "Pagamento",
             BATCH_TYPE_ADVANCE: "Adiantamento",
             BATCH_TYPE_RESIDUAL: "Residual",
+            BATCH_TYPE_MOTOBOY_DISTRATO: "Distrato (motoboy)",
             BATCH_TYPE_ADVANCE_DISTRATO: "Adiantamento (distrato)",
             BATCH_TYPE_RESIDUAL_DISTRATO: "Residual (distrato)",
         }

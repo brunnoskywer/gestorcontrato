@@ -3,7 +3,7 @@ import calendar
 from datetime import date
 from typing import Optional, Tuple
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.admin.auth_helpers import (
@@ -26,12 +26,11 @@ from app.models import (
     SUPPLIER_CLIENT,
     SUPPLIER_MOTOBOY,
     MOTOBOY_TERMINATED_STATUSES,
-    BATCH_TYPE_ADVANCE_DISTRATO,
-    BATCH_TYPE_RESIDUAL_DISTRATO,
+    BATCH_TYPE_MOTOBOY_DISTRATO,
     motoboy_supplier_operational,
 )
 from app.models.financial_entry import ENTRY_PAYABLE
-from app.services.motoboy_distrato import compute_advance_distrato_net, compute_residual_distrato_net
+from app.services.motoboy_distrato import compute_motoboy_distrato_net
 from app.utils import parse_decimal_form
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
@@ -611,11 +610,16 @@ def register_routes(bp: Blueprint) -> None:
         contract = Contract.query.filter_by(
             id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
         ).first_or_404()
-        natures = _payable_natures_query().all()
-        companies = Company.query.order_by(Company.legal_name).all()
         next_url = request.args.get("next") or url_for("admin.motoboy_contracts_list")
         if not (isinstance(next_url, str) and next_url.startswith("/")):
             next_url = url_for("admin.motoboy_contracts_list")
+        if contract.end_date is None:
+            return Response(
+                '<p class="text-danger small mb-0">Cadastre a <strong>data de distrato</strong> no contrato antes de gerar o lançamento.</p>',
+                mimetype="text/html; charset=utf-8",
+            )
+        natures = _payable_natures_query().all()
+        companies = Company.query.order_by(Company.legal_name).all()
         return render_template(
             "admin/motoboy_contracts/_distrato_form_fragment.html",
             contract=contract,
@@ -636,13 +640,12 @@ def register_routes(bp: Blueprint) -> None:
         contract = Contract.query.filter_by(
             id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
         ).first_or_404()
-        kind = (request.form.get("distrato_kind") or "").strip().lower()
         charge_date_str = (request.form.get("charge_date") or "").strip()
         nature_id = request.form.get("financial_nature_id", type=int)
         company_id = request.form.get("company_id", type=int)
 
-        if kind not in ("advance", "residual"):
-            flash("Selecione o tipo: adiantamento (distrato) ou residual (distrato).", "danger")
+        if not contract.end_date:
+            flash("Cadastre a data de distrato no contrato.", "danger")
             return redirect(next_url)
         if not charge_date_str or not nature_id or not company_id:
             flash("Data de cobrança, natureza financeira e empresa são obrigatórios.", "danger")
@@ -670,12 +673,8 @@ def register_routes(bp: Blueprint) -> None:
             flash("Motoboy encerrado no cadastro.", "danger")
             return redirect(next_url)
 
-        if kind == "advance":
-            net, err = compute_advance_distrato_net(contract)
-            batch_type = BATCH_TYPE_ADVANCE_DISTRATO
-        else:
-            net, err = compute_residual_distrato_net(contract)
-            batch_type = BATCH_TYPE_RESIDUAL_DISTRATO
+        net, err = compute_motoboy_distrato_net(contract)
+        batch_type = BATCH_TYPE_MOTOBOY_DISTRATO
 
         if err:
             flash(err, "danger")
@@ -684,15 +683,8 @@ def register_routes(bp: Blueprint) -> None:
             flash("Não foi possível calcular o valor do distrato.", "danger")
             return redirect(next_url)
 
-        if not contract.end_date:
-            flash("Cadastre a data de distrato no contrato.", "danger")
-            return redirect(next_url)
         year, month = contract.end_date.year, contract.end_date.month
-
-        if kind == "advance":
-            desc = f"Distrato adiantamento contrato motoboy #{contract.id} - {year}-{month:02d}"
-        else:
-            desc = f"Distrato residual contrato motoboy #{contract.id} - {year}-{month:02d}"
+        desc = f"Distrato contrato motoboy #{contract.id} - {year}-{month:02d}"
 
         if FinancialEntry.query.filter_by(description=desc).first():
             flash("Já existe um lançamento com esta descrição para este contrato e período.", "warning")
