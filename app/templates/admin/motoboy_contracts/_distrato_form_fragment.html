@@ -1,0 +1,50 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <div class="row g-3">
+    <div class="col-12">
+      <p class="text-muted small mb-1">
+        <strong>Contrato:</strong>
+        <strong>{{ contract.supplier.name }}</strong>
+        {% if contract.other_supplier %} — <strong>{{ contract.other_supplier.legal_name or contract.other_supplier.name }}</strong>{% endif %}
+      </p>
+      <p class="text-muted small mb-0">
+        <strong>Data de distrato no cadastro:</strong> {{ contract.end_date or "— (informe no contrato antes de gerar)" }}
+      </p>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Tipo de lançamento *</label>
+      <select name="distrato_kind" id="distrato_kind" class="form-select form-select-md" required>
+        <option value="">— Selecione —</option>
+        <option value="advance">Adiantamento proporcional (distrato até dia 15)</option>
+        <option value="residual">Residual proporcional (distrato no mês)</option>
+      </select>
+      <div class="form-text">O valor segue as mesmas regras do processamento em massa que existia para distrato; a data de distrato usada no cálculo é a do contrato.</div>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Data de cobrança (vencimento) *</label>
+      <input type="date" name="charge_date" class="form-control form-control-md" required value="{{ default_charge_date }}" />
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Empresa (lançamento) *</label>
+      <select name="company_id" class="form-select form-select-md" required>
+        <option value="">— Selecione —</option>
+        {% for c in companies %}
+        <option value="{{ c.id }}">{{ c.legal_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Natureza financeira *</label>
+      <select name="financial_nature_id" class="form-select form-select-md" required>
+        <option value="">— Selecione —</option>
+        {% for n in natures %}
+        <option value="{{ n.id }}">{{ n.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Gerar distrato</button>
+  </div>
+</form>

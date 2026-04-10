@@ -3,7 +3,15 @@ from .company import Company
 from .account import Account
 from .financial_nature import FinancialNature
 from .financial_entry import FinancialEntry, ENTRY_PAYABLE, ENTRY_RECEIVABLE
-from .financial_batch import FinancialBatch, BATCH_TYPE_REVENUE, BATCH_TYPE_PAYMENT, BATCH_TYPE_ADVANCE, BATCH_TYPE_RESIDUAL
+from .financial_batch import (
+    FinancialBatch,
+    BATCH_TYPE_REVENUE,
+    BATCH_TYPE_PAYMENT,
+    BATCH_TYPE_ADVANCE,
+    BATCH_TYPE_RESIDUAL,
+    BATCH_TYPE_ADVANCE_DISTRATO,
+    BATCH_TYPE_RESIDUAL_DISTRATO,
+)
 from .supplier import (
     Supplier,
     SUPPLIER_CLIENT,
@@ -31,6 +39,8 @@ __all__ = [
     "BATCH_TYPE_PAYMENT",
     "BATCH_TYPE_ADVANCE",
     "BATCH_TYPE_RESIDUAL",
+    "BATCH_TYPE_ADVANCE_DISTRATO",
+    "BATCH_TYPE_RESIDUAL_DISTRATO",
     "Supplier",
     "SUPPLIER_CLIENT",
     "SUPPLIER_SUPPLIER",

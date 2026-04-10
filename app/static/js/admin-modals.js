@@ -615,6 +615,22 @@
         openFormModal(faltaTpl.replace('{id}', ids[0]), faltaTitle);
       });
 
+      var distratoTpl = toolbar.getAttribute('data-distrato-url-template');
+      var distratoTitle = toolbar.getAttribute('data-distrato-title') || 'Gerar distrato';
+      toolbar.querySelector('.admin-toolbar-distrato')?.addEventListener('click', function () {
+        if (!distratoTpl) return;
+        var ids = getSelectedIds();
+        if (ids.length === 0) {
+          showMessageModal('Selecione um contrato para gerar o distrato.', 'Atenção');
+          return;
+        }
+        if (ids.length > 1) {
+          showMessageModal('Selecione apenas um contrato para gerar o distrato.', 'Atenção');
+          return;
+        }
+        openFormModal(distratoTpl.replace('{id}', ids[0]), distratoTitle);
+      });
+
       var calendarTpl = toolbar.getAttribute('data-calendar-url-template');
       var calendarTitle = toolbar.getAttribute('data-calendar-title') || 'Calendário de faltas';
       toolbar.querySelector('.admin-toolbar-calendar')?.addEventListener('click', function () {

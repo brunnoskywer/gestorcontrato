@@ -51,15 +51,6 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-12 col-md-6">
-      <label class="form-label mb-1" for="proc-adv-nature-dis">Natureza distrato *</label>
-      <select id="proc-adv-nature-dis" name="distrato_nature_id" class="form-select" required>
-        <option value="">— Selecione —</option>
-        {% for n in natures %}
-        <option value="{{ n.id }}">{{ n.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
 
     <div class="col-12 pt-3 mt-1 border-top d-flex justify-content-end gap-2">
       <button type="submit" class="btn btn-primary px-4">Processar</button>

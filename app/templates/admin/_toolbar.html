@@ -10,6 +10,7 @@
   {% if reopen_bulk_url %}data-reopen-bulk-url="{{ reopen_bulk_url }}"{% endif %}
   {% if falta_url_template %}data-falta-url-template="{{ falta_url_template }}" data-falta-title="{{ falta_title | default('Registrar falta') }}"{% endif %}
   {% if calendar_url_template %}data-calendar-url-template="{{ calendar_url_template }}" data-calendar-title="{{ calendar_title | default('Calendário de faltas') }}"{% endif %}
+  {% if distrato_url_template %}data-distrato-url-template="{{ distrato_url_template }}" data-distrato-title="{{ distrato_title | default('Gerar distrato') }}"{% endif %}
   {% if revenue_batches_url %}data-revenue-batches-url="{{ revenue_batches_url }}" data-revenue-batches-title="{{ revenue_batches_title | default('Processar receitas') }}"{% endif %}
   {% if motoboy_close_url_template %}data-motoboy-close-url-template="{{ motoboy_close_url_template }}"{% endif %}
   {% if motoboy_activate_url_template %}data-motoboy-activate-url-template="{{ motoboy_activate_url_template }}"{% endif %}>
@@ -59,6 +60,11 @@
   {% if falta_url_template %}
   <button type="button" class="btn btn-light btn-sm admin-toolbar-falta" title="Registrar falta" aria-label="Registrar falta">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  </button>
+  {% endif %}
+  {% if distrato_url_template %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-distrato" title="Gerar distrato" aria-label="Gerar distrato">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="9"/></svg>
   </button>
   {% endif %}
   {% if calendar_url_template %}

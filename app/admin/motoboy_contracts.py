@@ -4,7 +4,7 @@ from datetime import date
 from typing import Optional, Tuple
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.admin.auth_helpers import (
     require_admin,
@@ -15,18 +15,23 @@ from app.admin.auth_helpers import (
 )
 from app.extensions import db
 from app.models import (
+    Company,
     Contract,
     ContractAbsence,
     CONTRACT_TYPE_MOTOBOY,
+    FinancialBatch,
     FinancialEntry,
     FinancialNature,
     Supplier,
     SUPPLIER_CLIENT,
     SUPPLIER_MOTOBOY,
     MOTOBOY_TERMINATED_STATUSES,
+    BATCH_TYPE_ADVANCE_DISTRATO,
+    BATCH_TYPE_RESIDUAL_DISTRATO,
     motoboy_supplier_operational,
 )
 from app.models.financial_entry import ENTRY_PAYABLE
+from app.services.motoboy_distrato import compute_advance_distrato_net, compute_residual_distrato_net
 from app.utils import parse_decimal_form
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
@@ -598,6 +603,141 @@ def register_routes(bp: Blueprint) -> None:
             next_month_arg=next_month.strftime("%Y-%m"),
             contract_id=contract_id,
         )
+
+    @bp.route("/motoboy-contracts/<int:contract_id>/distrato/form")
+    @login_required
+    def motoboy_contract_distrato_form(contract_id: int):
+        require_admin()
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        natures = _payable_natures_query().all()
+        companies = Company.query.order_by(Company.legal_name).all()
+        next_url = request.args.get("next") or url_for("admin.motoboy_contracts_list")
+        if not (isinstance(next_url, str) and next_url.startswith("/")):
+            next_url = url_for("admin.motoboy_contracts_list")
+        return render_template(
+            "admin/motoboy_contracts/_distrato_form_fragment.html",
+            contract=contract,
+            companies=companies,
+            natures=natures,
+            action_url=url_for(
+                "admin.motoboy_contract_distrato_create", contract_id=contract_id
+            ),
+            next_url=next_url,
+            default_charge_date=date.today().isoformat(),
+        )
+
+    @bp.post("/motoboy-contracts/<int:contract_id>/distrato")
+    @login_required
+    def motoboy_contract_distrato_create(contract_id: int):
+        require_admin()
+        next_url = resolve_next_url("admin.motoboy_contracts_list")
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        kind = (request.form.get("distrato_kind") or "").strip().lower()
+        charge_date_str = (request.form.get("charge_date") or "").strip()
+        nature_id = request.form.get("financial_nature_id", type=int)
+        company_id = request.form.get("company_id", type=int)
+
+        if kind not in ("advance", "residual"):
+            flash("Selecione o tipo: adiantamento (distrato) ou residual (distrato).", "danger")
+            return redirect(next_url)
+        if not charge_date_str or not nature_id or not company_id:
+            flash("Data de cobrança, natureza financeira e empresa são obrigatórios.", "danger")
+            return redirect(next_url)
+        try:
+            charge_date = date.fromisoformat(charge_date_str)
+        except ValueError:
+            flash("Data de cobrança inválida.", "danger")
+            return redirect(next_url)
+
+        nature = FinancialNature.query.get(nature_id)
+        if (
+            not nature
+            or not nature.is_active
+            or nature.kind not in ("payable", "both")
+        ):
+            flash("Natureza financeira inválida ou inativa.", "danger")
+            return redirect(next_url)
+        company = Company.query.get(company_id)
+        if not company:
+            flash("Empresa inválida.", "danger")
+            return redirect(next_url)
+
+        if contract.supplier and not motoboy_supplier_operational(contract.supplier):
+            flash("Motoboy encerrado no cadastro.", "danger")
+            return redirect(next_url)
+
+        if kind == "advance":
+            net, err = compute_advance_distrato_net(contract)
+            batch_type = BATCH_TYPE_ADVANCE_DISTRATO
+        else:
+            net, err = compute_residual_distrato_net(contract)
+            batch_type = BATCH_TYPE_RESIDUAL_DISTRATO
+
+        if err:
+            flash(err, "danger")
+            return redirect(next_url)
+        if net is None:
+            flash("Não foi possível calcular o valor do distrato.", "danger")
+            return redirect(next_url)
+
+        if not contract.end_date:
+            flash("Cadastre a data de distrato no contrato.", "danger")
+            return redirect(next_url)
+        year, month = contract.end_date.year, contract.end_date.month
+
+        if kind == "advance":
+            desc = f"Distrato adiantamento contrato motoboy #{contract.id} - {year}-{month:02d}"
+        else:
+            desc = f"Distrato residual contrato motoboy #{contract.id} - {year}-{month:02d}"
+
+        if FinancialEntry.query.filter_by(description=desc).first():
+            flash("Já existe um lançamento com esta descrição para este contrato e período.", "warning")
+            return redirect(next_url)
+
+        client_supplier_id = contract.other_supplier_id
+        batch = FinancialBatch.query.filter_by(
+            batch_type=batch_type,
+            year=year,
+            month=month,
+            financial_nature_id=nature_id,
+            client_supplier_id=client_supplier_id,
+            company_id=company_id,
+        ).first()
+        if batch is None:
+            batch = FinancialBatch(
+                batch_type=batch_type,
+                year=year,
+                month=month,
+                financial_nature_id=nature_id,
+                charge_date=charge_date,
+                company_id=company_id,
+                client_supplier_id=client_supplier_id,
+                created_by_id=getattr(current_user, "id", None),
+            )
+            db.session.add(batch)
+            db.session.flush()
+
+        entry = FinancialEntry(
+            company_id=company_id,
+            account_id=None,
+            financial_nature_id=nature_id,
+            supplier_id=contract.supplier_id,
+            entry_type=ENTRY_PAYABLE,
+            description=desc,
+            amount=net,
+            due_date=charge_date,
+            settled_at=None,
+            reference=None,
+            financial_batch_id=batch.id,
+        )
+        db.session.add(entry)
+        db.session.commit()
+        flash("Lançamento de distrato gerado com sucesso.", "success")
+        return redirect(next_url)
 
     @bp.post("/motoboy-contracts/<int:contract_id>/delete")
     @login_required

@@ -24,6 +24,8 @@ from app.models import (
     BATCH_TYPE_PAYMENT,
     BATCH_TYPE_ADVANCE,
     BATCH_TYPE_RESIDUAL,
+    BATCH_TYPE_ADVANCE_DISTRATO,
+    BATCH_TYPE_RESIDUAL_DISTRATO,
     Contract,
     CONTRACT_TYPE_CLIENT,
     CONTRACT_TYPE_MOTOBOY,
@@ -31,6 +33,8 @@ from app.models import (
     motoboy_supplier_operational,
 )
 from io import BytesIO
+
+from app.services.motoboy_distrato import contract_has_distrato_in_month
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -298,13 +302,27 @@ def register_routes(bp: Blueprint) -> None:
         elif batch_type_filter == "payment":
             q = q.filter(
                 FinancialBatch.batch_type.in_(
-                    [BATCH_TYPE_PAYMENT, BATCH_TYPE_ADVANCE, BATCH_TYPE_RESIDUAL]
+                    [
+                        BATCH_TYPE_PAYMENT,
+                        BATCH_TYPE_ADVANCE,
+                        BATCH_TYPE_RESIDUAL,
+                        BATCH_TYPE_ADVANCE_DISTRATO,
+                        BATCH_TYPE_RESIDUAL_DISTRATO,
+                    ]
                 )
             )
         elif batch_type_filter == "advance":
-            q = q.filter(FinancialBatch.batch_type == BATCH_TYPE_ADVANCE)
+            q = q.filter(
+                FinancialBatch.batch_type.in_(
+                    [BATCH_TYPE_ADVANCE, BATCH_TYPE_ADVANCE_DISTRATO]
+                )
+            )
         elif batch_type_filter == "residual":
-            q = q.filter(FinancialBatch.batch_type == BATCH_TYPE_RESIDUAL)
+            q = q.filter(
+                FinancialBatch.batch_type.in_(
+                    [BATCH_TYPE_RESIDUAL, BATCH_TYPE_RESIDUAL_DISTRATO]
+                )
+            )
         q = q.filter(FinancialBatch.created_at >= datetime.combine(date_from, time.min))
         q = q.filter(FinancialBatch.created_at <= datetime.combine(date_to, time.max))
         batches = q.order_by(FinancialBatch.created_at.desc()).all()
@@ -608,12 +626,11 @@ def register_routes(bp: Blueprint) -> None:
         month = request.form.get("month", type=int)
         charge_date_str = request.form.get("charge_date", "").strip()
         advance_nature_id = request.form.get("advance_nature_id", type=int)
-        distrato_nature_id = request.form.get("distrato_nature_id", type=int)
         client_supplier_id = request.form.get("client_supplier_id", type=int)
         company_id_override = request.form.get("company_id", type=int)
 
-        if not year or not month or not charge_date_str or not advance_nature_id or not distrato_nature_id:
-            flash("Ano, mês, data de cobrança e naturezas de adiantamento e distrato são obrigatórios.", "danger")
+        if not year or not month or not charge_date_str or not advance_nature_id:
+            flash("Ano, mês, data de cobrança e natureza de adiantamento são obrigatórios.", "danger")
             return redirect(next_url)
         if not client_supplier_id and not company_id_override:
             flash("Informe pelo menos um Cliente ou uma Empresa para processar.", "danger")
@@ -625,22 +642,13 @@ def register_routes(bp: Blueprint) -> None:
             flash("Data de cobrança inválida.", "danger")
             return redirect(next_url)
 
-        # Validar naturezas
-        natures = FinancialNature.query.filter(
-            FinancialNature.id.in_([advance_nature_id, distrato_nature_id])
-        ).all()
-        nature_by_id = {n.id: n for n in natures}
-        adv_nature = nature_by_id.get(advance_nature_id)
-        dis_nature = nature_by_id.get(distrato_nature_id)
+        adv_nature = FinancialNature.query.get(advance_nature_id)
         if (
             not adv_nature
             or not adv_nature.is_active
             or adv_nature.kind not in ("payable", "both")
-            or not dis_nature
-            or not dis_nature.is_active
-            or dis_nature.kind not in ("payable", "both")
         ):
-            flash("Naturezas financeiras devem ser ativas e do tipo 'Contas a pagar' ou 'Ambas'.", "danger")
+            flash("Natureza financeira deve ser ativa e do tipo 'Contas a pagar' ou 'Ambas'.", "danger")
             return redirect(next_url)
 
         month_start = date(year, month, 1)
@@ -649,7 +657,6 @@ def register_routes(bp: Blueprint) -> None:
         else:
             month_end = date(year, month + 1, 1) - timedelta(days=1)
 
-        # Contratos de motoboy ativos no mês
         contracts = (
             Contract.query.filter(Contract.contract_type == CONTRACT_TYPE_MOTOBOY)
             .filter(Contract.start_date <= month_end)
@@ -663,7 +670,6 @@ def register_routes(bp: Blueprint) -> None:
             flash("Nenhum contrato de motoboy ativo no período selecionado.", "warning")
             return redirect(next_url)
 
-        # Evitar duplicidade por mês/natureza
         existing_adv = FinancialBatch.query.filter_by(
             batch_type=BATCH_TYPE_ADVANCE,
             year=year,
@@ -672,29 +678,21 @@ def register_routes(bp: Blueprint) -> None:
             client_supplier_id=client_supplier_id,
             company_id=company_id_override,
         ).first()
-        existing_dis = FinancialBatch.query.filter_by(
-            batch_type=BATCH_TYPE_ADVANCE,
-            year=year,
-            month=month,
-            financial_nature_id=distrato_nature_id,
-            client_supplier_id=client_supplier_id,
-            company_id=company_id_override,
-        ).first()
-        if existing_adv or existing_dis:
-            flash("Já existe um processamento de adiantamentos/distratos para este mês/naturezas.", "warning")
+        if existing_adv:
+            flash("Já existe um processamento de adiantamentos para este mês/naturezas.", "warning")
             return redirect(next_url)
 
         batch_adv = None
-        batch_dis = None
         created_adv = 0
-        created_dis = 0
         skipped_no_company = 0
         skipped_no_advance_value = 0
-        skipped_distrato_after_cutoff = 0
-        skipped_distrato_fully_paid = 0
         skipped_motoboy_encerrado = 0
+        skipped_distrato_no_mes = 0
 
         for c in contracts:
+            if contract_has_distrato_in_month(c, year, month):
+                skipped_distrato_no_mes += 1
+                continue
             if c.supplier and not motoboy_supplier_operational(c.supplier):
                 skipped_motoboy_encerrado += 1
                 continue
@@ -702,8 +700,6 @@ def register_routes(bp: Blueprint) -> None:
                 skipped_no_advance_value += 1
                 continue
 
-            # Empresa pagadora: billing_company_id do CLIENTE vinculado ao contrato de motoboy.
-            # Se não houver cliente, tenta cair para a empresa do próprio motoboy (caso exista).
             company_id = company_id_override
             if company_id is None and c.other_supplier and c.other_supplier.billing_company_id:
                 company_id = c.other_supplier.billing_company_id
@@ -713,94 +709,27 @@ def register_routes(bp: Blueprint) -> None:
                 skipped_no_company += 1
                 continue
 
-            # Se houver distrato dentro do mês, usa natureza de distrato; senão, natureza de adiantamento.
-            # Regra adicional: distratos pagos até dia 20 só entram se encerrados até o dia 15.
-            use_distrato = c.end_date is not None and month_start <= c.end_date <= month_end
-            if use_distrato and c.end_date.day > 15:
-                skipped_distrato_after_cutoff += 1
-                continue
+            amount = float(c.advance_value)
 
-            # Cálculo do valor:
-            # - Adiantamento padrão: valor cheio (advance_value) referente a 15 dias.
-            # - Distrato: proporcional até o dia do distrato, considerando 15 dias de referência.
-            if use_distrato:
-                effective_days = min(max(c.end_date.day, 0), 15)
-                proportion = effective_days / 15.0 if effective_days > 0 else 0.0
-                gross_amount = float(c.advance_value) * proportion if proportion > 0 else 0.0
-                if gross_amount <= 0:
-                    continue
-
-                # Deduzir pagamentos já feitos ao motoboy nesses 15 dias (ex.: vales).
-                # Considera lançamentos a pagar quitados (settled_at != None) para este motoboy
-                # no mesmo mês, de 1 até o dia 15.
-                period_start = date(year, month, 1)
-                period_end = date(year, month, 15)
-                paid_qs = (
-                    FinancialEntry.query.filter(
-                        FinancialEntry.supplier_id == c.supplier_id,
-                        FinancialEntry.entry_type == ENTRY_PAYABLE,
-                        FinancialEntry.settled_at.isnot(None),
-                    )
-                    .filter(FinancialEntry.due_date >= period_start)
-                    .filter(FinancialEntry.due_date <= period_end)
+            if batch_adv is None:
+                batch_adv = FinancialBatch(
+                    batch_type=BATCH_TYPE_ADVANCE,
+                    year=year,
+                    month=month,
+                    financial_nature_id=advance_nature_id,
+                    charge_date=charge_date,
+                    company_id=company_id_override,
+                    client_supplier_id=client_supplier_id,
+                    created_by_id=getattr(current_user, "id", None),
                 )
-                paid_total = 0.0
-                for e in paid_qs.all():
-                    try:
-                        paid_total += float(e.amount)
-                    except (TypeError, ValueError):
-                        continue
-                net_amount = gross_amount - paid_total
-                if net_amount <= 0:
-                    skipped_distrato_fully_paid += 1
-                    continue
-                amount = net_amount
-            else:
-                amount = float(c.advance_value)
+                db.session.add(batch_adv)
+                db.session.flush()
 
-            if use_distrato:
-                if batch_dis is None:
-                    batch_dis = FinancialBatch(
-                        batch_type=BATCH_TYPE_ADVANCE,
-                        year=year,
-                        month=month,
-                        financial_nature_id=distrato_nature_id,
-                        charge_date=charge_date,
-                        company_id=company_id_override,
-                        client_supplier_id=client_supplier_id,
-                        created_by_id=getattr(current_user, "id", None),
-                    )
-                    db.session.add(batch_dis)
-                    db.session.flush()
-                batch = batch_dis
-                created_counter = "dis"
-            else:
-                if batch_adv is None:
-                    batch_adv = FinancialBatch(
-                        batch_type=BATCH_TYPE_ADVANCE,
-                        year=year,
-                        month=month,
-                        financial_nature_id=advance_nature_id,
-                        charge_date=charge_date,
-                        company_id=company_id_override,
-                        client_supplier_id=client_supplier_id,
-                        created_by_id=getattr(current_user, "id", None),
-                    )
-                    db.session.add(batch_adv)
-                    db.session.flush()
-                batch = batch_adv
-                created_counter = "adv"
-
-            # Descrição depende se é adiantamento ou distrato
-            if created_counter == "adv":
-                desc = f"Adiantamento contrato motoboy #{c.id} - {year}-{month:02d}"
-            else:
-                desc = f"Distrato contrato motoboy #{c.id} - {year}-{month:02d}"
-
+            desc = f"Adiantamento contrato motoboy #{c.id} - {year}-{month:02d}"
             entry = FinancialEntry(
                 company_id=company_id,
                 account_id=None,
-                financial_nature_id=batch.financial_nature_id,
+                financial_nature_id=batch_adv.financial_nature_id,
                 supplier_id=c.supplier_id,
                 entry_type=ENTRY_PAYABLE,
                 description=desc,
@@ -808,36 +737,31 @@ def register_routes(bp: Blueprint) -> None:
                 due_date=charge_date,
                 settled_at=None,
                 reference=None,
-                financial_batch_id=batch.id,
+                financial_batch_id=batch_adv.id,
             )
             db.session.add(entry)
-            if created_counter == "adv":
-                created_adv += 1
-            else:
-                created_dis += 1
+            created_adv += 1
 
         db.session.commit()
 
         msg_parts = []
         if created_adv:
             msg_parts.append(f"{created_adv} lançamento(s) de adiantamento criado(s).")
-        if created_dis:
-            msg_parts.append(f"{created_dis} lançamento(s) de distrato criado(s).")
         if skipped_no_advance_value:
             msg_parts.append(f"{skipped_no_advance_value} contrato(s) sem valor de adiantamento foram ignorados.")
         if skipped_no_company:
             msg_parts.append(f"{skipped_no_company} contrato(s) sem empresa de cobrança foram ignorados.")
-        if skipped_distrato_after_cutoff:
-            msg_parts.append(f"{skipped_distrato_after_cutoff} contrato(s) com distrato após o dia 15 foram ignorados para este processamento.")
-        if skipped_distrato_fully_paid:
-            msg_parts.append(f"{skipped_distrato_fully_paid} contrato(s) já totalmente pagos no período de 15 dias foram ignorados.")
+        if skipped_distrato_no_mes:
+            msg_parts.append(
+                f"{skipped_distrato_no_mes} contrato(s) com distrato no mês foram ignorados — use Gerar distrato no contrato."
+            )
         if skipped_motoboy_encerrado:
             msg_parts.append(
                 f"{skipped_motoboy_encerrado} contrato(s) ignorados: motoboy encerrado no cadastro."
             )
 
         if not msg_parts:
-            flash("Nenhum lançamento de adiantamento ou distrato foi gerado.", "warning")
+            flash("Nenhum lançamento de adiantamento foi gerado.", "warning")
         else:
             flash(" ".join(msg_parts), "success")
 
@@ -881,12 +805,11 @@ def register_routes(bp: Blueprint) -> None:
         month = request.form.get("month", type=int)
         charge_date_str = request.form.get("charge_date", "").strip()
         residual_nature_id = request.form.get("residual_nature_id", type=int)
-        distrato_nature_id = request.form.get("distrato_nature_id", type=int)
         client_supplier_id = request.form.get("client_supplier_id", type=int)
         company_id_override = request.form.get("company_id", type=int)
 
-        if not year or not month or not charge_date_str or not residual_nature_id or not distrato_nature_id:
-            flash("Ano, mês, data de cobrança e naturezas residual e de distrato são obrigatórios.", "danger")
+        if not year or not month or not charge_date_str or not residual_nature_id:
+            flash("Ano, mês, data de cobrança e natureza residual são obrigatórios.", "danger")
             return redirect(next_url)
         if not client_supplier_id and not company_id_override:
             flash("Informe pelo menos um Cliente ou uma Empresa para processar.", "danger")
@@ -898,22 +821,13 @@ def register_routes(bp: Blueprint) -> None:
             flash("Data de cobrança inválida.", "danger")
             return redirect(next_url)
 
-        # Validar naturezas
-        natures = FinancialNature.query.filter(
-            FinancialNature.id.in_([residual_nature_id, distrato_nature_id])
-        ).all()
-        nature_by_id = {n.id: n for n in natures}
-        res_nature = nature_by_id.get(residual_nature_id)
-        dis_nature = nature_by_id.get(distrato_nature_id)
+        res_nature = FinancialNature.query.get(residual_nature_id)
         if (
             not res_nature
             or not res_nature.is_active
             or res_nature.kind not in ("payable", "both")
-            or not dis_nature
-            or not dis_nature.is_active
-            or dis_nature.kind not in ("payable", "both")
         ):
-            flash("Naturezas financeiras devem ser ativas e do tipo 'Contas a pagar' ou 'Ambas'.", "danger")
+            flash("Natureza financeira deve ser ativa e do tipo 'Contas a pagar' ou 'Ambas'.", "danger")
             return redirect(next_url)
 
         month_start = date(year, month, 1)
@@ -922,7 +836,6 @@ def register_routes(bp: Blueprint) -> None:
         else:
             month_end = date(year, month + 1, 1) - timedelta(days=1)
 
-        # Contratos de motoboy ativos no mês
         contracts = (
             Contract.query.filter(Contract.contract_type == CONTRACT_TYPE_MOTOBOY)
             .filter(Contract.start_date <= month_end)
@@ -936,7 +849,6 @@ def register_routes(bp: Blueprint) -> None:
             flash("Nenhum contrato de motoboy ativo no período selecionado.", "warning")
             return redirect(next_url)
 
-        # Evitar duplicidade por mês/natureza
         existing_res = FinancialBatch.query.filter_by(
             batch_type=BATCH_TYPE_RESIDUAL,
             year=year,
@@ -945,41 +857,31 @@ def register_routes(bp: Blueprint) -> None:
             client_supplier_id=client_supplier_id,
             company_id=company_id_override,
         ).first()
-        existing_dis = FinancialBatch.query.filter_by(
-            batch_type=BATCH_TYPE_RESIDUAL,
-            year=year,
-            month=month,
-            financial_nature_id=distrato_nature_id,
-            client_supplier_id=client_supplier_id,
-            company_id=company_id_override,
-        ).first()
-        if existing_res or existing_dis:
-            flash("Já existe um processamento residual/distrato para este mês/naturezas.", "warning")
+        if existing_res:
+            flash("Já existe um processamento residual para este mês/naturezas.", "warning")
             return redirect(next_url)
 
         batch_res = None
-        batch_dis = None
         created_res = 0
-        created_dis = 0
         skipped_no_company = 0
         skipped_no_base = 0
         skipped_fully_paid = 0
         skipped_motoboy_encerrado = 0
-
-        days_in_month = (month_end - month_start).days + 1
+        skipped_distrato_no_mes = 0
 
         for c in contracts:
+            if contract_has_distrato_in_month(c, year, month):
+                skipped_distrato_no_mes += 1
+                continue
             if c.supplier and not motoboy_supplier_operational(c.supplier):
                 skipped_motoboy_encerrado += 1
                 continue
-            # Base: precisa ter valor prestação ou premiação para ter o que calcular
             base_service = float(c.service_value or 0)
             base_bonus = float(c.bonus_value or 0)
             if base_service <= 0 and base_bonus <= 0:
                 skipped_no_base += 1
                 continue
 
-            # Empresa pagadora: cliente vinculado ao contrato; se não houver, fallback para motoboy
             company_id = company_id_override
             if company_id is None and c.other_supplier and c.other_supplier.billing_company_id:
                 company_id = c.other_supplier.billing_company_id
@@ -989,7 +891,6 @@ def register_routes(bp: Blueprint) -> None:
                 skipped_no_company += 1
                 continue
 
-            # Determinar dias efetivos (para distrato ou contrato normal)
             eff_start = max(c.start_date, month_start)
             eff_end = min(c.end_date or month_end, month_end)
             effective_days = (eff_end - eff_start).days + 1
@@ -997,35 +898,22 @@ def register_routes(bp: Blueprint) -> None:
                 skipped_no_base += 1
                 continue
 
-            # Faltas no período (para a regra de premiação e desconto por falta)
-            absences_qs = ContractAbsence.query.filter(
-                ContractAbsence.contract_id == c.id,
-                ContractAbsence.absence_date >= month_start,
-                ContractAbsence.absence_date <= month_end,
+            absences = (
+                ContractAbsence.query.filter(
+                    ContractAbsence.contract_id == c.id,
+                    ContractAbsence.absence_date >= month_start,
+                    ContractAbsence.absence_date <= month_end,
+                )
+                .all()
             )
-            absences = absences_qs.all()
             has_absences = len(absences) > 0
 
-            # 1) Base: Valor prestação sempre conta
-            # 2) Se não houver faltas no mês, soma premiação
-            if c.end_date is not None and month_start <= c.end_date <= month_end:
-                # 5) Caso haja distrato: proporcional, considerando prestação+prêmio como 30 dias
-                base_for_30 = base_service + (0 if has_absences else base_bonus)
-                eff_days_30 = min(max(effective_days, 0), 30)
-                proportion = eff_days_30 / 30.0 if eff_days_30 > 0 else 0.0
-                gross_amount = base_for_30 * proportion
-                use_distrato = True
-            else:
-                # Sem distrato: mês cheio; prestação sempre, prêmio só se não houver falta
-                base_total = base_service + (0 if has_absences else base_bonus)
-                gross_amount = base_total
-                use_distrato = False
-
+            base_total = base_service + (0 if has_absences else base_bonus)
+            gross_amount = base_total
             if gross_amount <= 0:
                 skipped_no_base += 1
                 continue
 
-            # 4) Descontar faltas utilizando Valor falta, apenas para faltas dentro do período efetivo
             missing_total = 0.0
             if c.missing_value:
                 mv = float(c.missing_value)
@@ -1033,7 +921,6 @@ def register_routes(bp: Blueprint) -> None:
                     if eff_start <= a.absence_date <= eff_end:
                         missing_total += mv
 
-            # 3) Reduzir todos os vales, adiantamentos etc pagos dentro do mês para ele
             paid_qs = (
                 FinancialEntry.query.filter(
                     FinancialEntry.supplier_id == c.supplier_id,
@@ -1055,45 +942,25 @@ def register_routes(bp: Blueprint) -> None:
                 skipped_fully_paid += 1
                 continue
 
-            if use_distrato:
-                if batch_dis is None:
-                    batch_dis = FinancialBatch(
-                        batch_type=BATCH_TYPE_RESIDUAL,
-                        year=year,
-                        month=month,
-                        financial_nature_id=distrato_nature_id,
-                        charge_date=charge_date,
-                        company_id=company_id_override,
-                        client_supplier_id=client_supplier_id,
-                        created_by_id=getattr(current_user, "id", None),
-                    )
-                    db.session.add(batch_dis)
-                    db.session.flush()
-                batch = batch_dis
-                created_dis += 1
-                desc = f"Residual distrato contrato motoboy #{c.id} - {year}-{month:02d}"
-            else:
-                if batch_res is None:
-                    batch_res = FinancialBatch(
-                        batch_type=BATCH_TYPE_RESIDUAL,
-                        year=year,
-                        month=month,
-                        financial_nature_id=residual_nature_id,
-                        charge_date=charge_date,
-                        company_id=company_id_override,
-                        client_supplier_id=client_supplier_id,
-                        created_by_id=getattr(current_user, "id", None),
-                    )
-                    db.session.add(batch_res)
-                    db.session.flush()
-                batch = batch_res
-                created_res += 1
-                desc = f"Residual contrato motoboy #{c.id} - {year}-{month:02d}"
+            if batch_res is None:
+                batch_res = FinancialBatch(
+                    batch_type=BATCH_TYPE_RESIDUAL,
+                    year=year,
+                    month=month,
+                    financial_nature_id=residual_nature_id,
+                    charge_date=charge_date,
+                    company_id=company_id_override,
+                    client_supplier_id=client_supplier_id,
+                    created_by_id=getattr(current_user, "id", None),
+                )
+                db.session.add(batch_res)
+                db.session.flush()
 
+            desc = f"Residual contrato motoboy #{c.id} - {year}-{month:02d}"
             entry = FinancialEntry(
                 company_id=company_id,
                 account_id=None,
-                financial_nature_id=batch.financial_nature_id,
+                financial_nature_id=batch_res.financial_nature_id,
                 supplier_id=c.supplier_id,
                 entry_type=ENTRY_PAYABLE,
                 description=desc,
@@ -1101,23 +968,26 @@ def register_routes(bp: Blueprint) -> None:
                 due_date=charge_date,
                 settled_at=None,
                 reference=None,
-                financial_batch_id=batch.id,
+                financial_batch_id=batch_res.id,
             )
             db.session.add(entry)
+            created_res += 1
 
         db.session.commit()
 
         msg_parts = []
         if created_res:
             msg_parts.append(f"{created_res} lançamento(s) residuais criado(s).")
-        if created_dis:
-            msg_parts.append(f"{created_dis} lançamento(s) residuais de distrato criado(s).")
         if skipped_no_base:
             msg_parts.append(f"{skipped_no_base} contrato(s) sem base de valor foram ignorados.")
         if skipped_no_company:
             msg_parts.append(f"{skipped_no_company} contrato(s) sem empresa de cobrança foram ignorados.")
         if skipped_fully_paid:
             msg_parts.append(f"{skipped_fully_paid} contrato(s) já totalmente pagos no mês foram ignorados.")
+        if skipped_distrato_no_mes:
+            msg_parts.append(
+                f"{skipped_distrato_no_mes} contrato(s) com distrato no mês foram ignorados — use Gerar distrato no contrato."
+            )
         if skipped_motoboy_encerrado:
             msg_parts.append(
                 f"{skipped_motoboy_encerrado} contrato(s) ignorados: motoboy encerrado no cadastro."
@@ -1306,7 +1176,12 @@ def register_routes(bp: Blueprint) -> None:
 
                     # Para batches de adiantamento/residual, tentar descobrir o CLIENTE
                     # a partir do contrato de motoboy ativo no mês do batch.
-                    if batch.batch_type in (BATCH_TYPE_ADVANCE, BATCH_TYPE_RESIDUAL):
+                    if batch.batch_type in (
+                        BATCH_TYPE_ADVANCE,
+                        BATCH_TYPE_RESIDUAL,
+                        BATCH_TYPE_ADVANCE_DISTRATO,
+                        BATCH_TYPE_RESIDUAL_DISTRATO,
+                    ):
                         try:
                             contract = (
                                 Contract.query.filter(
@@ -1353,6 +1228,8 @@ def register_routes(bp: Blueprint) -> None:
             BATCH_TYPE_PAYMENT: "Pagamento",
             BATCH_TYPE_ADVANCE: "Adiantamento",
             BATCH_TYPE_RESIDUAL: "Residual",
+            BATCH_TYPE_ADVANCE_DISTRATO: "Adiantamento (distrato)",
+            BATCH_TYPE_RESIDUAL_DISTRATO: "Residual (distrato)",
         }
         month_names = (
             "",
