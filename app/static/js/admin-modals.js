@@ -662,7 +662,8 @@
       var revenueBatchesUrl = toolbar.getAttribute('data-revenue-batches-url');
       var revenueBatchesTitle = toolbar.getAttribute('data-revenue-batches-title') || 'Processar receitas';
       toolbar.querySelector('.admin-toolbar-revenue-batches')?.addEventListener('click', function () {
-        if (revenueBatchesUrl) openFormModal(revenueBatchesUrl, revenueBatchesTitle, 'md');
+        /* Hub “Processar” (filtros + tabela): largura ampla; formulários dos botões usam data-modal-size no próprio gatilho. */
+        if (revenueBatchesUrl) openFormModal(revenueBatchesUrl, revenueBatchesTitle, 'xl');
       });
 
       if (toolbar.getAttribute('data-finance-actions') === '1') {

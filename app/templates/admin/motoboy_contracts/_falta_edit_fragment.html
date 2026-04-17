@@ -1,3 +1,10 @@
+{% if absence.substitute_amount is not none %}
+  {% set amt_display = absence.substitute_amount %}
+{% elif absence.payable_entry and absence.payable_entry.amount is not none %}
+  {% set amt_display = absence.payable_entry.amount %}
+{% else %}
+  {% set amt_display = contract.missing_value %}
+{% endif %}
 <form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
   <div class="row g-3">
     <div class="col-12">
@@ -7,7 +14,7 @@
         {% if contract.other_supplier %} — <strong>{{ contract.other_supplier.legal_name or contract.other_supplier.name }}</strong>{% endif %}
       </p>
       <p class="text-muted small mb-0">
-        Valor falta: <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}—{% endif %}</strong>
+        Valor falta do contrato (padrão): <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}—{% endif %}</strong>
       </p>
     </div>
     <div class="col-12">
@@ -35,6 +42,15 @@
       <div class="form-text">Opcional. Apenas motoboys com <strong>Diarista</strong> no cadastro. Se informado, a conta a pagar fica vinculada a ele.</div>
     </div>
     <div class="col-12 col-md-6">
+      <label class="form-label">Valor pago ao diarista (R$)</label>
+      <input type="text" name="substitute_amount" id="falta_substitute_amount" class="form-control form-control-md" data-mask="currency" placeholder="0,00" autocomplete="off" value="{{ amt_display|format_currency if amt_display is not none else '' }}" {% if absence.payable_entry and absence.payable_entry.settled_at %}disabled{% endif %} />
+      {% if absence.payable_entry and absence.payable_entry.settled_at %}
+      <p class="small text-muted mb-0">Quitado — valor não pode ser alterado.</p>
+      {% else %}
+      <div class="form-text">Ao escolher o diarista, sugere o valor de falta do contrato; ajuste se necessário.</div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-md-6">
       <label class="form-label">Natureza financeira</label>
       <select name="financial_nature_id" id="falta_financial_nature_id" class="form-select form-select-md" {% if absence.payable_entry and absence.payable_entry.settled_at %}disabled{% endif %}>
         <option value="">—</option>
@@ -58,15 +74,40 @@
     <button type="submit" class="btn btn-primary">Salvar</button>
   </div>
 </form>
+<script type="application/json" id="falta-contract-missing-json">{% if contract.missing_value is not none %}{{ contract.missing_value|float }}{% else %}null{% endif %}</script>
 <script>
 (function () {
   var sub = document.getElementById('falta_substitute_id');
   var nat = document.getElementById('falta_financial_nature_id');
-  if (!sub || !nat) return;
-  if (sub.disabled) return;
-  function sync() {
-    nat.required = !!sub.value;
+  var amt = document.getElementById('falta_substitute_amount');
+  var missingEl = document.getElementById('falta-contract-missing-json');
+  var missingDefault = null;
+  if (missingEl) {
+    try {
+      var v = JSON.parse(missingEl.textContent || 'null');
+      if (v !== null && !isNaN(Number(v))) missingDefault = Number(v);
+    } catch (e) {}
   }
+  function formatBr(num) {
+    var n = Number(num);
+    if (isNaN(n)) return '';
+    var fixed = n.toFixed(2).split('.');
+    var intPart = fixed[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return intPart + ',' + fixed[1];
+  }
+  function sync() {
+    if (!sub || sub.disabled) return;
+    nat.required = !!sub.value;
+    amt.required = !!sub.value;
+    if (!sub.value) {
+      amt.value = '';
+      return;
+    }
+    if (missingDefault !== null && !(amt.value && String(amt.value).trim())) {
+      amt.value = formatBr(missingDefault);
+    }
+  }
+  if (!sub || !nat || !amt) return;
   sub.addEventListener('change', sync);
   sync();
 })();

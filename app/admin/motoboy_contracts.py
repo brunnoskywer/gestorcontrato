@@ -92,6 +92,45 @@ def _diarist_motoboys_for_select(absence: Optional[ContractAbsence] = None):
     return rows
 
 
+def _resolve_substitute_amount_from_form(
+    contract: Contract, substitute_id: Optional[int]
+) -> Tuple[Optional[float], Optional[str]]:
+    """
+    Valor da conta a pagar do diarista a partir do formulário.
+    Se o campo vier vazio, usa o valor de falta do contrato (quando existir).
+    """
+    if not substitute_id:
+        return None, None
+    raw = (request.form.get("substitute_amount") or "").strip()
+    parsed = parse_decimal_form(raw) if raw else None
+    if raw and parsed is None:
+        return None, "Valor do pagamento ao diarista inválido."
+    if parsed is not None:
+        if parsed <= 0:
+            return None, "O valor para o diarista deve ser maior que zero."
+        return parsed, None
+    if contract.missing_value is not None:
+        return float(contract.missing_value), None
+    return None, "Informe o valor a pagar ao diarista ou cadastre o valor de falta no contrato."
+
+
+def _effective_substitute_pay_amount(
+    contract: Contract, absence: ContractAbsence
+) -> Optional[float]:
+    """Valor usado no lançamento a pagar (registro novo ou legado sem substitute_amount)."""
+    if absence.substitute_amount is not None:
+        try:
+            return float(absence.substitute_amount)
+        except (TypeError, ValueError):
+            return None
+    if contract.missing_value is not None:
+        try:
+            return float(contract.missing_value)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def _sync_absence_substitute_payable(contract: Contract, absence: ContractAbsence) -> Tuple[bool, Optional[str]]:
     """
     Cria/atualiza/remove conta a pagar conforme motoboy diarista (substitute_supplier_id) e natureza.
@@ -113,8 +152,12 @@ def _sync_absence_substitute_payable(contract: Contract, absence: ContractAbsenc
     if not sub or not sub.is_diarist or not motoboy_supplier_operational(sub):
         return False, "O motoboy que recebe a conta a pagar deve ser diarista ativo (não encerrado) no cadastro."
 
-    if contract.missing_value is None:
-        return False, "Contrato sem valor de falta (Valor falta). Defina no contrato para gerar a conta a pagar."
+    pay_amount = _effective_substitute_pay_amount(contract, absence)
+    if pay_amount is None or pay_amount <= 0:
+        return (
+            False,
+            "Defina o valor a pagar ao diarista ou o valor de falta no contrato para gerar a conta a pagar.",
+        )
 
     company_id = _billing_company_id_for_motoboy_contract(contract)
     if not company_id:
@@ -135,7 +178,7 @@ def _sync_absence_substitute_payable(contract: Contract, absence: ContractAbsenc
             pe.financial_nature_id = nature_id
             pe.entry_type = ENTRY_PAYABLE
             pe.description = desc
-            pe.amount = contract.missing_value
+            pe.amount = pay_amount
             pe.due_date = absence.absence_date
             pe.supplier_id = sub_id
             pe.reference = ref
@@ -147,7 +190,7 @@ def _sync_absence_substitute_payable(contract: Contract, absence: ContractAbsenc
         financial_nature_id=nature_id,
         entry_type=ENTRY_PAYABLE,
         description=desc,
-        amount=contract.missing_value,
+        amount=pay_amount,
         due_date=absence.absence_date,
         reference=ref,
         supplier_id=sub_id,
@@ -391,6 +434,13 @@ def register_routes(bp: Blueprint) -> None:
         else:
             nature_id = None
 
+        resolved_substitute_amount, amt_err = _resolve_substitute_amount_from_form(
+            contract, substitute_id
+        )
+        if amt_err:
+            flash(amt_err, "danger")
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+
         existing = ContractAbsence.query.filter_by(
             contract_id=contract_id,
             absence_date=absence_date,
@@ -407,7 +457,7 @@ def register_routes(bp: Blueprint) -> None:
             substitute_name=None,
             substitute_document=None,
             substitute_pix=None,
-            substitute_amount=None,
+            substitute_amount=resolved_substitute_amount,
         )
         db.session.add(absence)
         try:
@@ -507,6 +557,13 @@ def register_routes(bp: Blueprint) -> None:
             else:
                 nature_id = None
 
+            resolved_substitute_amount, amt_err = _resolve_substitute_amount_from_form(
+                contract, substitute_id
+            )
+            if amt_err:
+                flash(amt_err, "danger")
+                return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+
         other = ContractAbsence.query.filter_by(
             contract_id=contract_id,
             absence_date=absence_date,
@@ -518,6 +575,8 @@ def register_routes(bp: Blueprint) -> None:
         absence.justification = justification
         absence.substitute_supplier_id = substitute_id
         absence.financial_nature_id = nature_id
+        if not (settled_payable and settled_payable.settled_at):
+            absence.substitute_amount = resolved_substitute_amount
 
         ok, err = _sync_absence_substitute_payable(contract, absence)
         if not ok:

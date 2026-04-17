@@ -7,7 +7,7 @@
         {% if contract.other_supplier %} — <strong>{{ contract.other_supplier.legal_name or contract.other_supplier.name }}</strong>{% endif %}
       </p>
       <p class="text-muted small mb-0">
-        Valor falta do contrato (usado na conta a pagar do diarista): <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}— (defina no contrato){% endif %}</strong>
+        Valor falta do contrato (padrão para o diarista): <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}— (defina no contrato se quiser preencher automaticamente){% endif %}</strong>
       </p>
     </div>
     <div class="col-12">
@@ -29,7 +29,12 @@
         <option value="{{ m.id }}">{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
         {% endfor %}
       </select>
-      <div class="form-text">Opcional. Apenas motoboys com <strong>Diarista</strong> no cadastro. Se informado, será gerada <strong>conta a pagar</strong> para ele no valor da falta do titular.</div>
+      <div class="form-text">Opcional. Apenas motoboys com <strong>Diarista</strong> no cadastro. Se informado, será gerada <strong>conta a pagar</strong> com o valor abaixo.</div>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Valor pago ao diarista (R$)</label>
+      <input type="text" name="substitute_amount" id="falta_substitute_amount" class="form-control form-control-md" data-mask="currency" placeholder="0,00" autocomplete="off" />
+      <div class="form-text">Ao escolher o diarista, preenche com o valor de falta do contrato; você pode alterar antes de salvar.</div>
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Natureza financeira</label>
@@ -47,14 +52,39 @@
     <button type="submit" class="btn btn-primary">Registrar falta</button>
   </div>
 </form>
+<script type="application/json" id="falta-contract-missing-json">{% if contract.missing_value is not none %}{{ contract.missing_value|float }}{% else %}null{% endif %}</script>
 <script>
 (function () {
   var sub = document.getElementById('falta_substitute_id');
   var nat = document.getElementById('falta_financial_nature_id');
-  if (!sub || !nat) return;
+  var amt = document.getElementById('falta_substitute_amount');
+  var missingEl = document.getElementById('falta-contract-missing-json');
+  var missingDefault = null;
+  if (missingEl) {
+    try {
+      var v = JSON.parse(missingEl.textContent || 'null');
+      if (v !== null && !isNaN(Number(v))) missingDefault = Number(v);
+    } catch (e) {}
+  }
+  function formatBr(num) {
+    var n = Number(num);
+    if (isNaN(n)) return '';
+    var fixed = n.toFixed(2).split('.');
+    var intPart = fixed[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return intPart + ',' + fixed[1];
+  }
   function sync() {
     nat.required = !!sub.value;
+    amt.required = !!sub.value;
+    if (!sub.value) {
+      amt.value = '';
+      return;
+    }
+    if (missingDefault !== null && !(amt.value && String(amt.value).trim())) {
+      amt.value = formatBr(missingDefault);
+    }
   }
+  if (!sub || !nat || !amt) return;
   sub.addEventListener('change', sync);
   sync();
 })();
