@@ -820,6 +820,7 @@ def register_routes(bp: Blueprint) -> None:
             companies=companies,
             action_url=url_for("admin.motoboy_contract_print_pdf", contract_id=contract_id),
             next_url=next_url,
+            default_signed_date=date.today().isoformat(),
         )
 
     @bp.post("/motoboy-contracts/<int:contract_id>/contract/pdf")
@@ -836,6 +837,15 @@ def register_routes(bp: Blueprint) -> None:
         company_id = request.form.get("company_id", type=int)
         if not company_id:
             flash("Selecione a empresa para gerar o contrato.", "danger")
+            return redirect(next_url)
+        signed_date_raw = (request.form.get("signed_date") or "").strip()
+        if not signed_date_raw:
+            flash("Informe a data do contrato.", "danger")
+            return redirect(next_url)
+        try:
+            signed_date = date.fromisoformat(signed_date_raw)
+        except ValueError:
+            flash("Data do contrato inválida.", "danger")
             return redirect(next_url)
         company = Company.query.get(company_id)
         if not company:
@@ -854,7 +864,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Preencha o CNPJ do motoboy (campo CNPJ no cadastro) antes de gerar o contrato.", "danger")
             return redirect(next_url)
         try:
-            pdf_bytes = build_motoboy_contract_pdf(contract, company, date.today())
+            pdf_bytes = build_motoboy_contract_pdf(contract, company, signed_date)
         except RuntimeError:
             flash("Geração de PDF indisponível: instale o pacote 'reportlab' no ambiente.", "danger")
             return redirect(next_url)

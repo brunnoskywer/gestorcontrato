@@ -18,6 +18,11 @@
         {% endfor %}
       </select>
     </div>
+    <div class="col-12 col-sm-6">
+      <label class="form-label mb-0">Data do contrato *</label>
+      <input type="date" name="signed_date" class="form-control form-control-sm" required value="{{ default_signed_date }}" />
+      <p class="form-text small text-muted mb-0">Sugestão: data de hoje.</p>
+    </div>
   </div>
   <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
