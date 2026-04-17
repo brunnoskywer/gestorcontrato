@@ -10,11 +10,15 @@ if TYPE_CHECKING:
     from app.models import Company, Contract
 
 try:
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
     from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 except ImportError:  # pragma: no cover - depende de pacote externo
     A4 = None
-    canvas = None
+    TA_CENTER = TA_JUSTIFY = TA_LEFT = None
+    ParagraphStyle = getSampleStyleSheet = None
+    Paragraph = SimpleDocTemplate = Spacer = None
 
 
 _MONTH_NAMES = (
@@ -64,59 +68,20 @@ def _format_phone(value: str | None) -> str:
     return (value or "-").strip() or "-"
 
 
-def _draw_paragraph(
-    pdf,
-    text: str,
-    x: float,
-    y: float,
-    max_width: float,
-    *,
-    font_name: str = "Helvetica",
-    font_size: int = 10,
-    line_height: int = 13,
-    first_line_indent: float = 0,
-    rest_indent: float = 0,
-) -> float:
-    words = (text or "").split()
-    if not words:
-        return y
-    pdf.setFont(font_name, font_size)
-    line = ""
-    first = True
-    for w in words:
-        candidate = (line + " " + w).strip()
-        indent = first_line_indent if first else rest_indent
-        available = max_width - indent
-        if pdf.stringWidth(candidate, font_name, font_size) <= available:
-            line = candidate
-            continue
-        draw_x = x + indent
-        pdf.drawString(draw_x, y, line)
-        y -= line_height
-        first = False
-        line = w
-    if line:
-        indent = first_line_indent if first else rest_indent
-        pdf.drawString(x + indent, y, line)
-        y -= line_height
-    return y
-
-
-def _finish_page(pdf, width: float) -> None:
-    pdf.setFont("Helvetica", 8)
-    pdf.drawRightString(width - 35, 26, f"Página {pdf.getPageNumber()}")
-
-
-def _ensure_space(pdf, y: float, width: float, height: float, margin_bottom: int = 55) -> float:
-    if y > margin_bottom:
-        return y
-    _finish_page(pdf, width)
-    pdf.showPage()
-    return height - 50
+def _draw_page_footer(pdf_canvas, doc) -> None:
+    pdf_canvas.setFont("Helvetica", 8)
+    pdf_canvas.drawRightString(A4[0] - 35, 26, f"Página {pdf_canvas.getPageNumber()}")
 
 
 def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_at: date) -> bytes:
-    if canvas is None or A4 is None:  # pragma: no cover - ambiente sem reportlab
+    if (
+        A4 is None
+        or SimpleDocTemplate is None
+        or Paragraph is None
+        or Spacer is None
+        or ParagraphStyle is None
+        or getSampleStyleSheet is None
+    ):  # pragma: no cover - ambiente sem reportlab
         raise RuntimeError("reportlab não está instalado no ambiente.")
 
     supplier = contract.supplier
@@ -134,42 +99,96 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
     monthly_value = _fmt_money_br(contract.service_value or 0)
 
     buf = BytesIO()
-    pdf = canvas.Canvas(buf, pagesize=A4)
-    width, height = A4
-    margin_x = 40
-    usable_width = width - (margin_x * 2)
-    y = height - 48
-
-    pdf.setTitle(f"Contrato Motoboy #{contract.id}")
-    y = _draw_paragraph(
-        pdf,
-        "INSTRUMENTO DE PRESTAÇÃO DE SERVIÇOS",
-        margin_x,
-        y,
-        usable_width,
-        font_name="Helvetica-Bold",
-        font_size=12,
-        line_height=16,
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        leftMargin=42,
+        rightMargin=42,
+        topMargin=42,
+        bottomMargin=38,
+        title=f"Contrato Motoboy #{contract.id}",
     )
-    y -= 8
 
+    styles = getSampleStyleSheet()
+    style_title = ParagraphStyle(
+        "contractTitle",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        alignment=TA_CENTER,
+        leading=15,
+        spaceAfter=12,
+    )
+    style_intro = ParagraphStyle(
+        "contractIntro",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=14,
+        alignment=TA_JUSTIFY,
+        firstLineIndent=22,
+        spaceAfter=8,
+    )
+    style_clause = ParagraphStyle(
+        "clauseTitle",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=14,
+        alignment=TA_LEFT,
+        spaceBefore=5,
+        spaceAfter=3,
+    )
+    style_body = ParagraphStyle(
+        "clauseBody",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=13.5,
+        alignment=TA_JUSTIFY,
+        firstLineIndent=20,
+        spaceAfter=3,
+    )
+    style_alinea = ParagraphStyle(
+        "clauseAlinea",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=13.5,
+        alignment=TA_JUSTIFY,
+        leftIndent=18,
+        firstLineIndent=-10,  # tabulação pendente para "a)"
+        spaceAfter=2,
+    )
+    style_signature_label = ParagraphStyle(
+        "signatureLabel",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=13,
+        spaceBefore=4,
+        spaceAfter=1,
+    )
+    style_signature_text = ParagraphStyle(
+        "signatureText",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=13,
+        spaceAfter=1,
+    )
+
+    story = []
+    story.append(Paragraph("INSTRUMENTO DE PRESTAÇÃO DE SERVIÇOS", style_title))
     intro = (
-        "Contrato particular de prestação de serviço que entre si fazem, de um lado, como CONTRATANTE, "
-        f"{company_name}, com sede em {company_address}, inscrita no CNPJ sob o nº {company_cnpj}; "
-        "de outro lado, como CONTRATADA, "
-        f"{contractor_name}, empresa com sede em {contractor_address}, inscrita no CNPJ sob o nº {contractor_cnpj}, "
-        "segundo as cláusulas e condições a seguir:"
+        "Contrato particular de prestação de serviço que entre si fazem, de um lado, como "
+        f"<b>CONTRATANTE</b>, doravante como tal denominada, <b>{company_name}</b>, "
+        f"com sede em {company_address}, inscrita no CNPJ sob o nº <b>{company_cnpj}</b>; "
+        f"de outro lado, como <b>CONTRATADA</b>, doravante como tal denominado, "
+        f"<b>{contractor_name}</b>, empresa com sede em {contractor_address}, inscrita no CNPJ sob o nº "
+        f"<b>{contractor_cnpj}</b>, segundo as cláusulas e condições a seguir:"
     )
-    y = _draw_paragraph(
-        pdf,
-        intro,
-        margin_x,
-        y,
-        usable_width,
-        first_line_indent=18,
-        rest_indent=0,
-    )
-    y -= 3
+    story.append(Paragraph(intro, style_intro))
 
     sections = [
         ("CLÁUSULA 1ª - DO OBJETO DO CONTRATO", [
@@ -217,60 +236,37 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
     ]
 
     for title, items in sections:
-        y = _ensure_space(pdf, y, width, height)
-        y = _draw_paragraph(
-            pdf,
-            title,
-            margin_x,
-            y,
-            usable_width,
-            font_name="Helvetica-Bold",
-            line_height=14,
-        )
+        story.append(Paragraph(title, style_clause))
         for line in items:
-            y = _ensure_space(pdf, y, width, height)
-            first_indent = 8 if re.match(r"^[a-z]\)", line.strip(), re.IGNORECASE) else 18
-            rest_indent = 20 if first_indent == 8 else 0
-            y = _draw_paragraph(
-                pdf,
-                line,
-                margin_x,
-                y,
-                usable_width,
-                first_line_indent=first_indent,
-                rest_indent=rest_indent,
-            )
-        y -= 4
+            if re.match(r"^[a-z]\)", line.strip(), re.IGNORECASE):
+                story.append(Paragraph(line, style_alinea))
+            else:
+                story.append(Paragraph(line, style_body))
+        story.append(Spacer(1, 2))
 
-    y = _ensure_space(pdf, y, width, height, margin_bottom=145)
     city = "Fortaleza"
     month_name = _MONTH_NAMES[signed_at.month] if 1 <= signed_at.month <= 12 else str(signed_at.month)
-    y = _draw_paragraph(
-        pdf,
-        f"{city}, {signed_at.day:02d} de {month_name} de {signed_at.year}.",
-        margin_x,
-        y,
-        usable_width,
+    story.append(
+        Paragraph(
+            f"{city}, {signed_at.day:02d} de {month_name} de {signed_at.year}.",
+            style_body,
+        )
     )
-    y -= 8
+    story.append(Spacer(1, 10))
 
     signatures = [
         ("CONTRATANTE:", company_name, f"CNPJ: {company_cnpj}"),
         ("CONTRATADA:", contractor_name, f"CNPJ: {contractor_cnpj}"),
     ]
     for role, name, doc in signatures:
-        y = _ensure_space(pdf, y, width, height, margin_bottom=105)
-        y = _draw_paragraph(pdf, role, margin_x, y, usable_width, font_name="Helvetica-Bold")
-        y = _draw_paragraph(pdf, name, margin_x, y, usable_width)
-        y = _draw_paragraph(pdf, doc, margin_x, y, usable_width)
-        y -= 6
+        story.append(Paragraph(role, style_signature_label))
+        story.append(Paragraph(name, style_signature_text))
+        story.append(Paragraph(doc, style_signature_text))
+        story.append(Spacer(1, 6))
 
-    y = _ensure_space(pdf, y, width, height, margin_bottom=78)
-    y = _draw_paragraph(pdf, "TESTEMUNHAS:", margin_x, y, usable_width, font_name="Helvetica-Bold")
-    y -= 4
-    y = _draw_paragraph(pdf, "NOME: __________________________   CPF: __________________________", margin_x, y, usable_width)
-    y = _draw_paragraph(pdf, "NOME: __________________________   CPF: __________________________", margin_x, y, usable_width)
+    story.append(Paragraph("TESTEMUNHAS:", style_signature_label))
+    story.append(Paragraph("NOME: __________________________   CPF: __________________________", style_signature_text))
+    story.append(Paragraph("NOME: __________________________   CPF: __________________________", style_signature_text))
 
-    _finish_page(pdf, width)
-    pdf.save()
+    doc.build(story, onFirstPage=_draw_page_footer, onLaterPages=_draw_page_footer)
     return buf.getvalue()
