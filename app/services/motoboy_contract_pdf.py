@@ -258,10 +258,10 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
         ("CONTRATANTE:", company_name, f"CNPJ: {company_cnpj}"),
         ("CONTRATADA:", contractor_name, f"CNPJ: {contractor_cnpj}"),
     ]
-    for role, name, doc in signatures:
+    for role, name, doc_text in signatures:
         story.append(Paragraph(role, style_signature_label))
         story.append(Paragraph(name, style_signature_text))
-        story.append(Paragraph(doc, style_signature_text))
+        story.append(Paragraph(doc_text, style_signature_text))
         story.append(Spacer(1, 6))
 
     story.append(Paragraph("TESTEMUNHAS:", style_signature_label))
