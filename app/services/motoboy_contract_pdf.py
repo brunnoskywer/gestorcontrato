@@ -68,6 +68,14 @@ def _format_phone(value: str | None) -> str:
     return (value or "-").strip() or "-"
 
 
+def _highlight_roles(text: str) -> str:
+    if not text:
+        return text
+    out = text.replace("CONTRATANTE", "<b>CONTRATANTE</b>")
+    out = out.replace("CONTRATADA", "<b>CONTRATADA</b>")
+    return out
+
+
 def _draw_page_footer(pdf_canvas, doc) -> None:
     pdf_canvas.setFont("Helvetica", 8)
     pdf_canvas.drawRightString(A4[0] - 35, 26, f"Página {pdf_canvas.getPageNumber()}")
@@ -175,7 +183,7 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
         fontName="Helvetica",
         fontSize=10,
         leading=13,
-        spaceAfter=1,
+        spaceAfter=3,
     )
 
     story = []
@@ -222,10 +230,14 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
             "e) Havendo justo motivo para rescisão, a parte que deu causa deverá indenizar a outra em perdas e danos.",
         ]),
         ("CLÁUSULA 6ª - DA INEXISTÊNCIA DE VÍNCULO EMPREGATÍCIO", [
-            "Declaram as partes estarem cientes da espécie de contratação firmada, sem exclusividade e habitualidade, inexistindo vínculo empregatício."
+            "Declaram as partes estarem cientes da espécie de contratação firmada, sem qualquer exclusividade e/ou habitualidade, tendo sido devidamente esclarecidas, sabendo que o presente instrumento não estabelece relação de vínculo empregatício e se encerra quando da expiração do prazo de vigência fixado na cláusula 4ª ou em caso de rescisão, nas hipóteses previstas na cláusula quinta."
         ]),
         ("CLÁUSULA 7ª - DAS DISPOSIÇÕES FINAIS", [
-            "As partes declaram boa-fé, pleno conhecimento do conteúdo deste instrumento e das obrigações nele previstas, comprometendo-se com probidade e lealdade na execução."
+            "Estando revestidas de boa-fé, CONTRATANTE e CONTRATADA declaram, garantindo uma à outra que:",
+            "a) O presente Contrato não importa vício de consentimento, espelha fielmente tudo o que foi ajustado entre as Partes, que tiveram prévia e tempestivo conhecimento do conteúdo do presente Contrato, entendendo, perfeitamente, todas as disposições e reflexos jurídicos do presente instrumento;",
+            "b) Forneceu e recebeu da outra Parte todas as informações devidas ou convenientes para a celebração do presente Contrato, sobretudo sobre a natureza da prestação de serviços e formato de contratação/pagamento;",
+            "c) Não está em estado de perigo ou coação, nem incorre em erro, ignorância, dolo, fraude contra credores, lesão de direitos ou qualquer outra situação que impacte, limite ou inviabilize este Contrato;",
+            "d) Guardará na execução do presente Contrato os princípios da probidade e da boa-fé, igualmente presentes na sua negociação e na sua celebração;",
         ]),
         ("CLÁUSULA 8ª - DAS COMUNICAÇÕES", [
             f"A CONTRATADA autoriza que as comunicações decorrentes deste contrato ocorram, preferencialmente, via WhatsApp no número {contact_phone}."
@@ -238,11 +250,20 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
     for title, items in sections:
         story.append(Paragraph(title, style_clause))
         for line in items:
+            line_fmt = _highlight_roles(line)
             if re.match(r"^[a-z]\)", line.strip(), re.IGNORECASE):
-                story.append(Paragraph(line, style_alinea))
+                story.append(Paragraph(line_fmt, style_alinea))
             else:
-                story.append(Paragraph(line, style_body))
+                story.append(Paragraph(line_fmt, style_body))
         story.append(Spacer(1, 2))
+
+    story.append(
+        Paragraph(
+            "E por estarem assim justos e contratados, assinam o presente instrumento, depois de lido e achado conforme, em 02 (duas) vias de igual teor e forma, na presença das testemunhas abaixo assinadas para que produza os fins de direito.",
+            style_body,
+        )
+    )
+    story.append(Spacer(1, 8))
 
     city = "Fortaleza"
     month_name = _MONTH_NAMES[signed_at.month] if 1 <= signed_at.month <= 12 else str(signed_at.month)
@@ -262,7 +283,7 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
         story.append(Paragraph(role, style_signature_label))
         story.append(Paragraph(name, style_signature_text))
         story.append(Paragraph(doc_text, style_signature_text))
-        story.append(Spacer(1, 6))
+        story.append(Spacer(1, 16))
 
     story.append(Paragraph("TESTEMUNHAS:", style_signature_label))
     story.append(Paragraph("NOME: __________________________   CPF: __________________________", style_signature_text))
