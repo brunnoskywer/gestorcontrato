@@ -12,6 +12,7 @@ class Company(db.Model):
     cnpj = db.Column(db.String(20), unique=True, nullable=False)
     partner_name = db.Column(db.String(255), nullable=True)  # Sócio
     address = db.Column(db.String(255), nullable=True)
+    allow_contract_generation = db.Column(db.Boolean, nullable=False, default=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

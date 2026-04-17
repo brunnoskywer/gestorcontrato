@@ -804,7 +804,16 @@ def register_routes(bp: Blueprint) -> None:
                 '<p class="text-danger small mb-0">A geração só é permitida para contrato vigente (sem data de distrato).</p>',
                 mimetype="text/html; charset=utf-8",
             )
-        companies = Company.query.order_by(Company.legal_name).all()
+        companies = (
+            Company.query.filter(Company.allow_contract_generation.is_(True))
+            .order_by(Company.legal_name)
+            .all()
+        )
+        if not companies:
+            return Response(
+                '<p class="text-danger small mb-0">Nenhuma empresa está habilitada para geração de contrato. Ative em Empresas → Permite geração de contrato?.</p>',
+                mimetype="text/html; charset=utf-8",
+            )
         return render_template(
             "admin/motoboy_contracts/_print_contract_form_fragment.html",
             contract=contract,
@@ -831,6 +840,9 @@ def register_routes(bp: Blueprint) -> None:
         company = Company.query.get(company_id)
         if not company:
             flash("Empresa inválida.", "danger")
+            return redirect(next_url)
+        if not company.allow_contract_generation:
+            flash("Esta empresa não está habilitada para geração de contrato.", "danger")
             return redirect(next_url)
         if not company.address:
             flash("Preencha o endereço da empresa antes de gerar o contrato.", "danger")
