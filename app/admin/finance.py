@@ -1027,7 +1027,7 @@ def register_routes(bp: Blueprint) -> None:
                 except (TypeError, ValueError):
                     continue
                 nat = e.financial_nature
-                if nat is not None and getattr(nat, "consider_for_discount", False):
+                if nat is not None and getattr(nat, "does_not_consider_residual", False):
                     paid_excluded.append({"name": nat.name, "amount": amt})
                     continue
                 paid_total += amt
@@ -1084,7 +1084,7 @@ def register_routes(bp: Blueprint) -> None:
                     {"name": nm, "amount": val}
                     for nm, val in sorted(paid_by_nature.items(), key=lambda x: x[0])
                 ],
-                "paid_excluded_discount_nature": paid_excluded,
+                "paid_excluded_residual_nature": paid_excluded,
                 "net_amount": net_amount,
             }
 

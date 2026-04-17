@@ -1,5 +1,5 @@
 {# Macro reutilizável: select de UF (siglas). #}
-{% macro uf_select(name, value='', select_id='', required=true, css_class='form-select form-select-sm') -%}
+{% macro uf_select(name, value='', select_id='', required=true, css_class='form-select') -%}
 <select
   name="{{ name }}"
   {% if select_id %}id="{{ select_id }}"{% endif %}

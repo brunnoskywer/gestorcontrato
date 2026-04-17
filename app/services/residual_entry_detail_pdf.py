@@ -73,14 +73,16 @@ def build_residual_entry_detail_pdf(snapshot: dict[str, Any]) -> bytes:
         am = _fmt_br(row.get("amount"))
         line(f"  {nm}", f"- R$ {am}")
 
-    excluded = snapshot.get("paid_excluded_discount_nature") or []
+    excluded = snapshot.get("paid_excluded_residual_nature") or snapshot.get(
+        "paid_excluded_discount_nature"
+    ) or []
     if excluded:
         y -= 4
         pdf.setFont("Helvetica-Bold", 9)
         pdf.drawString(
             40,
             y,
-            "Naturezas com 'Considera para desconto?' (não abatem o residual)",
+            "Naturezas marcadas como 'Não considera' (não abatem o residual)",
         )
         y -= 12
         pdf.setFont("Helvetica", 9)

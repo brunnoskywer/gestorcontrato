@@ -37,7 +37,7 @@
       <th>Nome</th>
       <th>Tipo</th>
       <th>Ativa</th>
-      <th>Desconto residual</th>
+      <th>Não considera</th>
     </tr>
   </thead>
   <tbody>
@@ -47,7 +47,7 @@
       <td data-label="Nome">{{ nature.name }}</td>
       <td data-label="Tipo">{{ 'Contas a pagar' if nature.kind == 'payable' else ('Contas a receber' if nature.kind == 'receivable' else 'Ambas') }}</td>
       <td data-label="Ativa">{{ 'Sim' if nature.is_active else 'Não' }}</td>
-      <td data-label="Desconto residual">{{ 'Sim' if nature.consider_for_discount else 'Não' }}</td>
+      <td data-label="Não considera">{{ 'Sim' if nature.does_not_consider_residual else 'Não' }}</td>
     </tr>
     {% else %}
     <tr><td colspan="5" class="text-center text-muted">Nenhuma natureza financeira cadastrada.</td></tr>

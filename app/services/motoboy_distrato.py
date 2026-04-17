@@ -93,7 +93,7 @@ def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Option
     paid_total = 0.0
     for e in paid_qs.all():
         nat = e.financial_nature
-        if nat is not None and getattr(nat, "consider_for_discount", False):
+        if nat is not None and getattr(nat, "does_not_consider_residual", False):
             continue
         try:
             paid_total += float(e.amount)
