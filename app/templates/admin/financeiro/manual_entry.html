@@ -11,6 +11,7 @@
 {% set finance_actions = true %}
 {% set _approve_base = url_for('admin.finance_approve_entry_form', entry_id=999999) %}
 {% set approve_url_template = _approve_base.replace('999999', '{id}') %}
+{% set approve_bulk_url = url_for('admin.finance_approve_bulk_form') %}
 {% set reopen_bulk_url = url_for('admin.finance_bulk_reopen') %}
 {% set transfer_url = url_for('admin.finance_transfer_form') %}
 {% set revenue_batches_url = url_for('admin.finance_batches', next=request.full_path) %}

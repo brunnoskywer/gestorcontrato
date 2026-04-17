@@ -1020,6 +1020,37 @@ def register_routes(bp: Blueprint) -> None:
             default_date=date.today().isoformat(),
         )
 
+    @bp.route("/financeiro/lancamento/aprovar-lote/form")
+    @login_required
+    def finance_approve_bulk_form():
+        require_admin()
+        next_url = resolve_next_url("admin.finance_manual_entry")
+        ids = request.args.getlist("ids", type=int)
+        if not ids:
+            flash("Selecione um ou mais lançamentos pendentes para aprovar.", "warning")
+            return redirect(next_url)
+        entries = (
+            FinancialEntry.query.filter(FinancialEntry.id.in_(ids))
+            .order_by(FinancialEntry.due_date, FinancialEntry.id)
+            .all()
+        )
+        if not entries:
+            flash("Nenhum lançamento válido encontrado para aprovação em lote.", "warning")
+            return redirect(next_url)
+        if any(e.settled_at for e in entries):
+            flash("Todos os lançamentos selecionados para aprovação em lote devem estar pendentes.", "danger")
+            return redirect(next_url)
+        active_accounts = Account.query.filter_by(is_active=True).order_by(Account.name).all()
+        return render_template(
+            "admin/financeiro/_approve_bulk_form_fragment.html",
+            ids=[e.id for e in entries],
+            entries_count=len(entries),
+            accounts=active_accounts,
+            action_url=url_for("admin.finance_approve_bulk"),
+            next_url=next_url,
+            default_date=date.today().isoformat(),
+        )
+
     @bp.post("/financeiro/lancamento/<int:entry_id>/aprovar")
     @login_required
     def finance_approve_entry(entry_id: int):
@@ -1051,6 +1082,70 @@ def register_routes(bp: Blueprint) -> None:
         db.session.commit()
         flash("Lançamento aprovado (quitado).", "success")
         return _manual_entry_redirect()
+
+    @bp.post("/financeiro/lancamento/aprovar-lote")
+    @login_required
+    def finance_approve_bulk():
+        require_admin()
+        next_url = resolve_next_url("admin.finance_manual_entry")
+        ids = request.form.getlist("ids", type=int)
+        if not ids:
+            flash("Nenhum lançamento selecionado.", "warning")
+            return redirect(next_url)
+
+        settled_date_str = request.form.get("settled_date", "").strip()
+        if not settled_date_str:
+            flash("Data de baixa é obrigatória.", "danger")
+            return redirect(next_url)
+        try:
+            settled_date = date.fromisoformat(settled_date_str)
+        except ValueError:
+            flash("Data de baixa inválida.", "danger")
+            return redirect(next_url)
+
+        entries = (
+            FinancialEntry.query.filter(FinancialEntry.id.in_(ids))
+            .order_by(FinancialEntry.id)
+            .all()
+        )
+        if not entries:
+            flash("Nenhum lançamento válido encontrado.", "warning")
+            return redirect(next_url)
+        if len(entries) != len(set(ids)):
+            flash("Há lançamento(s) inválido(s) na seleção.", "danger")
+            return redirect(next_url)
+        if any(e.settled_at for e in entries):
+            flash("Todos os lançamentos selecionados devem estar pendentes para baixa em lote.", "danger")
+            return redirect(next_url)
+
+        account_id_raw = (request.form.get("account_id") or "").strip()
+        chosen_account = None
+        if account_id_raw:
+            try:
+                aid = int(account_id_raw)
+            except (ValueError, TypeError):
+                flash("Conta inválida.", "danger")
+                return redirect(next_url)
+            chosen_account = Account.query.get(aid)
+            if not chosen_account or not chosen_account.is_active:
+                flash("Conta inválida ou inativa.", "danger")
+                return redirect(next_url)
+            incompatible = [e.id for e in entries if e.company_id != chosen_account.company_id]
+            if incompatible:
+                flash(
+                    "A conta selecionada não pertence à mesma empresa de todos os lançamentos.",
+                    "danger",
+                )
+                return redirect(next_url)
+
+        settled_at = datetime.combine(settled_date, time(0, 0))
+        for entry in entries:
+            entry.settled_at = settled_at
+            entry.account_id = chosen_account.id if chosen_account else None
+
+        db.session.commit()
+        flash(f"{len(entries)} lançamento(s) aprovado(s) em lote.", "success")
+        return redirect(next_url)
 
     # ---- Reabrir (voltar a pendente) ----
     @bp.post("/financeiro/lancamento/<int:entry_id>/reabrir")

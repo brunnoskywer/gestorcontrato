@@ -1,0 +1,32 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal admin-finance-modal-form">
+  <input type="hidden" name="next" value="{{ next_url }}" />
+  {% for id in ids %}
+  <input type="hidden" name="ids" value="{{ id }}" />
+  {% endfor %}
+  <div class="row g-2">
+    <div class="col-12">
+      <p class="small text-muted mb-1">
+        Você está aprovando em lote <strong>{{ entries_count }}</strong> lançamento(s) pendente(s).
+      </p>
+      <p class="small text-muted mb-0">A data e a conta selecionadas serão aplicadas a todos.</p>
+    </div>
+    <div class="col-12">
+      <label class="form-label mb-0">Data de baixa *</label>
+      <input type="date" name="settled_date" class="form-control form-control-sm" required value="{{ default_date }}" />
+    </div>
+    <div class="col-12">
+      <label class="form-label mb-0">Conta (opcional)</label>
+      <select name="account_id" class="form-select form-select-sm">
+        <option value="">Nenhuma</option>
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}">{{ acc.company.legal_name if acc.company else "-" }} — {{ acc.name }}</option>
+        {% endfor %}
+      </select>
+      <p class="form-text small text-muted mb-0">Se informar conta, ela precisa ser da mesma empresa dos lançamentos selecionados.</p>
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary btn-sm">Aprovar selecionados</button>
+  </div>
+</form>

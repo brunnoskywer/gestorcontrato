@@ -673,16 +673,45 @@
         });
 
         var approveTpl = toolbar.getAttribute('data-approve-url-template');
+        var approveBulkUrl = toolbar.getAttribute('data-approve-bulk-url');
         toolbar.querySelector('.admin-toolbar-approve')?.addEventListener('click', function () {
-          if (!approveTpl) return;
-          var cb = table.querySelector('tbody tr[data-settled="0"] .row-select:checked');
-          if (!cb) {
-            showMessageModal('Selecione um lançamento pendente para aprovar.', 'Atenção');
+          if (!approveTpl && !approveBulkUrl) return;
+          var selectedRows = [];
+          table.querySelectorAll('tbody .row-select:checked').forEach(function (cb) {
+            var tr = cb.closest('tr');
+            if (tr) selectedRows.push(tr);
+          });
+          if (!selectedRows.length) {
+            showMessageModal('Selecione um ou mais lançamentos pendentes para aprovar.', 'Atenção');
             return;
           }
-          var id = cb.closest('tr').getAttribute('data-id');
+          var hasSettled = selectedRows.some(function (tr) {
+            return tr.getAttribute('data-settled') === '1';
+          });
+          if (hasSettled) {
+            showMessageModal('Para baixa em lote, todos os selecionados devem estar pendentes.', 'Atenção');
+            return;
+          }
+          var ids = selectedRows
+            .map(function (tr) { return tr.getAttribute('data-id'); })
+            .filter(function (id) { return !!id; });
+          if (!ids.length) {
+            showMessageModal('Nenhum lançamento válido selecionado para aprovar.', 'Atenção');
+            return;
+          }
           var next = listReturnNextPath();
-          var url = approveTpl.replace('{id}', id) + '?next=' + encodeURIComponent(next);
+          var url;
+          if (ids.length === 1 && approveTpl) {
+            url = approveTpl.replace('{id}', ids[0]) + '?next=' + encodeURIComponent(next);
+          } else if (approveBulkUrl) {
+            var params = ids.map(function (id) {
+              return 'ids=' + encodeURIComponent(id);
+            }).join('&');
+            url = approveBulkUrl + '?' + params + '&next=' + encodeURIComponent(next);
+          } else {
+            showMessageModal('Aprovação em lote indisponível.', 'Atenção');
+            return;
+          }
           openFormModal(url, 'Aprovar lançamento', 'md');
         });
 
