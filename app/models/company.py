@@ -11,6 +11,7 @@ class Company(db.Model):
     trade_name = db.Column(db.String(255), nullable=True)  # Fantasia
     cnpj = db.Column(db.String(20), unique=True, nullable=False)
     partner_name = db.Column(db.String(255), nullable=True)  # Sócio
+    address = db.Column(db.String(255), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

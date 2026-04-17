@@ -61,6 +61,7 @@ def register_routes(bp: Blueprint) -> None:
             trade_name = request.form.get("trade_name", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
             partner_name = request.form.get("partner_name", "").strip()
+            address = request.form.get("address", "").strip()
 
             if not legal_name or not cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")
@@ -70,6 +71,7 @@ def register_routes(bp: Blueprint) -> None:
                     trade_name=trade_name or None,
                     cnpj=cnpj,
                     partner_name=partner_name or None,
+                    address=address or None,
                 )
                 db.session.add(company)
                 db.session.commit()
@@ -89,6 +91,7 @@ def register_routes(bp: Blueprint) -> None:
             company.trade_name = request.form.get("trade_name", "").strip() or None
             company.cnpj = request.form.get("cnpj", "").strip()
             company.partner_name = request.form.get("partner_name", "").strip() or None
+            company.address = request.form.get("address", "").strip() or None
 
             if not company.legal_name or not company.cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")

@@ -15,6 +15,9 @@
 {% set _distrato_base = url_for('admin.motoboy_contract_distrato_form', contract_id=999999, next=request.full_path) %}
 {% set distrato_url_template = _distrato_base.replace('999999', '{id}') %}
 {% set distrato_title = 'Gerar distrato' %}
+{% set _contract_print_base = url_for('admin.motoboy_contract_print_form', contract_id=999999, next=request.full_path) %}
+{% set contract_print_url_template = _contract_print_base.replace('999999', '{id}') %}
+{% set contract_print_title = 'Gerar contrato (PDF)' %}
 {% else %}
 {% set insert_url = none %}
 {% set insert_title = none %}
@@ -24,6 +27,8 @@
 {% set falta_title = none %}
 {% set distrato_url_template = none %}
 {% set distrato_title = none %}
+{% set contract_print_url_template = none %}
+{% set contract_print_title = none %}
 {% endif %}
 {% set _calendar_base = url_for('admin.motoboy_contract_calendar', contract_id=999999) %}
 {% set calendar_url_template = _calendar_base.replace('999999', '{id}') %}

@@ -3,7 +3,7 @@ import calendar
 from datetime import date
 from typing import Optional, Tuple
 
-from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, flash, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.admin.auth_helpers import (
@@ -31,6 +31,7 @@ from app.models import (
 )
 from app.models.financial_entry import ENTRY_PAYABLE
 from app.services.motoboy_distrato import compute_motoboy_distrato_net
+from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.utils import parse_decimal_form
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
@@ -789,6 +790,68 @@ def register_routes(bp: Blueprint) -> None:
         db.session.commit()
         flash("Lançamento de distrato gerado com sucesso.", "success")
         return redirect(next_url)
+
+    @bp.route("/motoboy-contracts/<int:contract_id>/contract/form")
+    @login_required
+    def motoboy_contract_print_form(contract_id: int):
+        require_admin()
+        next_url = request.args.get("next") or url_for("admin.motoboy_contracts_list")
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        if contract.end_date is not None:
+            return Response(
+                '<p class="text-danger small mb-0">A geração só é permitida para contrato vigente (sem data de distrato).</p>',
+                mimetype="text/html; charset=utf-8",
+            )
+        companies = Company.query.order_by(Company.legal_name).all()
+        return render_template(
+            "admin/motoboy_contracts/_print_contract_form_fragment.html",
+            contract=contract,
+            companies=companies,
+            action_url=url_for("admin.motoboy_contract_print_pdf", contract_id=contract_id),
+            next_url=next_url,
+        )
+
+    @bp.post("/motoboy-contracts/<int:contract_id>/contract/pdf")
+    @login_required
+    def motoboy_contract_print_pdf(contract_id: int):
+        require_admin()
+        next_url = resolve_next_url("admin.motoboy_contracts_list")
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        if contract.end_date is not None:
+            flash("A geração do contrato só é permitida para contrato vigente (sem data de distrato).", "danger")
+            return redirect(next_url)
+        company_id = request.form.get("company_id", type=int)
+        if not company_id:
+            flash("Selecione a empresa para gerar o contrato.", "danger")
+            return redirect(next_url)
+        company = Company.query.get(company_id)
+        if not company:
+            flash("Empresa inválida.", "danger")
+            return redirect(next_url)
+        if not company.address:
+            flash("Preencha o endereço da empresa antes de gerar o contrato.", "danger")
+            return redirect(next_url)
+        if not contract.supplier or not contract.supplier.address:
+            flash("Preencha o endereço do motoboy antes de gerar o contrato.", "danger")
+            return redirect(next_url)
+        if not contract.supplier.document_secondary:
+            flash("Preencha o CNPJ do motoboy (campo CNPJ no cadastro) antes de gerar o contrato.", "danger")
+            return redirect(next_url)
+        try:
+            pdf_bytes = build_motoboy_contract_pdf(contract, company, date.today())
+        except RuntimeError:
+            flash("Geração de PDF indisponível: instale o pacote 'reportlab' no ambiente.", "danger")
+            return redirect(next_url)
+
+        filename = f"contrato_motoboy_{contract.id}.pdf"
+        resp = make_response(pdf_bytes)
+        resp.headers["Content-Type"] = "application/pdf"
+        resp.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return resp
 
     @bp.post("/motoboy-contracts/<int:contract_id>/delete")
     @login_required

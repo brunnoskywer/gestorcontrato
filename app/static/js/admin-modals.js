@@ -643,6 +643,28 @@
         openFormModal(distratoTpl.replace('{id}', ids[0]), distratoTitle, 'md');
       });
 
+      var contractPrintTpl = toolbar.getAttribute('data-contract-print-url-template');
+      var contractPrintTitle = toolbar.getAttribute('data-contract-print-title') || 'Gerar contrato (PDF)';
+      toolbar.querySelector('.admin-toolbar-contract-print')?.addEventListener('click', function () {
+        if (!contractPrintTpl) return;
+        var ids = getSelectedIds();
+        if (ids.length === 0) {
+          showMessageModal('Selecione um contrato vigente para gerar o contrato em PDF.', 'Atenção');
+          return;
+        }
+        if (ids.length > 1) {
+          showMessageModal('Selecione apenas um contrato para gerar o PDF.', 'Atenção');
+          return;
+        }
+        var row = getFirstSelectedRow();
+        var distratoDate = row && row.getAttribute('data-distrato-date');
+        if (distratoDate && String(distratoDate).trim()) {
+          showMessageModal('A geração do contrato só é permitida para contrato vigente (sem data de distrato).', 'Atenção');
+          return;
+        }
+        openFormModal(contractPrintTpl.replace('{id}', ids[0]), contractPrintTitle, 'md');
+      });
+
       var calendarTpl = toolbar.getAttribute('data-calendar-url-template');
       var calendarTitle = toolbar.getAttribute('data-calendar-title') || 'Calendário de faltas';
       toolbar.querySelector('.admin-toolbar-calendar')?.addEventListener('click', function () {

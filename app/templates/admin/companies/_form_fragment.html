@@ -10,6 +10,12 @@
     </div>
   </div>
   <div class="row">
+    <div class="col-12 mb-3">
+      <label class="form-label">Endereço</label>
+      <input type="text" name="address" class="form-control" value="{{ company.address if company else '' }}" />
+    </div>
+  </div>
+  <div class="row">
     <div class="col-12 col-md-6 mb-3">
       <label class="form-label">CNPJ *</label>
       <input type="text" name="cnpj" class="form-control" required value="{{ company.cnpj if company else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
