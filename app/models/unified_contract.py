@@ -30,6 +30,11 @@ class Contract(db.Model):
     # Client contract fields
     contract_value = db.Column(db.Numeric(10, 2), nullable=True)
     motoboy_quantity = db.Column(db.Integer, nullable=True)
+    client_driver_unit_value = db.Column(db.Numeric(10, 2), nullable=True)
+    client_driver_quantity = db.Column(db.Integer, nullable=True)
+    client_other_unit_value = db.Column(db.Numeric(10, 2), nullable=True)
+    client_other_quantity = db.Column(db.Integer, nullable=True)
+    client_absence_reimburse_unit_value = db.Column(db.Numeric(10, 2), nullable=True)
     revenue_financial_nature_id = db.Column(
         db.Integer, db.ForeignKey("financial_natures.id"), nullable=True
     )

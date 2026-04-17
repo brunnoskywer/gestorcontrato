@@ -3,13 +3,13 @@ from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
 from app.models import Contract, CONTRACT_TYPE_CLIENT, FinancialNature, Supplier, SUPPLIER_CLIENT
 from app.utils import parse_decimal_form
-from sqlalchemy import or_
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -27,7 +27,9 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def client_contracts_form_new():
         require_admin()
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
         natures = _revenue_natures()
         return render_template(
             "admin/client_contracts/_form_fragment.html",
@@ -42,7 +44,9 @@ def register_routes(bp: Blueprint) -> None:
     def client_contracts_form_edit(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_CLIENT).first_or_404()
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
         natures = _revenue_natures()
         return render_template(
             "admin/client_contracts/_form_fragment.html",
@@ -64,6 +68,7 @@ def register_routes(bp: Blueprint) -> None:
                 or_(
                     Supplier.legal_name.ilike(f"%{client_name}%"),
                     Supplier.name.ilike(f"%{client_name}%"),
+                    Supplier.trade_name.ilike(f"%{client_name}%"),
                 )
             )
         contracts = query.order_by(Contract.start_date.desc()).all()
@@ -77,7 +82,9 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def client_contracts_create():
         require_admin()
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
 
         if request.method == "POST":
             client_id = request.form.get("client_id")
@@ -85,6 +92,14 @@ def register_routes(bp: Blueprint) -> None:
             end_date_str = request.form.get("end_date", "")
             contract_value = parse_decimal_form(request.form.get("contract_value"))
             motoboy_quantity = request.form.get("motoboy_quantity") or None
+            client_driver_unit_value = parse_decimal_form(request.form.get("client_driver_unit_value"))
+            client_driver_quantity = request.form.get("client_driver_quantity", type=int)
+            client_other_unit_value = parse_decimal_form(request.form.get("client_other_unit_value"))
+            client_other_quantity = request.form.get("client_other_quantity", type=int)
+            client_absence_reimburse_unit_value = parse_decimal_form(
+                request.form.get("client_absence_reimburse_unit_value")
+            )
+            revenue_financial_nature_id = request.form.get("revenue_financial_nature_id") or None
 
             if not client_id or not start_date_str:
                 flash("Cliente e data de início são obrigatórios.", "danger")
@@ -98,16 +113,26 @@ def register_routes(bp: Blueprint) -> None:
                     end_date=end_date_val,
                     contract_value=contract_value,
                     motoboy_quantity=int(motoboy_quantity) if motoboy_quantity else None,
+                    client_driver_unit_value=client_driver_unit_value,
+                    client_driver_quantity=client_driver_quantity,
+                    client_other_unit_value=client_other_unit_value,
+                    client_other_quantity=client_other_quantity,
+                    client_absence_reimburse_unit_value=client_absence_reimburse_unit_value,
+                    revenue_financial_nature_id=int(revenue_financial_nature_id)
+                    if revenue_financial_nature_id
+                    else None,
                 )
                 db.session.add(contract)
                 db.session.commit()
                 flash("Client contract created successfully.", "success")
                 return redirect(resolve_next_url("admin.client_contracts_list"))
 
+        natures = _revenue_natures()
         return render_template(
             "admin/client_contracts/form.html",
             contract=None,
             clients=clients,
+            natures=natures,
         )
 
     @bp.route("/client-contracts/<int:contract_id>/edit", methods=["GET", "POST"])
@@ -115,7 +140,9 @@ def register_routes(bp: Blueprint) -> None:
     def client_contracts_edit(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_CLIENT).first_or_404()
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
 
         if request.method == "POST":
             client_id = request.form.get("client_id")
@@ -124,6 +151,13 @@ def register_routes(bp: Blueprint) -> None:
             contract_value = parse_decimal_form(request.form.get("contract_value"))
             motoboy_quantity = request.form.get("motoboy_quantity") or None
             revenue_financial_nature_id = request.form.get("revenue_financial_nature_id") or None
+            client_driver_unit_value = parse_decimal_form(request.form.get("client_driver_unit_value"))
+            client_driver_quantity = request.form.get("client_driver_quantity", type=int)
+            client_other_unit_value = parse_decimal_form(request.form.get("client_other_unit_value"))
+            client_other_quantity = request.form.get("client_other_quantity", type=int)
+            client_absence_reimburse_unit_value = parse_decimal_form(
+                request.form.get("client_absence_reimburse_unit_value")
+            )
 
             if not client_id or not start_date_str:
                 flash("Cliente e data de início são obrigatórios.", "danger")
@@ -134,6 +168,11 @@ def register_routes(bp: Blueprint) -> None:
                 contract.contract_value = contract_value
                 contract.motoboy_quantity = int(motoboy_quantity) if motoboy_quantity else None
                 contract.revenue_financial_nature_id = int(revenue_financial_nature_id) if revenue_financial_nature_id else None
+                contract.client_driver_unit_value = client_driver_unit_value
+                contract.client_driver_quantity = client_driver_quantity
+                contract.client_other_unit_value = client_other_unit_value
+                contract.client_other_quantity = client_other_quantity
+                contract.client_absence_reimburse_unit_value = client_absence_reimburse_unit_value
                 db.session.commit()
                 flash("Contrato de cliente atualizado com sucesso.", "success")
                 return redirect(resolve_next_url("admin.client_contracts_list"))

@@ -1,0 +1,14 @@
+{# Macro reutilizável: select de UF (siglas). #}
+{% macro uf_select(name, value='', select_id='', required=true, css_class='form-select form-select-sm') -%}
+<select
+  name="{{ name }}"
+  {% if select_id %}id="{{ select_id }}"{% endif %}
+  class="{{ css_class }}"
+  {% if required %}required{% endif %}
+>
+  <option value="">UF{% if required %} *{% endif %}</option>
+  {% for uf in ('AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO') %}
+  <option value="{{ uf }}" {% if (value or '')|upper == uf %}selected{% endif %}>{{ uf }}</option>
+  {% endfor %}
+</select>
+{%- endmacro %}

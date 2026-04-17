@@ -5,6 +5,7 @@ from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.constants.brazil_ufs import is_valid_uf
 from app.extensions import db
 from app.models import (
     Supplier,
@@ -122,6 +123,10 @@ def register_routes(bp: Blueprint) -> None:
             cpf = request.form.get("cpf", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
             address = request.form.get("address", "").strip()
+            street = request.form.get("street", "").strip()
+            neighborhood = request.form.get("neighborhood", "").strip()
+            city = request.form.get("city", "").strip()
+            state = (request.form.get("state") or "").strip().upper()
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
@@ -132,6 +137,8 @@ def register_routes(bp: Blueprint) -> None:
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
+            elif not street or not neighborhood or not city or not is_valid_uf(state):
+                flash("Preencha rua, bairro, cidade e UF válidos do motoboy.", "danger")
             else:
                 motoboy = Supplier(
                     name=full_name,
@@ -139,6 +146,10 @@ def register_routes(bp: Blueprint) -> None:
                     type=SUPPLIER_MOTOBOY,
                     is_active=status not in MOTOBOY_TERMINATED_STATUSES,
                     address=address or None,
+                    street=street,
+                    neighborhood=neighborhood,
+                    city=city,
+                    state=state,
                     reference_contact=reference_contact or None,
                     bike_plate=bike_plate or None,
                     bank_account_pix=bank_account_pix or None,
@@ -174,6 +185,10 @@ def register_routes(bp: Blueprint) -> None:
             cpf = request.form.get("cpf", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
             address = request.form.get("address", "").strip()
+            street = request.form.get("street", "").strip()
+            neighborhood = request.form.get("neighborhood", "").strip()
+            city = request.form.get("city", "").strip()
+            state = (request.form.get("state") or "").strip().upper()
             reference_contact = request.form.get("reference_contact", "").strip()
             bike_plate = request.form.get("bike_plate", "").strip()
             bank_account_pix = request.form.get("bank_account_pix", "").strip()
@@ -184,10 +199,18 @@ def register_routes(bp: Blueprint) -> None:
 
             if not full_name or not cpf:
                 flash("Nome completo e CPF são obrigatórios.", "danger")
+                db.session.rollback()
+            elif not street or not neighborhood or not city or not is_valid_uf(state):
+                flash("Preencha rua, bairro, cidade e UF válidos do motoboy.", "danger")
+                db.session.rollback()
             else:
                 motoboy.name = full_name
                 motoboy.document = cpf
                 motoboy.address = address or None
+                motoboy.street = street
+                motoboy.neighborhood = neighborhood
+                motoboy.city = city
+                motoboy.state = state
                 motoboy.reference_contact = reference_contact or None
                 motoboy.bike_plate = bike_plate or None
                 motoboy.bank_account_pix = bank_account_pix or None

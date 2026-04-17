@@ -73,7 +73,7 @@
           {% endif %}
         </td>
         <td>{{ "%04d-%02d"|format(b.year, b.month) }}</td>
-        <td>{{ (b.client_supplier.legal_name or b.client_supplier.name) if b.client_supplier else "-" }}</td>
+        <td>{{ (b.client_supplier|client_display_label) if b.client_supplier else "-" }}</td>
         <td>{{ b.company.legal_name if b.company else "-" }}</td>
         <td>{{ b.entries.count() }}</td>
         <td class="text-end">

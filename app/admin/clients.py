@@ -1,12 +1,14 @@
 """CRUD for Clients: uses Supplier with type=client."""
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.constants.brazil_ufs import is_valid_uf
 from app.extensions import db
 from app.models import Company, Supplier, SUPPLIER_CLIENT
+from app.models.supplier import client_display_label
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -45,15 +47,18 @@ def register_routes(bp: Blueprint) -> None:
         query = Supplier.query.filter_by(type=SUPPLIER_CLIENT)
         if name:
             query = query.filter(
-                db.or_(
+                or_(
                     Supplier.legal_name.ilike(f"%{name}%"),
                     Supplier.name.ilike(f"%{name}%"),
+                    Supplier.trade_name.ilike(f"%{name}%"),
                 )
             )
         if cnpj:
             query = query.filter(Supplier.document.ilike(f"%{cnpj}%"))
 
-        clients = query.order_by(Supplier.legal_name, Supplier.name).all()
+        clients = query.order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
         companies = Company.query.order_by(Company.legal_name).all()
         return render_template(
             "admin/clients/list.html",
@@ -77,15 +82,16 @@ def register_routes(bp: Blueprint) -> None:
                 or_(
                     Supplier.legal_name.ilike(f"%{term}%"),
                     Supplier.name.ilike(f"%{term}%"),
+                    Supplier.trade_name.ilike(f"%{term}%"),
                 )
             )
-            .order_by(Supplier.legal_name, Supplier.name)
+            .order_by(func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name))
         )
         results = query.limit(20).all()
         payload = [
             {
                 "id": c.id,
-                "label": c.legal_name or c.name,
+                "label": client_display_label(c),
                 "secondary": c.document or "",
             }
             for c in results
@@ -103,6 +109,10 @@ def register_routes(bp: Blueprint) -> None:
             trade_name = request.form.get("trade_name", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
             address = request.form.get("address", "").strip()
+            street = request.form.get("street", "").strip()
+            neighborhood = request.form.get("neighborhood", "").strip()
+            city = request.form.get("city", "").strip()
+            state = (request.form.get("state") or "").strip().upper()
             contact_name = request.form.get("contact_name", "").strip()
             email = request.form.get("email", "").strip()
             billing_company_id = request.form.get("billing_company_id") or None
@@ -110,6 +120,8 @@ def register_routes(bp: Blueprint) -> None:
 
             if not legal_name or not cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")
+            elif not street or not neighborhood or not city or not is_valid_uf(state):
+                flash("Preencha rua, bairro, cidade e UF válidos do cliente.", "danger")
             else:
                 client = Supplier(
                     name=legal_name,
@@ -119,6 +131,10 @@ def register_routes(bp: Blueprint) -> None:
                     legal_name=legal_name,
                     trade_name=trade_name or None,
                     address=address or None,
+                    street=street,
+                    neighborhood=neighborhood,
+                    city=city,
+                    state=state,
                     contact_name=contact_name or None,
                     email=email or None,
                     billing_company_id=billing_company_id,
@@ -147,6 +163,10 @@ def register_routes(bp: Blueprint) -> None:
             trade_name = request.form.get("trade_name", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
             address = request.form.get("address", "").strip()
+            street = request.form.get("street", "").strip()
+            neighborhood = request.form.get("neighborhood", "").strip()
+            city = request.form.get("city", "").strip()
+            state = (request.form.get("state") or "").strip().upper()
             contact_name = request.form.get("contact_name", "").strip()
             email = request.form.get("email", "").strip()
             billing_company_id = request.form.get("billing_company_id") or None
@@ -154,12 +174,20 @@ def register_routes(bp: Blueprint) -> None:
 
             if not legal_name or not cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")
+                db.session.rollback()
+            elif not street or not neighborhood or not city or not is_valid_uf(state):
+                flash("Preencha rua, bairro, cidade e UF válidos do cliente.", "danger")
+                db.session.rollback()
             else:
                 client.name = legal_name
                 client.document = cnpj
                 client.legal_name = legal_name
                 client.trade_name = trade_name or None
                 client.address = address or None
+                client.street = street
+                client.neighborhood = neighborhood
+                client.city = city
+                client.state = state
                 client.contact_name = contact_name or None
                 client.email = email or None
                 client.billing_company_id = billing_company_id

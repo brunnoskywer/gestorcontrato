@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from sqlalchemy.orm import joinedload
+
 from app.models import ContractAbsence, FinancialEntry
 from app.models.financial_entry import ENTRY_PAYABLE
 
@@ -79,7 +81,8 @@ def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Option
                 missing_total += mv
 
     paid_qs = (
-        FinancialEntry.query.filter(
+        FinancialEntry.query.options(joinedload(FinancialEntry.financial_nature))
+        .filter(
             FinancialEntry.supplier_id == c.supplier_id,
             FinancialEntry.entry_type == ENTRY_PAYABLE,
             FinancialEntry.settled_at.isnot(None),
@@ -89,6 +92,9 @@ def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Option
     )
     paid_total = 0.0
     for e in paid_qs.all():
+        nat = e.financial_nature
+        if nat is not None and getattr(nat, "consider_for_discount", False):
+            continue
         try:
             paid_total += float(e.amount)
         except (TypeError, ValueError):

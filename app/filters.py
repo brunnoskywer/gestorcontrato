@@ -4,6 +4,8 @@ from app.models.supplier import (
     MOTOBOY_STATUS_ACTIVE,
     MOTOBOY_STATUS_PENDING,
     MOTOBOY_TERMINATED_STATUSES,
+    SUPPLIER_CLIENT,
+    client_display_label,
 )
 
 
@@ -44,6 +46,15 @@ def motoboy_status_label_pt(status: str | None) -> str:
     if s == MOTOBOY_STATUS_PENDING:
         return "Pendente"
     return "Ativo"
+
+
+def finance_supplier_display(supplier) -> str:
+    """Célula de fornecedor na lista financeira: cliente por fantasia; demais por nome."""
+    if supplier is None:
+        return "-"
+    if getattr(supplier, "type", None) == SUPPLIER_CLIENT:
+        return client_display_label(supplier)
+    return (supplier.name or "-").strip() or "-"
 
 
 def finance_entry_stripe_class(entry) -> str:

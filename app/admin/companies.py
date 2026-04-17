@@ -4,6 +4,7 @@ from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.constants.brazil_ufs import is_valid_uf
 from app.extensions import db
 from app.models import Company
 
@@ -62,10 +63,16 @@ def register_routes(bp: Blueprint) -> None:
             cnpj = request.form.get("cnpj", "").strip()
             partner_name = request.form.get("partner_name", "").strip()
             address = request.form.get("address", "").strip()
+            street = request.form.get("street", "").strip()
+            neighborhood = request.form.get("neighborhood", "").strip()
+            city = request.form.get("city", "").strip()
+            state = (request.form.get("state") or "").strip().upper()
             allow_contract_generation = request.form.get("allow_contract_generation") == "1"
 
             if not legal_name or not cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")
+            elif not street or not neighborhood or not city or not is_valid_uf(state):
+                flash("Preencha rua, bairro, cidade e UF válidos da empresa.", "danger")
             else:
                 company = Company(
                     legal_name=legal_name,
@@ -73,6 +80,10 @@ def register_routes(bp: Blueprint) -> None:
                     cnpj=cnpj,
                     partner_name=partner_name or None,
                     address=address or None,
+                    street=street,
+                    neighborhood=neighborhood,
+                    city=city,
+                    state=state,
                     allow_contract_generation=allow_contract_generation,
                 )
                 db.session.add(company)
@@ -94,10 +105,23 @@ def register_routes(bp: Blueprint) -> None:
             company.cnpj = request.form.get("cnpj", "").strip()
             company.partner_name = request.form.get("partner_name", "").strip() or None
             company.address = request.form.get("address", "").strip() or None
+            company.street = request.form.get("street", "").strip()
+            company.neighborhood = request.form.get("neighborhood", "").strip()
+            company.city = request.form.get("city", "").strip()
+            company.state = (request.form.get("state") or "").strip().upper()
             company.allow_contract_generation = request.form.get("allow_contract_generation") == "1"
 
             if not company.legal_name or not company.cnpj:
                 flash("Razão social e CNPJ são obrigatórios.", "danger")
+                db.session.rollback()
+            elif (
+                not company.street
+                or not company.neighborhood
+                or not company.city
+                or not is_valid_uf(company.state)
+            ):
+                flash("Preencha rua, bairro, cidade e UF válidos da empresa.", "danger")
+                db.session.rollback()
             else:
                 db.session.commit()
                 flash("Empresa atualizada com sucesso.", "success")

@@ -29,16 +29,20 @@ def create_app(config_class: type[Config] | None = None) -> Flask:
     from .filters import (
         format_currency,
         finance_entry_stripe_class,
+        finance_supplier_display,
         jinja_finalize,
         motoboy_status_label_pt,
         motoboy_status_stripe_class,
     )
+    from .models.supplier import client_display_label
 
     app.jinja_env.finalize = jinja_finalize
     app.jinja_env.filters["format_currency"] = format_currency
     app.jinja_env.filters["motoboy_status_stripe_class"] = motoboy_status_stripe_class
     app.jinja_env.filters["motoboy_status_label_pt"] = motoboy_status_label_pt
     app.jinja_env.filters["finance_entry_stripe_class"] = finance_entry_stripe_class
+    app.jinja_env.filters["finance_supplier_display"] = finance_supplier_display
+    app.jinja_env.filters["client_display_label"] = client_display_label
 
     return app
 

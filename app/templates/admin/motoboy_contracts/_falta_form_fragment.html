@@ -4,7 +4,7 @@
       <p class="text-muted small mb-1">
         <strong>Contrato:</strong>
         <strong>{{ contract.supplier.name }}</strong>
-        {% if contract.other_supplier %} — <strong>{{ contract.other_supplier.legal_name or contract.other_supplier.name }}</strong>{% endif %}
+        {% if contract.other_supplier %} — <strong>{{ contract.other_supplier|client_display_label }}</strong>{% endif %}
       </p>
       <p class="text-muted small mb-0">
         Valor falta do contrato (padrão para o diarista): <strong>{% if contract.missing_value is not none %}R$ {{ contract.missing_value|format_currency }}{% else %}— (defina no contrato se quiser preencher automaticamente){% endif %}</strong>

@@ -3,7 +3,7 @@
   <div class="row g-2">
     <div class="col-12">
       <p class="small text-muted mb-1">
-        <strong>Contrato:</strong> {{ contract.supplier.name }}{% if contract.other_supplier %} — {{ contract.other_supplier.legal_name or contract.other_supplier.name }}{% endif %}
+        <strong>Contrato:</strong> {{ contract.supplier.name }}{% if contract.other_supplier %} — {{ contract.other_supplier|client_display_label }}{% endif %}
       </p>
       <p class="small text-muted mb-0">
         Selecione a empresa que entrará como contratante no contrato PDF.

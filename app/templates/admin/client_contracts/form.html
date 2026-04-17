@@ -15,9 +15,9 @@
         {% for c in clients %}
         <option
           value="{{ c.id }}"
-          {% if contract and contract.client_id == c.id %}selected{% endif %}
+          {% if contract and contract.supplier_id == c.id %}selected{% endif %}
         >
-          {{ c.legal_name }}
+          {{ c|client_display_label }}
         </option>
         {% endfor %}
       </select>
@@ -60,6 +60,26 @@
         class="form-control"
         value="{{ contract.motoboy_quantity if contract else '' }}"
       />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Valor motorista (R$)</label>
+      <input type="text" name="client_driver_unit_value" class="form-control" data-mask="currency" value="{{ contract.client_driver_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Qtd. motoristas</label>
+      <input type="number" name="client_driver_quantity" class="form-control" value="{{ contract.client_driver_quantity if contract else '' }}" />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Outros (R$ / unid.)</label>
+      <input type="text" name="client_other_unit_value" class="form-control" data-mask="currency" value="{{ contract.client_other_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Qtd. outros</label>
+      <input type="number" name="client_other_quantity" class="form-control" value="{{ contract.client_other_quantity if contract else '' }}" />
+    </div>
+    <div class="col-md-2 mb-3">
+      <label class="form-label">Ressarc. falta s/ subst. (R$)</label>
+      <input type="text" name="client_absence_reimburse_unit_value" class="form-control" data-mask="currency" value="{{ contract.client_absence_reimburse_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
     </div>
     <div class="col-md-4 mb-3">
       <label class="form-label">Natureza financeira (receita)</label>

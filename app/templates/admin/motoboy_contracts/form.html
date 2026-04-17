@@ -31,7 +31,7 @@
           value="{{ c.id }}"
           {% if contract and contract.other_supplier_id == c.id %}selected{% endif %}
         >
-          {{ c.legal_name or c.name }}
+          {{ c|client_display_label }}
         </option>
         {% endfor %}
       </select>

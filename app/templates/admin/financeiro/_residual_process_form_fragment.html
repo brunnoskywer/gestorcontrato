@@ -25,7 +25,7 @@
       <select id="proc-res-client" name="client_supplier_id" class="form-select form-select-sm">
         <option value="">Todos</option>
         {% for c in clients %}
-        <option value="{{ c.id }}">{{ c.legal_name or c.name }}</option>
+        <option value="{{ c.id }}">{{ c|client_display_label }}</option>
         {% endfor %}
       </select>
     </div>

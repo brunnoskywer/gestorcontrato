@@ -77,7 +77,7 @@
     <tr data-id="{{ c.id }}"{% if c.end_date %} data-distrato-date="{{ c.end_date.isoformat() }}"{% endif %}>
       <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ c.id }}" aria-label="Selecionar" /></td>
       <td data-label="Motoboy">{{ c.supplier.name }}</td>
-      <td data-label="Cliente">{{ (c.other_supplier.legal_name or c.other_supplier.name) if c.other_supplier else '-' }}</td>
+      <td data-label="Cliente">{{ (c.other_supplier|client_display_label) if c.other_supplier else '-' }}</td>
       <td data-label="Data início">{{ c.start_date }}</td>
       <td data-label="Data distrato">{{ c.end_date or '-' }}</td>
       <td data-label="Valor prestação" class="text-end">{{ c.service_value|format_currency if c.service_value is not none else '-' }}</td>

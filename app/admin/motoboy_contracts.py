@@ -33,7 +33,7 @@ from app.models.financial_entry import ENTRY_PAYABLE
 from app.services.motoboy_distrato import compute_motoboy_distrato_net
 from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.utils import parse_decimal_form
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 
@@ -78,14 +78,17 @@ def _motoboys_for_contract_select(contract: Optional[Contract] = None):
     return rows
 
 
-def _diarist_motoboys_for_select(absence: Optional[ContractAbsence] = None):
-    """Motoboys ativos marcados como diarista; na edição inclui o atual se não estiver na lista."""
-    rows = (
+def _diarist_motoboys_for_select(contract: Contract, absence: Optional[ContractAbsence] = None):
+    """Diaristas ativos do mesmo UF do titular; na edição inclui o atual se não estiver na lista."""
+    titular = contract.supplier
+    uf = (titular.state or "").strip().upper() if titular else ""
+    q = (
         Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True, is_diarist=True)
         .filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
-        .order_by(Supplier.name)
-        .all()
     )
+    if uf:
+        q = q.filter(func.upper(Supplier.state) == uf)
+    rows = q.order_by(Supplier.name).all()
     if absence and absence.substitute_supplier_id:
         current = absence.substitute_supplier
         if current and current.id not in {m.id for m in rows}:
@@ -208,7 +211,9 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contracts_form_new():
         require_admin()
         motoboys = _motoboys_for_contract_select()
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
         return render_template(
             "admin/motoboy_contracts/_form_fragment.html",
             contract=None,
@@ -223,7 +228,9 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
         motoboys = _motoboys_for_contract_select(contract)
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
         return render_template(
             "admin/motoboy_contracts/_form_fragment.html",
             contract=contract,
@@ -253,6 +260,7 @@ def register_routes(bp: Blueprint) -> None:
                 or_(
                     SupplierClient.legal_name.ilike(f"%{client_name}%"),
                     SupplierClient.name.ilike(f"%{client_name}%"),
+                    SupplierClient.trade_name.ilike(f"%{client_name}%"),
                 )
             )
         contracts = query.order_by(Contract.start_date.desc()).all()
@@ -268,7 +276,9 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contracts_create():
         require_admin()
         motoboys = _motoboys_for_contract_select()
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
 
         if request.method == "POST":
             motoboy_id = request.form.get("motoboy_id")
@@ -331,7 +341,9 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
         motoboys = _motoboys_for_contract_select(contract)
-        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(Supplier.legal_name, Supplier.name).all()
+        clients = Supplier.query.filter_by(type=SUPPLIER_CLIENT).order_by(
+            func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
+        ).all()
 
         if request.method == "POST":
             contract.supplier_id = int(request.form.get("motoboy_id"))
@@ -381,7 +393,7 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contract_falta_form(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
-        diarist_motoboys = _diarist_motoboys_for_select()
+        diarist_motoboys = _diarist_motoboys_for_select(contract)
         financial_natures = _payable_natures_query().all()
         return render_template(
             "admin/motoboy_contracts/_falta_form_fragment.html",
@@ -432,6 +444,13 @@ def register_routes(bp: Blueprint) -> None:
                     "danger",
                 )
                 return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+            tit = contract.supplier
+            if tit and sub:
+                uf_t = (tit.state or "").strip().upper()
+                uf_s = (sub.state or "").strip().upper()
+                if uf_t and uf_s and uf_t != uf_s:
+                    flash("O diarista deve ser do mesmo estado (UF) do motoboy titular.", "danger")
+                    return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         else:
             nature_id = None
 
@@ -493,7 +512,7 @@ def register_routes(bp: Blueprint) -> None:
         absence = ContractAbsence.query.filter_by(
             id=absence_id, contract_id=contract_id
         ).first_or_404()
-        diarist_motoboys = _diarist_motoboys_for_select(absence)
+        diarist_motoboys = _diarist_motoboys_for_select(contract, absence)
         financial_natures = _payable_natures_query().all()
         return render_template(
             "admin/motoboy_contracts/_falta_edit_fragment.html",
@@ -555,6 +574,13 @@ def register_routes(bp: Blueprint) -> None:
                         "danger",
                     )
                     return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+                tit = contract.supplier
+                if tit and sub:
+                    uf_t = (tit.state or "").strip().upper()
+                    uf_s = (sub.state or "").strip().upper()
+                    if uf_t and uf_s and uf_t != uf_s:
+                        flash("O diarista deve ser do mesmo estado (UF) do motoboy titular.", "danger")
+                        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
             else:
                 nature_id = None
 
@@ -854,11 +880,22 @@ def register_routes(bp: Blueprint) -> None:
         if not company.allow_contract_generation:
             flash("Esta empresa não está habilitada para geração de contrato.", "danger")
             return redirect(next_url)
-        if not company.address:
-            flash("Preencha o endereço da empresa antes de gerar o contrato.", "danger")
+
+        def _endereco_estruturado_ok(ent) -> bool:
+            if not ent:
+                return False
+            return (
+                bool((ent.street or "").strip())
+                and bool((ent.neighborhood or "").strip())
+                and bool((ent.city or "").strip())
+                and bool((ent.state or "").strip())
+            )
+
+        if not _endereco_estruturado_ok(company):
+            flash("Preencha rua, bairro, cidade e UF da empresa antes de gerar o contrato.", "danger")
             return redirect(next_url)
-        if not contract.supplier or not contract.supplier.address:
-            flash("Preencha o endereço do motoboy antes de gerar o contrato.", "danger")
+        if not _endereco_estruturado_ok(contract.supplier):
+            flash("Preencha rua, bairro, cidade e UF do motoboy antes de gerar o contrato.", "danger")
             return redirect(next_url)
         if not contract.supplier.document_secondary:
             flash("Preencha o CNPJ do motoboy (campo CNPJ no cadastro) antes de gerar o contrato.", "danger")

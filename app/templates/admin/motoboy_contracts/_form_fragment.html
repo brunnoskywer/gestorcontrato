@@ -27,7 +27,7 @@
           data-target-hidden="client_id"
           placeholder="Digite ao menos 3 letras para buscar..."
           autocomplete="off"
-          value="{{ (contract.other_supplier.legal_name or contract.other_supplier.name) if contract and contract.other_supplier else '' }}"
+          value="{{ (contract.other_supplier|client_display_label) if contract and contract.other_supplier else '' }}"
         >
         <div class="search-entity-dropdown list-group shadow-sm" style="display:none;"></div>
       </div>

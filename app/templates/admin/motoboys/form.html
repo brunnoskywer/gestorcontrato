@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "admin/_macros.html" import uf_select %}
 {% block title %}{{ 'Editar motoboy' if motoboy else 'Novo motoboy' }}{% endblock %}
 
 {% block content %}
@@ -24,7 +25,23 @@
 
   <div class="row">
     <div class="col-md-6 mb-3">
-      <label class="form-label">Endereço</label>
+      <label class="form-label">Rua / logradouro *</label>
+      <input type="text" name="street" class="form-control" required value="{{ motoboy.street if motoboy else '' }}" />
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Bairro *</label>
+      <input type="text" name="neighborhood" class="form-control" required value="{{ motoboy.neighborhood if motoboy else '' }}" />
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Cidade *</label>
+      <input type="text" name="city" class="form-control" required value="{{ motoboy.city if motoboy else '' }}" />
+    </div>
+    <div class="col-md-3 mb-3">
+      <label class="form-label d-block">Estado (UF) *</label>
+      {{ uf_select('state', motoboy.state if motoboy else '', 'motoboy_state_page') }}
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Complemento (opcional)</label>
       <input type="text" name="address" class="form-control" value="{{ motoboy.address if motoboy else '' }}" />
     </div>
     <div class="col-md-6 mb-3">

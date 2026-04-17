@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models import Company, Contract
 
+from app.utils import format_address_line
+
 try:
     from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
     from reportlab.lib.pagesizes import A4
@@ -94,11 +96,31 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
 
     supplier = contract.supplier
     company_name = (company.legal_name or "").strip() or "-"
-    company_address = (company.address or "").strip() or "-"
+    company_address = (
+        format_address_line(
+            company.street,
+            company.neighborhood,
+            company.city,
+            company.state,
+            complement=company.address,
+        ).strip()
+        or (company.address or "").strip()
+        or "-"
+    )
     company_cnpj = _format_doc(company.cnpj)
 
     contractor_name = (supplier.name if supplier else "").strip() or "-"
-    contractor_address = (supplier.address if supplier else "").strip() or "-"
+    contractor_address = (
+        format_address_line(
+            supplier.street,
+            supplier.neighborhood,
+            supplier.city,
+            supplier.state,
+            complement=supplier.address,
+        ).strip()
+        or (supplier.address if supplier else "").strip()
+        or "-"
+    )
     contractor_cnpj = _format_doc(
         (supplier.document_secondary if supplier else None)
         or (supplier.document if supplier else None)

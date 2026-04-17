@@ -27,6 +27,13 @@
         <label class="form-check-label" for="nature_is_active">Natureza ativa</label>
       </div>
     </div>
+    <div class="col-12">
+      <div class="form-check">
+        <input type="checkbox" name="consider_for_discount" value="on" class="form-check-input" id="nature_consider_discount" {% if nature and nature.consider_for_discount %}checked{% endif %} />
+        <label class="form-check-label" for="nature_consider_discount">Considera para desconto?</label>
+      </div>
+      <p class="form-text small text-muted mb-0">Se marcado, pagamentos quitados nesta natureza não abatem o residual nem o distrato do motoboy.</p>
+    </div>
   </div>
   <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

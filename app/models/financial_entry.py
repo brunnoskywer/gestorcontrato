@@ -26,6 +26,7 @@ class FinancialEntry(db.Model):
     due_date = db.Column(db.Date, nullable=True)
     settled_at = db.Column(db.DateTime, nullable=True)  # quando foi pago/recebido
     reference = db.Column(db.String(255), nullable=True)
+    processing_snapshot = db.Column(db.Text, nullable=True)
     financial_batch_id = db.Column(db.Integer, db.ForeignKey("financial_batches.id"), nullable=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)
 

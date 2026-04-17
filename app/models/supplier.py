@@ -37,6 +37,10 @@ class Supplier(db.Model):
     legal_name = db.Column(db.String(255), nullable=True)
     trade_name = db.Column(db.String(255), nullable=True)
     address = db.Column(db.String(255), nullable=True)
+    street = db.Column(db.String(255), nullable=True)
+    neighborhood = db.Column(db.String(120), nullable=True)
+    city = db.Column(db.String(120), nullable=True)
+    state = db.Column(db.String(2), nullable=True)
     contact_name = db.Column(db.String(255), nullable=True)
     email = db.Column(db.String(255), nullable=True)
     billing_company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
@@ -55,4 +59,13 @@ class Supplier(db.Model):
     is_diarist = db.Column(db.Boolean, nullable=False, default=False)
 
     billing_company = db.relationship("Company", back_populates="billing_suppliers", foreign_keys=[billing_company_id])
+
+
+def client_display_label(supplier: "Supplier | None") -> str:
+    """Nome de exibição para cliente: fantasia, senão razão social, senão nome interno."""
+    if not supplier:
+        return "-"
+    if supplier.type == SUPPLIER_CLIENT:
+        return (supplier.trade_name or supplier.legal_name or supplier.name or "-").strip() or "-"
+    return (supplier.name or "-").strip() or "-"
 

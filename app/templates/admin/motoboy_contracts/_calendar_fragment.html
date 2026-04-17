@@ -1,6 +1,6 @@
 <div class="admin-calendar-wrap" data-calendar-base-url="{{ calendar_url }}">
   <p class="mb-2 fs-6 text-dark">
-    <span class="fw-bold">Motoboy:</span> {{ contract.supplier.name }}{% if contract.other_supplier %} · <span class="fw-bold">Cliente:</span> {{ (contract.other_supplier.legal_name or contract.other_supplier.name) }}{% endif %}
+    <span class="fw-bold">Motoboy:</span> {{ contract.supplier.name }}{% if contract.other_supplier %} · <span class="fw-bold">Cliente:</span> {{ contract.other_supplier|client_display_label }}{% endif %}
   </p>
   <div class="d-flex align-items-center justify-content-between mb-3">
     <a href="{{ calendar_url }}?month={{ prev_month_arg }}" class="btn btn-outline-secondary btn-sm admin-calendar-month-nav" data-replace-modal-body="1" aria-label="Mês anterior">&larr;</a>

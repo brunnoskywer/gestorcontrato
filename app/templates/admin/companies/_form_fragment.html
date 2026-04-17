@@ -1,3 +1,4 @@
+{% from "admin/_macros.html" import uf_select %}
 <form method="post" action="{{ action_url }}" data-turbo-frame="main-content">
   <div class="row">
     <div class="col-12 col-md-6 mb-3">
@@ -10,9 +11,25 @@
     </div>
   </div>
   <div class="row">
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Rua / logradouro *</label>
+      <input type="text" name="street" class="form-control" required value="{{ company.street if company else '' }}" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Bairro *</label>
+      <input type="text" name="neighborhood" class="form-control" required value="{{ company.neighborhood if company else '' }}" />
+    </div>
+    <div class="col-12 col-md-6 mb-3">
+      <label class="form-label">Cidade *</label>
+      <input type="text" name="city" class="form-control" required value="{{ company.city if company else '' }}" />
+    </div>
+    <div class="col-12 col-md-3 mb-3">
+      <label class="form-label d-block">Estado (UF) *</label>
+      {{ uf_select('state', company.state if company else '', 'company_state') }}
+    </div>
     <div class="col-12 mb-3">
-      <label class="form-label">Endereço</label>
-      <input type="text" name="address" class="form-control" value="{{ company.address if company else '' }}" />
+      <label class="form-label">Complemento (opcional)</label>
+      <input type="text" name="address" class="form-control" value="{{ company.address if company else '' }}" placeholder="Referência, número, etc." />
     </div>
   </div>
   <div class="row">

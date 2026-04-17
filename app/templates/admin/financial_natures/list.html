@@ -37,6 +37,7 @@
       <th>Nome</th>
       <th>Tipo</th>
       <th>Ativa</th>
+      <th>Desconto residual</th>
     </tr>
   </thead>
   <tbody>
@@ -44,11 +45,12 @@
     <tr data-id="{{ nature.id }}">
       <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ nature.id }}" aria-label="Selecionar" /></td>
       <td data-label="Nome">{{ nature.name }}</td>
-      <td data-label="Tipo">{{ 'Contas a pagar' if nature.kind == 'payable' else 'Contas a receber' }}</td>
+      <td data-label="Tipo">{{ 'Contas a pagar' if nature.kind == 'payable' else ('Contas a receber' if nature.kind == 'receivable' else 'Ambas') }}</td>
       <td data-label="Ativa">{{ 'Sim' if nature.is_active else 'Não' }}</td>
+      <td data-label="Desconto residual">{{ 'Sim' if nature.consider_for_discount else 'Não' }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="text-center text-muted">Nenhuma natureza financeira cadastrada.</td></tr>
+    <tr><td colspan="5" class="text-center text-muted">Nenhuma natureza financeira cadastrada.</td></tr>
     {% endfor %}
   </tbody>
 </table>

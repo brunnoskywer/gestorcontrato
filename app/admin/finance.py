@@ -1,10 +1,13 @@
 """Rotas do módulo Financeiro: contas a pagar, a receber, despesa e lançamento manual."""
 import calendar as cal
+import json
 from datetime import date, datetime, time, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for, make_response
 from flask_login import current_user, login_required
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
 from app.extensions import db
@@ -35,6 +38,7 @@ from app.models import (
 )
 from io import BytesIO
 
+from app.models.supplier import client_display_label
 from app.services.motoboy_distrato import contract_has_distrato_in_month
 
 try:
@@ -56,7 +60,7 @@ def _all_companies():
 def _active_clients():
     return (
         Supplier.query.filter_by(type=SUPPLIER_CLIENT, is_active=True)
-        .order_by(Supplier.legal_name, Supplier.name)
+        .order_by(func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name))
         .all()
     )
 
@@ -201,7 +205,11 @@ def register_routes(bp: Blueprint) -> None:
         supplier_type = request.args.get("supplier_type", "").strip()
         supplier_id = request.args.get("supplier_id", type=int)
         supplier_name = request.args.get("supplier_name", "").strip()
-        status = request.args.get("status", "").strip()  # '', pending, settled
+        # Sem "status" na URL (acesso inicial ou Limpar): padrão = só pendentes.
+        if "status" not in request.args:
+            status = "pending"
+        else:
+            status = request.args.get("status", "").strip()  # '', pending, settled
 
         date_from_filter = None
         date_to_filter = None
@@ -216,14 +224,23 @@ def register_routes(bp: Blueprint) -> None:
             except ValueError:
                 pass
         if not date_from_filter and not date_to_filter:
-            # padrão: primeiro dia do mês até hoje
+            # padrão: mês civil corrente (dia 1 ao último dia)
             today = date.today()
+            _, last_dom = cal.monthrange(today.year, today.month)
             date_from_filter = today.replace(day=1)
-            date_to_filter = today
+            date_to_filter = today.replace(day=last_dom)
             date_from_str = date_from_filter.isoformat()
             date_to_str = date_to_filter.isoformat()
 
-        query = FinancialEntry.query.outerjoin(Supplier)
+        query = (
+            FinancialEntry.query.options(
+                joinedload(FinancialEntry.company),
+                joinedload(FinancialEntry.account),
+                joinedload(FinancialEntry.financial_nature),
+                joinedload(FinancialEntry.supplier),
+                joinedload(FinancialEntry.batch),
+            ).outerjoin(Supplier)
+        )
         if date_from_filter:
             query = query.filter(FinancialEntry.due_date >= date_from_filter)
         if date_to_filter:
@@ -263,6 +280,39 @@ def register_routes(bp: Blueprint) -> None:
                 "status": status,
             },
         )
+
+    @bp.get("/financeiro/lancamento/<int:entry_id>/residual-detalhe.pdf")
+    @login_required
+    def finance_entry_residual_detail_pdf(entry_id: int):
+        require_admin()
+        entry = FinancialEntry.query.options(joinedload(FinancialEntry.batch)).get_or_404(entry_id)
+        if entry.entry_type != ENTRY_PAYABLE or not entry.processing_snapshot:
+            flash(
+                "Detalhamento disponível apenas para lançamentos residuais com registro de cálculo.",
+                "warning",
+            )
+            return _manual_entry_redirect()
+        if entry.batch is None or entry.batch.batch_type != BATCH_TYPE_RESIDUAL:
+            flash("Detalhamento disponível apenas para processamento residual.", "warning")
+            return _manual_entry_redirect()
+        from app.services.residual_entry_detail_pdf import (
+            build_residual_entry_detail_pdf,
+            parse_residual_snapshot_json,
+        )
+
+        snap = parse_residual_snapshot_json(entry.processing_snapshot)
+        if not snap:
+            flash("Não foi possível ler o detalhamento deste lançamento.", "danger")
+            return _manual_entry_redirect()
+        try:
+            pdf_bytes = build_residual_entry_detail_pdf(snap)
+        except RuntimeError:
+            flash("Geração de PDF indisponível: instale o pacote 'reportlab' no ambiente.", "danger")
+            return _manual_entry_redirect()
+        resp = make_response(pdf_bytes)
+        resp.headers["Content-Type"] = "application/pdf"
+        resp.headers["Content-Disposition"] = f'attachment; filename="residual_detalhe_{entry.id}.pdf"'
+        return resp
 
     @bp.route("/financeiro/processamentos")
     @login_required
@@ -417,11 +467,10 @@ def register_routes(bp: Blueprint) -> None:
         created = 0
         skipped_no_company = 0
         skipped_no_nature = 0
+        skipped_zero_amount = 0
         batch = None
 
         for c in contracts:
-            if not c.contract_value:
-                continue
             # Natureza vem do cadastro do contrato do cliente
             nature = c.revenue_financial_nature if c.revenue_financial_nature_id else None
             if not nature or not nature.is_active or nature.kind not in ("receivable", "both"):
@@ -455,7 +504,33 @@ def register_routes(bp: Blueprint) -> None:
             effective_days = (eff_end - eff_start).days + 1
             proportion = effective_days / days_in_month if days_in_month > 0 else 1
             motoboy_qty = int(c.motoboy_quantity) if c.motoboy_quantity is not None else 1
-            amount = float(c.contract_value) * motoboy_qty * proportion
+            cv = float(c.contract_value or 0)
+            drv_q = int(c.client_driver_quantity or 0)
+            drv_u = float(c.client_driver_unit_value or 0)
+            oth_q = int(c.client_other_quantity or 0)
+            oth_u = float(c.client_other_unit_value or 0)
+            base_line = cv * motoboy_qty * proportion
+            extras = (drv_u * drv_q + oth_u * oth_q) * proportion
+            reimburse = float(c.client_absence_reimburse_unit_value or 0)
+            d0 = max(month_start, eff_start)
+            d1 = min(month_end, eff_end)
+            no_sub = (
+                db.session.query(func.count(ContractAbsence.id))
+                .join(Contract, ContractAbsence.contract_id == Contract.id)
+                .filter(
+                    Contract.contract_type == CONTRACT_TYPE_MOTOBOY,
+                    Contract.other_supplier_id == c.supplier_id,
+                    ContractAbsence.absence_date >= d0,
+                    ContractAbsence.absence_date <= d1,
+                    ContractAbsence.substitute_supplier_id.is_(None),
+                )
+                .scalar()
+            ) or 0
+            discount_abs = float(no_sub) * reimburse
+            amount = base_line + extras - discount_abs
+            if amount <= 0:
+                skipped_zero_amount += 1
+                continue
 
             entry = FinancialEntry(
                 company_id=company_id,
@@ -479,6 +554,11 @@ def register_routes(bp: Blueprint) -> None:
                 flash("Nenhuma receita gerada: defina a natureza financeira de receita no cadastro de cada contrato de cliente.", "warning")
             elif skipped_no_company:
                 flash("Nenhuma receita gerada: os clientes dos contratos precisam ter uma empresa associada para emissão de nota (cadastro do cliente).", "warning")
+            elif skipped_zero_amount:
+                flash(
+                    "Nenhuma receita gerada: valor líquido zerado ou negativo após extras e descontos por falta sem substituto.",
+                    "warning",
+                )
             else:
                 flash("Nenhuma receita foi gerada para os contratos vigentes no período.", "warning")
         else:
@@ -488,6 +568,11 @@ def register_routes(bp: Blueprint) -> None:
                 msg += f" {skipped_no_company} contrato(s) ignorado(s): cliente sem empresa para emissão de nota."
             if skipped_no_nature:
                 msg += f" {skipped_no_nature} contrato(s) ignorado(s): sem natureza financeira de receita."
+            if skipped_zero_amount:
+                msg += (
+                    f" {skipped_zero_amount} contrato(s) ignorado(s): valor líquido da receita "
+                    "zerado ou negativo."
+                )
             flash(msg, "success" if not (skipped_no_company or skipped_no_nature) else "warning")
 
         return redirect(next_url)
@@ -924,7 +1009,8 @@ def register_routes(bp: Blueprint) -> None:
                         missing_total += mv
 
             paid_qs = (
-                FinancialEntry.query.filter(
+                FinancialEntry.query.options(joinedload(FinancialEntry.financial_nature))
+                .filter(
                     FinancialEntry.supplier_id == c.supplier_id,
                     FinancialEntry.entry_type == ENTRY_PAYABLE,
                     FinancialEntry.settled_at.isnot(None),
@@ -933,11 +1019,20 @@ def register_routes(bp: Blueprint) -> None:
                 .filter(FinancialEntry.due_date <= month_end)
             )
             paid_total = 0.0
+            paid_by_nature: dict[str, float] = {}
+            paid_excluded: list[dict] = []
             for e in paid_qs.all():
                 try:
-                    paid_total += float(e.amount)
+                    amt = float(e.amount)
                 except (TypeError, ValueError):
                     continue
+                nat = e.financial_nature
+                if nat is not None and getattr(nat, "consider_for_discount", False):
+                    paid_excluded.append({"name": nat.name, "amount": amt})
+                    continue
+                paid_total += amt
+                if nat:
+                    paid_by_nature[nat.name] = paid_by_nature.get(nat.name, 0.0) + amt
 
             net_amount = gross_amount - missing_total - paid_total
             if net_amount <= 0:
@@ -958,6 +1053,41 @@ def register_routes(bp: Blueprint) -> None:
                 db.session.add(batch_res)
                 db.session.flush()
 
+            _meses = (
+                "",
+                "Janeiro",
+                "Fevereiro",
+                "Março",
+                "Abril",
+                "Maio",
+                "Junho",
+                "Julho",
+                "Agosto",
+                "Setembro",
+                "Outubro",
+                "Novembro",
+                "Dezembro",
+            )
+            after_missing = gross_amount - missing_total
+            snapshot = {
+                "v": 1,
+                "contract_id": c.id,
+                "motoboy_name": (c.supplier.name if c.supplier else "") or "-",
+                "client_name": client_display_label(c.other_supplier) if c.other_supplier else "-",
+                "period_label": f"{_meses[month]} de {year}",
+                "gross_amount": gross_amount,
+                "has_absences": has_absences,
+                "missing_total": missing_total,
+                "after_missing": after_missing,
+                "paid_total": paid_total,
+                "paid_by_nature": [
+                    {"name": nm, "amount": val}
+                    for nm, val in sorted(paid_by_nature.items(), key=lambda x: x[0])
+                ],
+                "paid_excluded_discount_nature": paid_excluded,
+                "net_amount": net_amount,
+            }
+
             desc = f"Residual contrato motoboy #{c.id} - {year}-{month:02d}"
             entry = FinancialEntry(
                 company_id=company_id,
@@ -971,6 +1101,7 @@ def register_routes(bp: Blueprint) -> None:
                 settled_at=None,
                 reference=None,
                 financial_batch_id=batch_res.id,
+                processing_snapshot=json.dumps(snapshot, ensure_ascii=False),
             )
             db.session.add(entry)
             created_res += 1
@@ -1415,7 +1546,7 @@ def register_routes(bp: Blueprint) -> None:
 
             if e.supplier:
                 if e.supplier.type == SUPPLIER_CLIENT:
-                    client_name = e.supplier.legal_name or e.supplier.name
+                    client_name = client_display_label(e.supplier)
                 elif e.supplier.type == SUPPLIER_MOTOBOY:
                     motoboy_name = e.supplier.name
                     pix_key = e.supplier.bank_account_pix or "-"
@@ -1443,10 +1574,7 @@ def register_routes(bp: Blueprint) -> None:
                                 .first()
                             )
                             if contract and contract.other_supplier:
-                                client_name = (
-                                    contract.other_supplier.legal_name
-                                    or contract.other_supplier.name
-                                )
+                                client_name = client_display_label(contract.other_supplier)
                         except Exception:
                             pass
 

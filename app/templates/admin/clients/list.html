@@ -38,8 +38,8 @@
   <thead>
     <tr>
       <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
-      <th>Razão social</th>
       <th>Nome fantasia</th>
+      <th>Razão social</th>
       <th>CNPJ</th>
       <th>Empresa emissão NF</th>
     </tr>
@@ -48,8 +48,8 @@
     {% for client in clients %}
     <tr data-id="{{ client.id }}">
       <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ client.id }}" aria-label="Selecionar" /></td>
-      <td data-label="Razão social">{{ client.legal_name }}</td>
-      <td data-label="Nome fantasia">{{ client.trade_name or '-' }}</td>
+      <td data-label="Nome fantasia">{{ client|client_display_label }}</td>
+      <td data-label="Razão social">{{ client.legal_name or '-' }}</td>
       <td data-label="CNPJ">{{ client.document or '-' }}</td>
       <td data-label="Empresa emissão NF">{{ client.billing_company.legal_name if client.billing_company else '-' }}</td>
     </tr>

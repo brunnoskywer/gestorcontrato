@@ -140,6 +140,7 @@
       <th>Conta</th>
       <th class="text-end text-nowrap">Valor</th>
       <th class="text-center text-nowrap">Vencimento</th>
+      <th class="text-nowrap">Detalhe</th>
       <th>Status</th>
     </tr>
   </thead>
@@ -156,7 +157,7 @@
       <td data-label="Empresa">{{ e.company.legal_name }}</td>
       <td data-label="Fornecedor">
         {% if e.supplier %}
-          {{ e.supplier.name }}
+          {{ e.supplier|finance_supplier_display }}
         {% else %}
           -
         {% endif %}
@@ -165,11 +166,18 @@
       <td data-label="Conta">{{ e.account.name if e.account else "-" }}</td>
       <td data-label="Valor" class="text-end text-nowrap">R$ {{ e.amount|format_currency }}</td>
       <td data-label="Vencimento" class="text-center text-nowrap">{{ e.due_date or "-" }}</td>
+      <td data-label="Detalhe" class="text-nowrap">
+        {% if e.processing_snapshot and e.batch and e.batch.batch_type == 'residual' %}
+        <a class="small" href="{{ url_for('admin.finance_entry_residual_detail_pdf', entry_id=e.id) }}" target="_blank" rel="noopener">PDF residual</a>
+        {% else %}
+        -
+        {% endif %}
+      </td>
       <td data-label="Status">{% if e.settled_at %}Quitado ({{ e.settled_at.strftime('%d/%m/%Y') }}){% else %}Pendente{% endif %}</td>
     </tr>
     {% else %}
     <tr>
-      <td colspan="10" class="text-center text-muted">Nenhum lançamento financeiro cadastrado.</td>
+      <td colspan="11" class="text-center text-muted">Nenhum lançamento financeiro cadastrado.</td>
     </tr>
     {% endfor %}
   </tbody>
