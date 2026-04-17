@@ -103,7 +103,7 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
         (supplier.document_secondary if supplier else None)
         or (supplier.document if supplier else None)
     )
-    contact_phone = _format_phone((supplier.contact_phone if supplier else None) or "")
+    contact_phone = "(85) 98829-4588"
     monthly_value = _fmt_money_br(contract.service_value or 0)
 
     buf = BytesIO()
