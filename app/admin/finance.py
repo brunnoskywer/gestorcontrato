@@ -1065,20 +1065,21 @@ def register_routes(bp: Blueprint) -> None:
         except ValueError:
             flash("Data de baixa inválida.", "danger")
             return _manual_entry_redirect()
-        entry.settled_at = datetime.combine(settled_date, time(0, 0))
         account_id = request.form.get("account_id", "").strip()
-        if account_id:
-            try:
-                aid = int(account_id)
-                acc = Account.query.get(aid)
-                if acc and acc.company_id == entry.company_id and acc.is_active:
-                    entry.account_id = aid
-                else:
-                    entry.account_id = None
-            except (ValueError, TypeError):
-                entry.account_id = None
-        else:
-            entry.account_id = None
+        if not account_id:
+            flash("Conta é obrigatória para dar baixa.", "danger")
+            return _manual_entry_redirect()
+        try:
+            aid = int(account_id)
+        except (ValueError, TypeError):
+            flash("Conta inválida.", "danger")
+            return _manual_entry_redirect()
+        acc = Account.query.get(aid)
+        if not acc or not acc.is_active or acc.company_id != entry.company_id:
+            flash("Conta inválida para a empresa do lançamento.", "danger")
+            return _manual_entry_redirect()
+        entry.settled_at = datetime.combine(settled_date, time(0, 0))
+        entry.account_id = aid
         db.session.commit()
         flash("Lançamento aprovado (quitado).", "success")
         return _manual_entry_redirect()
@@ -1119,29 +1120,30 @@ def register_routes(bp: Blueprint) -> None:
             return redirect(next_url)
 
         account_id_raw = (request.form.get("account_id") or "").strip()
-        chosen_account = None
-        if account_id_raw:
-            try:
-                aid = int(account_id_raw)
-            except (ValueError, TypeError):
-                flash("Conta inválida.", "danger")
-                return redirect(next_url)
-            chosen_account = Account.query.get(aid)
-            if not chosen_account or not chosen_account.is_active:
-                flash("Conta inválida ou inativa.", "danger")
-                return redirect(next_url)
-            incompatible = [e.id for e in entries if e.company_id != chosen_account.company_id]
-            if incompatible:
-                flash(
-                    "A conta selecionada não pertence à mesma empresa de todos os lançamentos.",
-                    "danger",
-                )
-                return redirect(next_url)
+        if not account_id_raw:
+            flash("Conta é obrigatória para dar baixa em lote.", "danger")
+            return redirect(next_url)
+        try:
+            aid = int(account_id_raw)
+        except (ValueError, TypeError):
+            flash("Conta inválida.", "danger")
+            return redirect(next_url)
+        chosen_account = Account.query.get(aid)
+        if not chosen_account or not chosen_account.is_active:
+            flash("Conta inválida ou inativa.", "danger")
+            return redirect(next_url)
+        incompatible = [e.id for e in entries if e.company_id != chosen_account.company_id]
+        if incompatible:
+            flash(
+                "A conta selecionada não pertence à mesma empresa de todos os lançamentos.",
+                "danger",
+            )
+            return redirect(next_url)
 
         settled_at = datetime.combine(settled_date, time(0, 0))
         for entry in entries:
             entry.settled_at = settled_at
-            entry.account_id = chosen_account.id if chosen_account else None
+            entry.account_id = chosen_account.id
 
         db.session.commit()
         flash(f"{len(entries)} lançamento(s) aprovado(s) em lote.", "success")

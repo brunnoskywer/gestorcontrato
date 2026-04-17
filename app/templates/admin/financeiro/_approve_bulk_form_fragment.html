@@ -15,14 +15,14 @@
       <input type="date" name="settled_date" class="form-control form-control-sm" required value="{{ default_date }}" />
     </div>
     <div class="col-12">
-      <label class="form-label mb-0">Conta (opcional)</label>
-      <select name="account_id" class="form-select form-select-sm">
-        <option value="">Nenhuma</option>
+      <label class="form-label mb-0">Conta *</label>
+      <select name="account_id" class="form-select form-select-sm" required>
+        <option value="">Selecione a conta</option>
         {% for acc in accounts %}
         <option value="{{ acc.id }}">{{ acc.company.legal_name if acc.company else "-" }} — {{ acc.name }}</option>
         {% endfor %}
       </select>
-      <p class="form-text small text-muted mb-0">Se informar conta, ela precisa ser da mesma empresa dos lançamentos selecionados.</p>
+      <p class="form-text small text-muted mb-0">Obrigatória. Deve ser da mesma empresa de todos os lançamentos selecionados.</p>
     </div>
   </div>
   <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
