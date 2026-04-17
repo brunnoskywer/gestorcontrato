@@ -17,6 +17,9 @@
 {% set transfer_url = url_for('admin.finance_transfer_form') %}
 {% set revenue_batches_url = url_for('admin.finance_batches', next=request.full_path) %}
 {% set revenue_batches_title = 'Processar' %}
+{% set _residual_pdf_base = url_for('admin.finance_entry_residual_detail_pdf', entry_id=999999) %}
+{% set residual_detail_pdf_url_template = _residual_pdf_base.replace('999999', '{id}') %}
+{% set residual_detail_pdf_title = 'Detalhamento residual (PDF)' %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Movimentos Financeiros</h1>
@@ -140,13 +143,12 @@
       <th>Conta</th>
       <th class="text-end text-nowrap">Valor</th>
       <th class="text-center text-nowrap">Vencimento</th>
-      <th class="text-nowrap">Detalhe</th>
       <th>Status</th>
     </tr>
   </thead>
   <tbody>
     {% for e in entries %}
-    <tr data-id="{{ e.id }}" data-settled="{{ '1' if e.settled_at else '0' }}">
+    <tr data-id="{{ e.id }}" data-settled="{{ '1' if e.settled_at else '0' }}"{% if e.entry_type == 'payable' and e.processing_snapshot and e.batch and e.batch.batch_type == 'residual' %} data-residual-detail="1"{% endif %}>
       <td class="table-status-stripe-cell p-0 align-middle" aria-hidden="true">
         <span class="status-stripe {{ e|finance_entry_stripe_class }}" title="{% if e.settled_at %}Quitado{% else %}Pendente{% endif %}"></span>
       </td>
@@ -166,18 +168,11 @@
       <td data-label="Conta">{{ e.account.name if e.account else "-" }}</td>
       <td data-label="Valor" class="text-end text-nowrap">R$ {{ e.amount|format_currency }}</td>
       <td data-label="Vencimento" class="text-center text-nowrap">{{ e.due_date or "-" }}</td>
-      <td data-label="Detalhe" class="text-nowrap">
-        {% if e.processing_snapshot and e.batch and e.batch.batch_type == 'residual' %}
-        <a class="small" href="{{ url_for('admin.finance_entry_residual_detail_pdf', entry_id=e.id) }}" target="_blank" rel="noopener">PDF residual</a>
-        {% else %}
-        -
-        {% endif %}
-      </td>
       <td data-label="Status">{% if e.settled_at %}Quitado ({{ e.settled_at.strftime('%d/%m/%Y') }}){% else %}Pendente{% endif %}</td>
     </tr>
     {% else %}
     <tr>
-      <td colspan="11" class="text-center text-muted">Nenhum lançamento financeiro cadastrado.</td>
+      <td colspan="10" class="text-center text-muted">Nenhum lançamento financeiro cadastrado.</td>
     </tr>
     {% endfor %}
   </tbody>

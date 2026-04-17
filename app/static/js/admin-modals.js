@@ -815,6 +815,35 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
             }
           );
         });
+
+        var residualPdfTpl = toolbar.getAttribute('data-residual-detail-pdf-url-template');
+        toolbar.querySelector('.admin-toolbar-residual-detail-pdf')?.addEventListener('click', function () {
+          if (!residualPdfTpl) return;
+          var ids = getSelectedIds();
+          if (ids.length === 0) {
+            showMessageModal(
+              'Selecione um lançamento gerado pelo processamento residual para abrir o PDF.',
+              'Atenção'
+            );
+            return;
+          }
+          if (ids.length > 1) {
+            showMessageModal(
+              'Selecione apenas um lançamento para o detalhamento residual em PDF.',
+              'Atenção'
+            );
+            return;
+          }
+          var row = getFirstSelectedRow();
+          if (!row || row.getAttribute('data-residual-detail') !== '1') {
+            showMessageModal(
+              'O PDF de detalhamento residual só está disponível para lançamentos gerados pelo processamento residual.',
+              'Atenção'
+            );
+            return;
+          }
+          window.open(residualPdfTpl.replace('{id}', ids[0]), '_blank', 'noopener,noreferrer');
+        });
       }
     });
   }

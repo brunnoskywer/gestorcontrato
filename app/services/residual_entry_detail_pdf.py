@@ -82,7 +82,7 @@ def build_residual_entry_detail_pdf(snapshot: dict[str, Any]) -> bytes:
         pdf.drawString(
             40,
             y,
-            "Naturezas marcadas como 'Não considera' (não abatem o residual)",
+            "Naturezas marcadas como 'Não considera para abatimento?' (não abatem o residual)",
         )
         y -= 12
         pdf.setFont("Helvetica", 9)
