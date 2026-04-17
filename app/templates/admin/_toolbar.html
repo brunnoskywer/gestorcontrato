@@ -6,6 +6,7 @@
   {% if delete_bulk_url %}data-delete-bulk-url="{{ delete_bulk_url }}"{% endif %}
   {% if finance_actions %}data-finance-actions="1"{% endif %}
   {% if transfer_url %}data-transfer-url="{{ transfer_url }}"{% endif %}
+  {% if bulk_update_url %}data-bulk-update-url="{{ bulk_update_url }}"{% endif %}
   {% if approve_url_template %}data-approve-url-template="{{ approve_url_template }}"{% endif %}
   {% if approve_bulk_url %}data-approve-bulk-url="{{ approve_bulk_url }}"{% endif %}
   {% if reopen_bulk_url %}data-reopen-bulk-url="{{ reopen_bulk_url }}"{% endif %}
@@ -56,6 +57,9 @@
   </button>
   <button type="button" class="btn btn-light btn-sm admin-toolbar-transfer" title="Transferência entre contas" aria-label="Transferência">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="8" x2="12" y2="8"/><polyline points="5 5 2 8 5 11"/><line x1="22" y1="16" x2="12" y2="16"/><polyline points="19 19 22 16 19 13"/></svg>
+  </button>
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-bulk-update" title="Alterar em massa" aria-label="Alterar em massa">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
   </button>
   {% endif %}
   {% if falta_url_template %}

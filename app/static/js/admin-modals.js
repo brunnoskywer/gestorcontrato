@@ -668,8 +668,41 @@
 
       if (toolbar.getAttribute('data-finance-actions') === '1') {
         var transferUrl = toolbar.getAttribute('data-transfer-url');
+        var bulkUpdateUrl = toolbar.getAttribute('data-bulk-update-url');
         toolbar.querySelector('.admin-toolbar-transfer')?.addEventListener('click', function () {
           if (transferUrl) openFormModal(transferUrl, 'Transferência entre contas', 'md');
+        });
+        toolbar.querySelector('.admin-toolbar-bulk-update')?.addEventListener('click', function () {
+          if (!bulkUpdateUrl) return;
+          var selectedRows = [];
+          table.querySelectorAll('tbody .row-select:checked').forEach(function (cb) {
+            var tr = cb.closest('tr');
+            if (tr) selectedRows.push(tr);
+          });
+          if (!selectedRows.length) {
+            showMessageModal('Selecione um ou mais lançamentos para alterar em massa.', 'Atenção');
+            return;
+          }
+          var hasSettled = selectedRows.some(function (tr) {
+            return tr.getAttribute('data-settled') === '1';
+          });
+          if (hasSettled) {
+            showMessageModal('A alteração em massa só pode ser aplicada quando todos os selecionados estiverem pendentes.', 'Atenção');
+            return;
+          }
+          var ids = selectedRows
+            .map(function (tr) { return tr.getAttribute('data-id'); })
+            .filter(function (id) { return !!id; });
+          if (!ids.length) {
+            showMessageModal('Nenhum lançamento válido selecionado para alterar.', 'Atenção');
+            return;
+          }
+          var next = listReturnNextPath();
+          var params = ids.map(function (id) {
+            return 'ids=' + encodeURIComponent(id);
+          }).join('&');
+          var url = bulkUpdateUrl + '?' + params + '&next=' + encodeURIComponent(next);
+          openFormModal(url, 'Alterar lançamentos em massa', 'md');
         });
 
         var approveTpl = toolbar.getAttribute('data-approve-url-template');

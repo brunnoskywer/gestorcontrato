@@ -1149,6 +1149,153 @@ def register_routes(bp: Blueprint) -> None:
         flash(f"{len(entries)} lançamento(s) aprovado(s) em lote.", "success")
         return redirect(next_url)
 
+    @bp.route("/financeiro/lancamento/alterar-lote/form")
+    @login_required
+    def finance_bulk_update_form():
+        require_admin()
+        next_url = resolve_next_url("admin.finance_manual_entry")
+        ids = request.args.getlist("ids", type=int)
+        if not ids:
+            flash("Selecione um ou mais lançamentos para alterar em massa.", "warning")
+            return redirect(next_url)
+        entries = (
+            FinancialEntry.query.filter(FinancialEntry.id.in_(ids))
+            .order_by(FinancialEntry.due_date, FinancialEntry.id)
+            .all()
+        )
+        if not entries:
+            flash("Nenhum lançamento válido encontrado.", "warning")
+            return redirect(next_url)
+        if any(e.settled_at for e in entries):
+            flash("A alteração em massa só pode ser aplicada em lançamentos pendentes.", "danger")
+            return redirect(next_url)
+        companies = Company.query.order_by(Company.legal_name).all()
+        accounts = Account.query.filter_by(is_active=True).order_by(Account.name).all()
+        accounts_by_company = {}
+        for acc in accounts:
+            if not acc.company_id:
+                continue
+            key = str(acc.company_id)
+            accounts_by_company.setdefault(key, []).append(
+                {"id": acc.id, "name": acc.name}
+            )
+        return render_template(
+            "admin/financeiro/_bulk_update_form_fragment.html",
+            ids=[e.id for e in entries],
+            entries_count=len(entries),
+            companies=companies,
+            accounts_by_company=accounts_by_company,
+            action_url=url_for("admin.finance_bulk_update_apply"),
+            next_url=next_url,
+        )
+
+    @bp.post("/financeiro/lancamento/alterar-lote")
+    @login_required
+    def finance_bulk_update_apply():
+        require_admin()
+        next_url = resolve_next_url("admin.finance_manual_entry")
+        ids = request.form.getlist("ids", type=int)
+        if not ids:
+            flash("Nenhum lançamento selecionado.", "warning")
+            return redirect(next_url)
+        entries = (
+            FinancialEntry.query.filter(FinancialEntry.id.in_(ids))
+            .order_by(FinancialEntry.id)
+            .all()
+        )
+        if not entries:
+            flash("Nenhum lançamento válido encontrado.", "warning")
+            return redirect(next_url)
+        if len(entries) != len(set(ids)):
+            flash("Há lançamento(s) inválido(s) na seleção.", "danger")
+            return redirect(next_url)
+        if any(e.settled_at for e in entries):
+            flash("A alteração em massa só pode ser aplicada em lançamentos pendentes.", "danger")
+            return redirect(next_url)
+
+        company_id_raw = (request.form.get("company_id") or "").strip()
+        due_date_raw = (request.form.get("due_date") or "").strip()
+        account_id_raw = (request.form.get("account_id") or "").strip()
+
+        chosen_company = None
+        if company_id_raw:
+            try:
+                cid = int(company_id_raw)
+            except (ValueError, TypeError):
+                flash("Empresa inválida.", "danger")
+                return redirect(next_url)
+            chosen_company = Company.query.get(cid)
+            if not chosen_company:
+                flash("Empresa inválida.", "danger")
+                return redirect(next_url)
+
+        chosen_due_date = None
+        if due_date_raw:
+            try:
+                chosen_due_date = date.fromisoformat(due_date_raw)
+            except ValueError:
+                flash("Data inválida.", "danger")
+                return redirect(next_url)
+
+        chosen_account = None
+        if account_id_raw:
+            try:
+                aid = int(account_id_raw)
+            except (ValueError, TypeError):
+                flash("Conta inválida.", "danger")
+                return redirect(next_url)
+            chosen_account = Account.query.get(aid)
+            if not chosen_account or not chosen_account.is_active:
+                flash("Conta inválida ou inativa.", "danger")
+                return redirect(next_url)
+
+        if not chosen_company and not chosen_due_date and not chosen_account:
+            flash("Preencha ao menos um campo para alterar em massa.", "warning")
+            return redirect(next_url)
+
+        if chosen_account:
+            if not chosen_company:
+                flash(
+                    "Para alterar a conta em massa, informe também a empresa.",
+                    "danger",
+                )
+                return redirect(next_url)
+            if chosen_account.company_id != chosen_company.id:
+                flash("A conta selecionada deve pertencer à empresa informada.", "danger")
+                return redirect(next_url)
+
+        if chosen_company and not chosen_account:
+            incompatible_existing_account = [
+                e.id
+                for e in entries
+                if e.account_id and e.account and e.account.company_id != chosen_company.id
+            ]
+            if incompatible_existing_account:
+                flash(
+                    "Alguns registros têm conta de outra empresa. Informe uma conta compatível para concluir a alteração de empresa.",
+                    "danger",
+                )
+                return redirect(next_url)
+
+        changed = 0
+        for entry in entries:
+            touched = False
+            if chosen_company and entry.company_id != chosen_company.id:
+                entry.company_id = chosen_company.id
+                touched = True
+            if chosen_due_date and entry.due_date != chosen_due_date:
+                entry.due_date = chosen_due_date
+                touched = True
+            if chosen_account and entry.account_id != chosen_account.id:
+                entry.account_id = chosen_account.id
+                touched = True
+            if touched:
+                changed += 1
+
+        db.session.commit()
+        flash(f"{changed} lançamento(s) atualizado(s) em massa.", "success")
+        return redirect(next_url)
+
     # ---- Reabrir (voltar a pendente) ----
     @bp.post("/financeiro/lancamento/<int:entry_id>/reabrir")
     @login_required
