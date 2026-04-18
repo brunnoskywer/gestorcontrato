@@ -344,6 +344,23 @@ def register_routes(bp: Blueprint) -> None:
             download_name=dl_name,
         )
 
+    @bp.post(
+        "/motoboy-contracts/<int:contract_id>/attachments/<int:attachment_id>/delete"
+    )
+    @login_required
+    def motoboy_contract_attachment_delete(contract_id: int, attachment_id: int):
+        require_admin()
+        Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        att = ContractAttachment.query.filter_by(
+            id=attachment_id, contract_id=contract_id
+        ).first_or_404()
+        db.session.delete(att)
+        db.session.commit()
+        flash("Anexo excluído.", "info")
+        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+
     @bp.route("/motoboy-contracts")
     @login_required
     def motoboy_contracts_list():

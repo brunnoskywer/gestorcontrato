@@ -25,7 +25,14 @@
           <td class="text-end text-nowrap">{{ row.created_at.strftime('%d/%m/%Y %H:%M') if row.created_at else '-' }}</td>
           <td class="text-end">
             {% if row.attachment %}
-            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.motoboy_contract_attachment_download', contract_id=contract.id, attachment_id=row.attachment.id) }}" target="_blank" rel="noopener">Abrir</a>
+            <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+              <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.motoboy_contract_attachment_download', contract_id=contract.id, attachment_id=row.attachment.id) }}" target="_blank" rel="noopener">Abrir</a>
+              {% if can_upload %}
+              <form method="post" action="{{ url_for('admin.motoboy_contract_attachment_delete', contract_id=contract.id, attachment_id=row.attachment.id) }}" data-turbo="false" class="d-inline" onsubmit="return confirm('Excluir este anexo?');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
+              </form>
+              {% endif %}
+            </div>
             {% else %}
             <span class="text-muted">—</span>
             {% endif %}
@@ -60,7 +67,7 @@
     </div>
   </form>
   {% else %}
-  <p class="small text-muted mb-0">Apenas administradores podem enviar anexos. Você pode abrir os arquivos já cadastrados.</p>
+  <p class="small text-muted mb-0">Apenas administradores podem enviar ou excluir anexos. Você pode abrir os arquivos já cadastrados.</p>
   {% endif %}
 
   <div class="d-flex justify-content-end mt-4 pt-2 border-top">
