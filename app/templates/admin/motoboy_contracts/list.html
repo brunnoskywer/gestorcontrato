@@ -89,6 +89,11 @@
       <td data-label="Cliente">{{ (c.other_supplier|client_display_label) if c.other_supplier else '-' }}</td>
       <td data-label="Data início">{{ c.start_date }}</td>
       <td data-label="Data distrato">{{ c.end_date or '-' }}</td>
+      <td data-label="Situação">
+        {% if c.is_blocked %}<span class="badge text-bg-warning">Bloqueado</span>
+        {% elif c.supplier and c.supplier.status in ['terminated', 'inactive'] %}<span class="badge text-bg-secondary">Encerrado</span>
+        {% else %}<span class="text-muted">—</span>{% endif %}
+      </td>
       <td data-label="Valor prestação" class="text-end">{{ c.service_value|format_currency if c.service_value is not none else '-' }}</td>
       <td data-label="Premiação" class="text-end">{{ c.bonus_value|format_currency if c.bonus_value is not none else '-' }}</td>
       <td data-label="Valor falta" class="text-end">{{ c.missing_value|format_currency if c.missing_value is not none else '-' }}</td>
