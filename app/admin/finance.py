@@ -35,12 +35,15 @@ from app.models import (
     CONTRACT_TYPE_CLIENT,
     CONTRACT_TYPE_MOTOBOY,
     ContractAbsence,
-    motoboy_supplier_operational,
 )
 from io import BytesIO
 
 from app.models.supplier import client_display_label
 from app.services.motoboy_distrato import contract_has_distrato_in_month
+from app.services.motoboy_contract_finance import (
+    motoboy_contract_in_processing_scope,
+    motoboy_supplier_accepts_manual_financial_entries,
+)
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -526,6 +529,7 @@ def register_routes(bp: Blueprint) -> None:
                 .filter(
                     Contract.contract_type == CONTRACT_TYPE_MOTOBOY,
                     Contract.other_supplier_id == c.supplier_id,
+                    Contract.is_blocked.is_(False),
                     ContractAbsence.absence_date >= d0,
                     ContractAbsence.absence_date <= d1,
                     ContractAbsence.substitute_supplier_id.is_(None),
@@ -781,13 +785,17 @@ def register_routes(bp: Blueprint) -> None:
         skipped_no_advance_value = 0
         skipped_motoboy_encerrado = 0
         skipped_distrato_no_mes = 0
+        skipped_blocked = 0
 
         for c in contracts:
             if contract_has_distrato_in_month(c, year, month):
                 skipped_distrato_no_mes += 1
                 continue
-            if c.supplier and not motoboy_supplier_operational(c.supplier):
-                skipped_motoboy_encerrado += 1
+            if not motoboy_contract_in_processing_scope(c):
+                if getattr(c, "is_blocked", False):
+                    skipped_blocked += 1
+                else:
+                    skipped_motoboy_encerrado += 1
                 continue
             if not c.advance_value:
                 skipped_no_advance_value += 1
@@ -852,6 +860,8 @@ def register_routes(bp: Blueprint) -> None:
             msg_parts.append(
                 f"{skipped_motoboy_encerrado} contrato(s) ignorados: motoboy encerrado no cadastro."
             )
+        if skipped_blocked:
+            msg_parts.append(f"{skipped_blocked} contrato(s) ignorados: contrato bloqueado.")
 
         if not msg_parts:
             flash("Nenhum lançamento de adiantamento foi gerado.", "warning")
@@ -961,13 +971,17 @@ def register_routes(bp: Blueprint) -> None:
         skipped_fully_paid = 0
         skipped_motoboy_encerrado = 0
         skipped_distrato_no_mes = 0
+        skipped_blocked = 0
 
         for c in contracts:
             if contract_has_distrato_in_month(c, year, month):
                 skipped_distrato_no_mes += 1
                 continue
-            if c.supplier and not motoboy_supplier_operational(c.supplier):
-                skipped_motoboy_encerrado += 1
+            if not motoboy_contract_in_processing_scope(c):
+                if getattr(c, "is_blocked", False):
+                    skipped_blocked += 1
+                else:
+                    skipped_motoboy_encerrado += 1
                 continue
             base_service = float(c.service_value or 0)
             base_bonus = float(c.bonus_value or 0)
@@ -1136,6 +1150,8 @@ def register_routes(bp: Blueprint) -> None:
             msg_parts.append(
                 f"{skipped_motoboy_encerrado} contrato(s) ignorados: motoboy encerrado no cadastro."
             )
+        if skipped_blocked:
+            msg_parts.append(f"{skipped_blocked} contrato(s) ignorados: contrato bloqueado.")
 
         if not msg_parts:
             flash("Nenhum lançamento residual foi gerado.", "warning")
@@ -1925,6 +1941,10 @@ def _create_entry(entry_type: str, list_route: str, label: str):
     if not supplier or not supplier.is_active:
         flash("Fornecedor inválido ou inativo.", "danger")
         return redirect(resolve_next_url(list_route))
+    ok_sup, sup_err = motoboy_supplier_accepts_manual_financial_entries(supplier)
+    if not ok_sup:
+        flash(sup_err or "Fornecedor não pode receber este lançamento.", "danger")
+        return redirect(resolve_next_url(list_route))
 
     due_date = date.fromisoformat(due_date_str) if due_date_str else None
     if not due_date:
@@ -2003,6 +2023,10 @@ def _update_entry(entry: FinancialEntry):
     supplier = Supplier.query.get(int(supplier_id))
     if not supplier or not supplier.is_active:
         flash("Fornecedor inválido ou inativo.", "danger")
+        return _manual_entry_redirect()
+    ok_sup, sup_err = motoboy_supplier_accepts_manual_financial_entries(supplier)
+    if not ok_sup:
+        flash(sup_err or "Fornecedor não pode receber este lançamento.", "danger")
         return _manual_entry_redirect()
 
     due_date = date.fromisoformat(due_date_str) if due_date_str else None

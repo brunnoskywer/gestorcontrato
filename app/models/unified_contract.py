@@ -26,6 +26,8 @@ class Contract(db.Model):
     bonus_value = db.Column(db.Numeric(10, 2), nullable=True)
     missing_value = db.Column(db.Numeric(10, 2), nullable=True)
     advance_value = db.Column(db.Numeric(10, 2), nullable=True)
+    # Contrato bloqueado: fora de adiantamento/residual/receita (faltas) e sem lançamentos manuais para o motoboy.
+    is_blocked = db.Column(db.Boolean, nullable=False, default=False)
 
     # Client contract fields
     contract_value = db.Column(db.Numeric(10, 2), nullable=True)

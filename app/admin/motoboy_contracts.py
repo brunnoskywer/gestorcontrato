@@ -40,6 +40,7 @@ from app.services.contract_attachment_storage import (
     delete_attachment_files_for_contract_ids,
     store_motoboy_contract_upload,
 )
+from app.services.motoboy_contract_finance import motoboy_contract_in_processing_scope
 from app.services.motoboy_distrato import compute_motoboy_distrato_net
 from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.services.motoboy_distrato_pdf import build_motoboy_distrato_pdf
@@ -412,6 +413,7 @@ def register_routes(bp: Blueprint) -> None:
             bonus_value = parse_decimal_form(request.form.get("bonus_value"))
             missing_value = parse_decimal_form(request.form.get("missing_value"))
             advance_value = parse_decimal_form(request.form.get("advance_value"))
+            is_blocked = request.form.get("is_blocked") == "1"
 
             if not motoboy_id or not start_date_str:
                 flash("Motoboy e data de início são obrigatórios.", "danger")
@@ -444,6 +446,7 @@ def register_routes(bp: Blueprint) -> None:
                                 bonus_value=bonus_value,
                                 missing_value=missing_value,
                                 advance_value=advance_value,
+                                is_blocked=is_blocked,
                             )
                             db.session.add(contract)
                             db.session.commit()
@@ -477,6 +480,7 @@ def register_routes(bp: Blueprint) -> None:
             contract.bonus_value = parse_decimal_form(request.form.get("bonus_value"))
             contract.missing_value = parse_decimal_form(request.form.get("missing_value"))
             contract.advance_value = parse_decimal_form(request.form.get("advance_value"))
+            contract.is_blocked = request.form.get("is_blocked") == "1"
 
             if not contract.supplier_id or not start_date_str:
                 flash("Motoboy e data de início são obrigatórios.", "danger")
@@ -531,6 +535,12 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contract_falta_create(contract_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
+        if not motoboy_contract_in_processing_scope(contract):
+            flash(
+                "Não é possível registrar falta: contrato bloqueado ou motoboy encerrado no cadastro.",
+                "danger",
+            )
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         absence_date_str = request.form.get("absence_date", "").strip()
         justification = request.form.get("justification", "").strip()
 
@@ -650,6 +660,12 @@ def register_routes(bp: Blueprint) -> None:
     def motoboy_contract_falta_update(contract_id: int, absence_id: int):
         require_admin()
         contract = Contract.query.filter_by(id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY).first_or_404()
+        if not motoboy_contract_in_processing_scope(contract):
+            flash(
+                "Não é possível alterar falta: contrato bloqueado ou motoboy encerrado no cadastro.",
+                "danger",
+            )
+            return redirect(resolve_next_url("admin.motoboy_contracts_list"))
         absence = ContractAbsence.query.filter_by(
             id=absence_id, contract_id=contract_id
         ).first_or_404()

@@ -22,7 +22,7 @@
           <td>{{ row.label }}</td>
           <td class="text-break">{{ row.original_filename }}</td>
           <td class="text-end text-nowrap">{{ row.size_display }}</td>
-          <td class="text-end text-nowrap">{{ row.created_at.strftime('%d/%m/%Y %H:%M') if row.created_at else '-' }}</td>
+          <td class="text-end text-nowrap">{{ row.created_at.strftime('%d/%m/%Y') if row.created_at else '-' }}</td>
           <td class="text-end">
             {% if row.attachment %}
             <div class="d-inline-flex flex-wrap gap-1 justify-content-end">

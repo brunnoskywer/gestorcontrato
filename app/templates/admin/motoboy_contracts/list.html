@@ -75,6 +75,7 @@
       <th>Cliente</th>
       <th>Data início</th>
       <th>Data distrato</th>
+      <th>Situação</th>
       <th class="text-end">Valor prestação</th>
       <th class="text-end">Premiação</th>
       <th class="text-end">Valor falta</th>
@@ -93,7 +94,7 @@
       <td data-label="Valor falta" class="text-end">{{ c.missing_value|format_currency if c.missing_value is not none else '-' }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="text-center text-muted">Nenhum contrato cadastrado.</td></tr>
+    <tr><td colspan="9" class="text-center text-muted">Nenhum contrato cadastrado.</td></tr>
     {% endfor %}
   </tbody>
 </table>
