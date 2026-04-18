@@ -142,6 +142,17 @@
     </tr>
     {% endfor %}
   </tbody>
+  {% if entries %}
+  <tfoot class="border-top">
+    <tr class="table-secondary fw-semibold">
+      <td class="table-status-stripe-cell p-0 align-middle" aria-hidden="true"></td>
+      <td></td>
+      <td colspan="5" class="text-end align-middle">Total (lista filtrada)</td>
+      <td class="text-end text-nowrap align-middle">R$ {{ entries_total|format_currency }}</td>
+      <td colspan="2"></td>
+    </tr>
+  </tfoot>
+  {% endif %}
 </table>
 </div>
 {% endblock %}

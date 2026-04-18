@@ -2,6 +2,7 @@
 import calendar as cal
 import json
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for, make_response
 from flask_login import current_user, login_required
@@ -255,11 +256,16 @@ def register_routes(bp: Blueprint) -> None:
         entries = query.order_by(
             FinancialEntry.due_date.desc().nullslast(), FinancialEntry.id.desc()
         ).all()
+        entries_total = sum(
+            (e.amount for e in entries if e.amount is not None),
+            Decimal("0"),
+        )
         return render_template(
             "admin/financeiro/manual_entry.html",
             companies=companies,
             natures=natures,
             entries=entries,
+            entries_total=entries_total,
             filters={
                 "date_from": date_from_str,
                 "date_to": date_to_str,

@@ -65,6 +65,36 @@
     return isNaN(num) ? '' : num.toFixed(2);
   }
 
+  /** Parse BR currency field for blur normalization (milhares com ponto, decimais com vírgula). */
+  function parseBrazilianCurrencyInput(raw) {
+    if (!raw || !String(raw).trim()) return NaN;
+    var t = String(raw).trim().replace(/\./g, '').replace(',', '.');
+    if (t.endsWith('.')) t = t.slice(0, -1);
+    if (t === '' || t === '-') return NaN;
+    return parseFloat(t);
+  }
+
+  /** Formata número como moeda BR (1.234,56), sempre com dois decimais. */
+  function formatCurrencyBR(num) {
+    if (typeof num !== 'number' || isNaN(num)) return '';
+    var cents = Math.round(num * 100);
+    var negative = cents < 0;
+    cents = Math.abs(cents);
+    var intPart = Math.floor(cents / 100);
+    var decPart = cents % 100;
+    var intStr = intPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    var decStr = decPart.toString().padStart(2, '0');
+    return (negative ? '-' : '') + intStr + ',' + decStr;
+  }
+
+  function normalizeCurrencyOnBlur(input) {
+    var raw = (input.value || '').trim();
+    if (!raw) return;
+    var n = parseBrazilianCurrencyInput(raw);
+    if (isNaN(n)) return;
+    input.value = formatCurrencyBR(n);
+  }
+
   function applyMasks(container) {
     if (!container || !container.querySelector) return;
     var cpfInputs = container.querySelectorAll('[data-mask="cpf"]');
@@ -93,10 +123,13 @@
       if (input.dataset.maskApplied) return;
       input.dataset.maskApplied = '1';
       // Não formatamos durante a digitação para não mexer no cursor.
-      // Apenas garantimos que o valor inicial vindo do backend esteja no formato esperado.
+      // Valor inicial: normaliza para ,00 quando vier só parte inteira.
       if (input.value) {
-        input.value = String(input.value).replace(/[^0-9,]/g, '').replace(/\./g, ',');
+        normalizeCurrencyOnBlur(input);
       }
+      input.addEventListener('blur', function () {
+        normalizeCurrencyOnBlur(input);
+      });
     });
 
     var form = container.tagName === 'FORM' ? container : container.querySelector('form');
@@ -985,6 +1018,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     initConfirmSubmitForms();
     initToolbar();
     initTableListRowClick();
+    applyMasks(document);
     initSearchInputs(document);
     showFlashModalIfNeeded();
   }
@@ -1001,6 +1035,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     var container = (e.detail && e.detail.frame) || document;
     initToolbar();
     initTableListRowClick(container);
+    applyMasks(container);
     initSearchInputs(container);
     runScriptsInElement(container);
   });
@@ -1009,6 +1044,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     if (e.target.id === 'main-content') {
       initToolbar();
       initTableListRowClick();
+      applyMasks(e.target);
       runScriptsInElement(e.target);
       var modalEl = document.getElementById('adminFormModal');
       if (modalEl) {
