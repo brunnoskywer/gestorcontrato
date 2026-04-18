@@ -1,0 +1,34 @@
+<form method="post" action="{{ action_url }}" class="admin-form-modal admin-finance-modal-form" data-turbo="false" target="_blank">
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <div class="row g-2">
+    <div class="col-12">
+      <p class="small text-muted mb-1">
+        <strong>Contrato:</strong> {{ contract.supplier.name }}{% if contract.other_supplier %} — {{ contract.other_supplier|client_display_label }}{% endif %}
+      </p>
+      <p class="small text-muted mb-0">
+        <strong>Data de distrato (eficácia):</strong> {{ contract.end_date.strftime('%d/%m/%Y') if contract.end_date else '—' }}
+      </p>
+      <p class="small text-muted mb-0">
+        Selecione a empresa <b>contratante</b> que constará no PDF e a data de assinatura deste instrumento.
+      </p>
+    </div>
+    <div class="col-12">
+      <label class="form-label mb-0">Empresa contratante *</label>
+      <select name="company_id" class="form-select form-select-sm" required>
+        <option value="">Selecione a empresa</option>
+        {% for c in companies %}
+        <option value="{{ c.id }}">{{ c.legal_name }} ({{ c.cnpj }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-sm-6">
+      <label class="form-label mb-0">Data do documento (assinatura) *</label>
+      <input type="date" name="document_date" class="form-control form-control-sm" required value="{{ default_document_date }}" />
+      <p class="form-text small text-muted mb-0">Data em que o distrato será assinado (cidade no rodapé). A eficácia da rescisão segue a data de distrato do contrato.</p>
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary btn-sm">Gerar PDF</button>
+  </div>
+</form>

@@ -32,6 +32,7 @@ from app.models import (
 from app.models.financial_entry import ENTRY_PAYABLE
 from app.services.motoboy_distrato import compute_motoboy_distrato_net
 from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
+from app.services.motoboy_distrato_pdf import build_motoboy_distrato_pdf
 from app.utils import parse_decimal_form
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
@@ -907,6 +908,120 @@ def register_routes(bp: Blueprint) -> None:
             return redirect(next_url)
 
         filename = f"contrato_motoboy_{contract.id}.pdf"
+        resp = make_response(pdf_bytes)
+        resp.headers["Content-Type"] = "application/pdf"
+        resp.headers["Content-Disposition"] = f'inline; filename="{filename}"'
+        return resp
+
+    @bp.route("/motoboy-contracts/<int:contract_id>/distrato/print/form")
+    @login_required
+    def motoboy_contract_distrato_print_form(contract_id: int):
+        require_admin()
+        next_url = request.args.get("next") or url_for("admin.motoboy_contracts_list")
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        if contract.end_date is None:
+            return Response(
+                '<p class="text-danger small mb-0">A impressão do distrato só é permitida quando a '
+                "<strong>data de distrato</strong> estiver preenchida no contrato.</p>",
+                mimetype="text/html; charset=utf-8",
+            )
+        companies = (
+            Company.query.filter(Company.allow_contract_generation.is_(True))
+            .order_by(Company.legal_name)
+            .all()
+        )
+        if not companies:
+            return Response(
+                '<p class="text-danger small mb-0">Nenhuma empresa está habilitada para geração de contrato/distrato. '
+                "Ative em Empresas → Permite geração de contrato?.</p>",
+                mimetype="text/html; charset=utf-8",
+            )
+        return render_template(
+            "admin/motoboy_contracts/_distrato_print_form_fragment.html",
+            contract=contract,
+            companies=companies,
+            action_url=url_for(
+                "admin.motoboy_contract_distrato_print_pdf", contract_id=contract_id
+            ),
+            next_url=next_url,
+            default_document_date=date.today().isoformat(),
+        )
+
+    @bp.post("/motoboy-contracts/<int:contract_id>/distrato/print/pdf")
+    @login_required
+    def motoboy_contract_distrato_print_pdf(contract_id: int):
+        require_admin()
+        next_url = resolve_next_url("admin.motoboy_contracts_list")
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        if contract.end_date is None:
+            flash(
+                "A impressão do distrato só é permitida quando a data de distrato estiver preenchida.",
+                "danger",
+            )
+            return redirect(next_url)
+        company_id = request.form.get("company_id", type=int)
+        if not company_id:
+            flash("Selecione a empresa para gerar o distrato em PDF.", "danger")
+            return redirect(next_url)
+        document_date_raw = (request.form.get("document_date") or "").strip()
+        if not document_date_raw:
+            flash("Informe a data do documento (assinatura do distrato).", "danger")
+            return redirect(next_url)
+        try:
+            document_date = date.fromisoformat(document_date_raw)
+        except ValueError:
+            flash("Data do documento inválida.", "danger")
+            return redirect(next_url)
+        company = Company.query.get(company_id)
+        if not company:
+            flash("Empresa inválida.", "danger")
+            return redirect(next_url)
+        if not company.allow_contract_generation:
+            flash("Esta empresa não está habilitada para geração de contrato/distrato.", "danger")
+            return redirect(next_url)
+
+        def _endereco_estruturado_ok(ent) -> bool:
+            if not ent:
+                return False
+            return (
+                bool((ent.street or "").strip())
+                and bool((ent.neighborhood or "").strip())
+                and bool((ent.city or "").strip())
+                and bool((ent.state or "").strip())
+            )
+
+        if not _endereco_estruturado_ok(company):
+            flash(
+                "Preencha rua, bairro, cidade e UF da empresa antes de gerar o distrato.",
+                "danger",
+            )
+            return redirect(next_url)
+        if not _endereco_estruturado_ok(contract.supplier):
+            flash(
+                "Preencha rua, bairro, cidade e UF do motoboy antes de gerar o distrato.",
+                "danger",
+            )
+            return redirect(next_url)
+        if not contract.supplier.document_secondary:
+            flash(
+                "Preencha o CNPJ do motoboy (campo CNPJ no cadastro) antes de gerar o distrato.",
+                "danger",
+            )
+            return redirect(next_url)
+        try:
+            pdf_bytes = build_motoboy_distrato_pdf(contract, company, document_date)
+        except RuntimeError:
+            flash(
+                "Geração de PDF indisponível: instale o pacote 'reportlab' no ambiente.",
+                "danger",
+            )
+            return redirect(next_url)
+
+        filename = f"distrato_motoboy_{contract.id}.pdf"
         resp = make_response(pdf_bytes)
         resp.headers["Content-Type"] = "application/pdf"
         resp.headers["Content-Disposition"] = f'inline; filename="{filename}"'

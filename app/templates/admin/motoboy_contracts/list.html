@@ -18,6 +18,9 @@
 {% set _contract_print_base = url_for('admin.motoboy_contract_print_form', contract_id=999999, next=request.full_path) %}
 {% set contract_print_url_template = _contract_print_base.replace('999999', '{id}') %}
 {% set contract_print_title = 'Gerar contrato (PDF)' %}
+{% set _distrato_print_base = url_for('admin.motoboy_contract_distrato_print_form', contract_id=999999, next=request.full_path) %}
+{% set distrato_print_url_template = _distrato_print_base.replace('999999', '{id}') %}
+{% set distrato_print_title = 'Distrato (PDF)' %}
 {% else %}
 {% set insert_url = none %}
 {% set insert_title = none %}
@@ -29,6 +32,8 @@
 {% set distrato_title = none %}
 {% set contract_print_url_template = none %}
 {% set contract_print_title = none %}
+{% set distrato_print_url_template = none %}
+{% set distrato_print_title = none %}
 {% endif %}
 {% set _calendar_base = url_for('admin.motoboy_contract_calendar', contract_id=999999) %}
 {% set calendar_url_template = _calendar_base.replace('999999', '{id}') %}
@@ -40,17 +45,17 @@
 
 <div class="card mb-3">
   <div class="card-body">
-    <form class="row g-2 align-items-end" method="get" action="{{ url_for('admin.motoboy_contracts_list') }}">
-      <div class="col-md-5">
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.motoboy_contracts_list') }}">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
         <label class="form-label mb-1">Motoboy</label>
-        <input type="text" name="motoboy_name" class="form-control form-control-sm" value="{{ filters.motoboy_name }}" placeholder="Pesquisar por motoboy" />
+        <input type="text" name="motoboy_name" class="form-control form-control-sm w-100" value="{{ filters.motoboy_name }}" placeholder="Pesquisar por motoboy" />
       </div>
-      <div class="col-md-4">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
         <label class="form-label mb-1">Cliente</label>
-        <input type="text" name="client_name" class="form-control form-control-sm" value="{{ filters.client_name }}" placeholder="Pesquisar por cliente" />
+        <input type="text" name="client_name" class="form-control form-control-sm w-100" value="{{ filters.client_name }}" placeholder="Pesquisar por cliente" />
       </div>
-      <div class="col-md-3 text-md-end">
-        <button type="submit" class="btn btn-primary btn-sm me-2">Pesquisar</button>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
         <a href="{{ url_for('admin.motoboy_contracts_list') }}" class="btn btn-danger btn-sm">Limpar</a>
       </div>
     </form>

@@ -15,17 +15,17 @@
 
 <div class="card mb-3">
   <div class="card-body">
-    <form class="row g-2 align-items-end" method="get" action="{{ url_for('admin.clients_list') }}">
-      <div class="col-md-5">
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.clients_list') }}">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
         <label class="form-label mb-1">Razão social</label>
-        <input type="text" name="name" class="form-control form-control-sm" value="{{ filters.name }}" placeholder="Pesquisar por razão social" />
+        <input type="text" name="name" class="form-control form-control-sm w-100" value="{{ filters.name }}" placeholder="Pesquisar por razão social" />
       </div>
-      <div class="col-md-4">
+      <div class="admin-filter-flex__field">
         <label class="form-label mb-1">CNPJ</label>
-        <input type="text" name="cnpj" class="form-control form-control-sm" value="{{ filters.cnpj }}" placeholder="Pesquisar por CNPJ" />
+        <input type="text" name="cnpj" class="form-control form-control-sm w-100" value="{{ filters.cnpj }}" placeholder="Pesquisar por CNPJ" />
       </div>
-      <div class="col-md-3 text-md-end">
-        <button type="submit" class="btn btn-primary btn-sm me-2">Pesquisar</button>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
         <a href="{{ url_for('admin.clients_list') }}" class="btn btn-danger btn-sm">Limpar</a>
       </div>
     </form>

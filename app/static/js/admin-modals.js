@@ -698,6 +698,35 @@
         openFormModal(contractPrintTpl.replace('{id}', ids[0]), contractPrintTitle, 'md');
       });
 
+      var distratoPrintTpl = toolbar.getAttribute('data-distrato-print-url-template');
+      var distratoPrintTitle =
+        toolbar.getAttribute('data-distrato-print-title') || 'Distrato (PDF)';
+      toolbar.querySelector('.admin-toolbar-distrato-print')?.addEventListener('click', function () {
+        if (!distratoPrintTpl) return;
+        var ids = getSelectedIds();
+        if (ids.length === 0) {
+          showMessageModal(
+            'Selecione um contrato com data de distrato para gerar o distrato em PDF.',
+            'Atenção'
+          );
+          return;
+        }
+        if (ids.length > 1) {
+          showMessageModal('Selecione apenas um contrato para gerar o distrato em PDF.', 'Atenção');
+          return;
+        }
+        var row = getFirstSelectedRow();
+        var distratoDate = row && row.getAttribute('data-distrato-date');
+        if (!distratoDate || !String(distratoDate).trim()) {
+          showMessageModal(
+            'A impressão do distrato só é permitida quando a data de distrato estiver preenchida no contrato.',
+            'Atenção'
+          );
+          return;
+        }
+        openFormModal(distratoPrintTpl.replace('{id}', ids[0]), distratoPrintTitle, 'md');
+      });
+
       var calendarTpl = toolbar.getAttribute('data-calendar-url-template');
       var calendarTitle = toolbar.getAttribute('data-calendar-title') || 'Calendário de faltas';
       toolbar.querySelector('.admin-toolbar-calendar')?.addEventListener('click', function () {

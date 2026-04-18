@@ -15,17 +15,17 @@
 
 <div class="card mb-3">
   <div class="card-body">
-    <form class="row g-2 align-items-end" method="get" action="{{ url_for('admin.users_list') }}">
-      <div class="col-md-5">
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.users_list') }}">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
         <label class="form-label mb-1">Nome</label>
-        <input type="text" name="name" class="form-control form-control-sm" value="{{ filters.name }}" placeholder="Pesquisar por nome" />
+        <input type="text" name="name" class="form-control form-control-sm w-100" value="{{ filters.name }}" placeholder="Pesquisar por nome" />
       </div>
-      <div class="col-md-5">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
         <label class="form-label mb-1">E-mail</label>
-        <input type="text" name="email" class="form-control form-control-sm" value="{{ filters.email }}" placeholder="Pesquisar por e-mail" />
+        <input type="text" name="email" class="form-control form-control-sm w-100" value="{{ filters.email }}" placeholder="Pesquisar por e-mail" />
       </div>
-      <div class="col-md-2 text-md-end">
-        <button type="submit" class="btn btn-primary btn-sm me-2">Pesquisar</button>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
         <a href="{{ url_for('admin.users_list') }}" class="btn btn-danger btn-sm">Limpar</a>
       </div>
     </form>

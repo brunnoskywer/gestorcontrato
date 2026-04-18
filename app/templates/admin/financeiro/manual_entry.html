@@ -27,71 +27,67 @@
 
 <div class="card mb-3">
   <div class="card-body">
-    <form class="row g-2 align-items-end justify-content-between" method="get" action="{{ url_for('admin.finance_manual_entry') }}">
-      <div class="col-auto">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-2">
-            <label class="form-label mb-1">Data inicial</label>
-            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}" />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label mb-1">Data final</label>
-            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}" />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label mb-1">Empresa</label>
-            <select name="company_id" class="form-select form-select-sm">
-              <option value="">Todas</option>
-              {% for c in companies %}
-              <option value="{{ c.id }}" {% if filters.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label mb-1">Tipo</label>
-            <select name="entry_type" class="form-select form-select-sm">
-              <option value="">Todos</option>
-              <option value="payable" {% if filters.entry_type == 'payable' %}selected{% endif %}>Contas a pagar</option>
-              <option value="receivable" {% if filters.entry_type == 'receivable' %}selected{% endif %}>Contas a receber</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label mb-1">Status</label>
-            <select name="status" class="form-select form-select-sm">
-              <option value="">Todos</option>
-              <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>Pendentes</option>
-              <option value="settled" {% if filters.status == 'settled' %}selected{% endif %}>Quitados</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label mb-1">Tipo de fornecedor</label>
-            <select name="supplier_type" id="finance-filter-supplier-type" class="form-select form-select-sm">
-              <option value="">Todos</option>
-              <option value="client" {% if filters.supplier_type == 'client' %}selected{% endif %}>Cliente</option>
-              <option value="supplier" {% if filters.supplier_type == 'supplier' %}selected{% endif %}>Fornecedor</option>
-              <option value="motoboy" {% if filters.supplier_type == 'motoboy' %}selected{% endif %}>Motoboy</option>
-            </select>
-          </div>
-          <div class="col-md-3 position-relative" id="finance-filter-supplier-wrap">
-            <label class="form-label mb-1">Fornecedor</label>
-            <input type="hidden" name="supplier_id" id="finance-filter-supplier-id" value="{{ filters.supplier_id or '' }}" />
-            <input
-              type="text"
-              name="supplier_name"
-              class="form-control form-control-sm search-entity-input"
-              data-search-url="{{ url_for('admin.suppliers_search') }}"
-              data-target-hidden="supplier_id"
-              data-supplier-type-source="finance-filter-supplier-type"
-              placeholder="Digite ao menos 3 letras para buscar..."
-              autocomplete="off"
-              value="{{ supplier_filter_display or '' }}"
-            />
-            <div class="search-entity-dropdown list-group shadow-sm" style="display: none;"></div>
-          </div>
-        </div>
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.finance_manual_entry') }}">
+      <div class="admin-filter-flex__field admin-filter-flex__field--date">
+        <label class="form-label mb-1">Data inicial</label>
+        <input type="date" name="date_from" class="form-control form-control-sm w-100" value="{{ filters.date_from }}" />
       </div>
-      <div class="col-auto d-flex align-items-end">
-        <button type="submit" class="btn btn-primary btn-sm me-2">Pesquisar</button>
+      <div class="admin-filter-flex__field admin-filter-flex__field--date">
+        <label class="form-label mb-1">Data final</label>
+        <input type="date" name="date_to" class="form-control form-control-sm w-100" value="{{ filters.date_to }}" />
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Empresa</label>
+        <select name="company_id" class="form-select form-select-sm w-100">
+          <option value="">Todas</option>
+          {% for c in companies %}
+          <option value="{{ c.id }}" {% if filters.company_id == c.id %}selected{% endif %}>{{ c.legal_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Tipo</label>
+        <select name="entry_type" class="form-select form-select-sm w-100">
+          <option value="">Todos</option>
+          <option value="payable" {% if filters.entry_type == 'payable' %}selected{% endif %}>Contas a pagar</option>
+          <option value="receivable" {% if filters.entry_type == 'receivable' %}selected{% endif %}>Contas a receber</option>
+        </select>
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm w-100">
+          <option value="">Todos</option>
+          <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>Pendentes</option>
+          <option value="settled" {% if filters.status == 'settled' %}selected{% endif %}>Quitados</option>
+        </select>
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Tipo de fornecedor</label>
+        <select name="supplier_type" id="finance-filter-supplier-type" class="form-select form-select-sm w-100">
+          <option value="">Todos</option>
+          <option value="client" {% if filters.supplier_type == 'client' %}selected{% endif %}>Cliente</option>
+          <option value="supplier" {% if filters.supplier_type == 'supplier' %}selected{% endif %}>Fornecedor</option>
+          <option value="motoboy" {% if filters.supplier_type == 'motoboy' %}selected{% endif %}>Motoboy</option>
+        </select>
+      </div>
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide position-relative" id="finance-filter-supplier-wrap">
+        <label class="form-label mb-1">Fornecedor</label>
+        <input type="hidden" name="supplier_id" id="finance-filter-supplier-id" value="{{ filters.supplier_id or '' }}" />
+        <input
+          type="text"
+          name="supplier_name"
+          class="form-control form-control-sm search-entity-input w-100"
+          data-search-url="{{ url_for('admin.suppliers_search') }}"
+          data-target-hidden="supplier_id"
+          data-supplier-type-source="finance-filter-supplier-type"
+          placeholder="Digite ao menos 3 letras para buscar..."
+          autocomplete="off"
+          value="{{ supplier_filter_display or '' }}"
+        />
+        <div class="search-entity-dropdown list-group shadow-sm" style="display: none;"></div>
+      </div>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
         <a href="{{ url_for('admin.finance_manual_entry') }}" class="btn btn-danger btn-sm">Limpar</a>
       </div>
     </form>

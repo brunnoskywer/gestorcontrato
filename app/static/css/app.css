@@ -448,9 +448,50 @@ main.container {
   }
 }
 
-/* Forms in cards: full width inputs on mobile */
-@media (max-width: 767.98px) {
-  .card .card-body .row.g-2 [class^="col-"] {
+/* Filtros em card: linha fluida — só quebra quando não há largura (flex-wrap) */
+.admin-filter-flex {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+.admin-filter-flex__field {
+  flex: 1 1 8.75rem;
+  min-width: min(100%, 8.25rem);
+  max-width: 100%;
+}
+.admin-filter-flex__field--date {
+  flex: 0 1 10.75rem;
+  min-width: min(100%, 9.5rem);
+  max-width: 12.5rem;
+}
+.admin-filter-flex__field--wide {
+  flex: 2 1 12rem;
+  min-width: min(100%, 10rem);
+  max-width: 24rem;
+}
+.admin-filter-flex__actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+@media (max-width: 575.98px) {
+  .admin-filter-flex__actions {
+    margin-left: 0;
+    flex: 1 1 100%;
+    justify-content: stretch;
+  }
+  .admin-filter-flex__actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* Forms in cards: empilhar colunas só em telas bem estreitas (evita tablet inteiro em uma coluna) */
+@media (max-width: 575.98px) {
+  .card .card-body .row.g-2 > [class*="col-"] {
     flex: 0 0 100%;
     max-width: 100%;
   }
