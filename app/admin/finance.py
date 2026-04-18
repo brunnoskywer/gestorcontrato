@@ -246,8 +246,14 @@ def register_routes(bp: Blueprint) -> None:
             query = query.filter(Supplier.type == supplier_type)
         if supplier_id:
             query = query.filter(FinancialEntry.supplier_id == supplier_id)
-        if supplier_name:
+        elif supplier_name:
             query = query.filter(Supplier.name.ilike(f"%{supplier_name}%"))
+
+        supplier_filter_display = supplier_name
+        if supplier_id:
+            sup_row = Supplier.query.get(supplier_id)
+            if sup_row and sup_row.name:
+                supplier_filter_display = sup_row.name
         if status == "pending":
             query = query.filter(FinancialEntry.settled_at.is_(None))
         elif status == "settled":
@@ -266,6 +272,7 @@ def register_routes(bp: Blueprint) -> None:
             natures=natures,
             entries=entries,
             entries_total=entries_total,
+            supplier_filter_display=supplier_filter_display,
             filters={
                 "date_from": date_from_str,
                 "date_to": date_to_str,

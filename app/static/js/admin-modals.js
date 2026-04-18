@@ -934,6 +934,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
               btn.addEventListener('click', function () {
                 input.value = item.label;
                 if (hiddenId) hiddenId.value = item.id;
+                input.dataset.entityPickLabel = item.label;
                 hideDropdown();
               });
               dropdown.appendChild(btn);
@@ -944,8 +945,19 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
       }
 
       input.addEventListener('input', function () {
-        if (hiddenId && input.value.trim() === '') {
-          hiddenId.value = '';
+        if (hiddenId) {
+          var v = input.value.trim();
+          if (v === '') {
+            hiddenId.value = '';
+            delete input.dataset.entityPickLabel;
+          } else if (
+            hiddenId.value &&
+            input.dataset.entityPickLabel &&
+            v !== input.dataset.entityPickLabel
+          ) {
+            hiddenId.value = '';
+            delete input.dataset.entityPickLabel;
+          }
         }
         var term = input.value.trim();
         if (debounceTimer) clearTimeout(debounceTimer);

@@ -65,23 +65,28 @@
           </div>
           <div class="col-md-2">
             <label class="form-label mb-1">Tipo de fornecedor</label>
-            <select name="supplier_type" class="form-select form-select-sm">
+            <select name="supplier_type" id="finance-filter-supplier-type" class="form-select form-select-sm">
               <option value="">Todos</option>
               <option value="client" {% if filters.supplier_type == 'client' %}selected{% endif %}>Cliente</option>
               <option value="supplier" {% if filters.supplier_type == 'supplier' %}selected{% endif %}>Fornecedor</option>
               <option value="motoboy" {% if filters.supplier_type == 'motoboy' %}selected{% endif %}>Motoboy</option>
             </select>
           </div>
-          <div class="col-md-3">
-            <label class="form-label mb-1">Fornecedor (nome)</label>
+          <div class="col-md-3 position-relative" id="finance-filter-supplier-wrap">
+            <label class="form-label mb-1">Fornecedor</label>
+            <input type="hidden" name="supplier_id" id="finance-filter-supplier-id" value="{{ filters.supplier_id or '' }}" />
             <input
               type="text"
               name="supplier_name"
-              class="form-control form-control-sm"
-              value="{{ filters.supplier_name or '' }}"
-              placeholder="Digite parte do nome"
+              class="form-control form-control-sm search-entity-input"
+              data-search-url="{{ url_for('admin.suppliers_search') }}"
+              data-target-hidden="supplier_id"
+              data-supplier-type-source="finance-filter-supplier-type"
+              placeholder="Digite ao menos 3 letras para buscar..."
               autocomplete="off"
+              value="{{ supplier_filter_display or '' }}"
             />
+            <div class="search-entity-dropdown list-group shadow-sm" style="display: none;"></div>
           </div>
         </div>
       </div>
@@ -92,6 +97,27 @@
     </form>
   </div>
 </div>
+<script>
+(function () {
+  var typeSel = document.getElementById('finance-filter-supplier-type');
+  var wrap = document.getElementById('finance-filter-supplier-wrap');
+  if (!typeSel || !wrap) return;
+  typeSel.addEventListener('change', function () {
+    var hid = document.getElementById('finance-filter-supplier-id');
+    var inp = wrap.querySelector('.search-entity-input');
+    if (hid) hid.value = '';
+    if (inp) {
+      inp.value = '';
+      delete inp.dataset.entityPickLabel;
+    }
+    var dd = wrap.querySelector('.search-entity-dropdown');
+    if (dd) {
+      dd.style.display = 'none';
+      dd.innerHTML = '';
+    }
+  });
+})();
+</script>
 
 {% include "admin/_toolbar.html" with context %}
 <div class="table-responsive">
