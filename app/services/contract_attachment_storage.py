@@ -85,18 +85,6 @@ def store_motoboy_contract_upload(
             "Extensão não permitida. Use: PDF, imagens (PNG, JPG, WebP) ou Word (DOC/DOCX)."
         )
 
-    if file_storage.content_length is not None:
-        size = int(file_storage.content_length)
-    else:
-        stream = file_storage.stream
-        stream.seek(0, os.SEEK_END)
-        size = stream.tell()
-        stream.seek(0)
-    if size > MAX_ATTACHMENT_BYTES:
-        raise ValueError("Arquivo muito grande (máximo 15 MB).")
-    if size == 0:
-        raise ValueError("Arquivo vazio.")
-
     upload_root = get_upload_root()
     target_dir = upload_root / "contracts" / str(contract.id)
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -104,7 +92,16 @@ def store_motoboy_contract_upload(
     stored_name = f"{uuid4().hex}{ext}"
     relpath = f"contracts/{contract.id}/{stored_name}"
     abs_path = target_dir / stored_name
+    # Medir tamanho após gravar: content_length multipart costuma vir 0 no Werkzeug;
+    # seek no stream também falha em alguns wrappers.
     file_storage.save(abs_path)
+    size = abs_path.stat().st_size
+    if size == 0:
+        abs_path.unlink(missing_ok=True)
+        raise ValueError("Arquivo vazio.")
+    if size > MAX_ATTACHMENT_BYTES:
+        abs_path.unlink(missing_ok=True)
+        raise ValueError("Arquivo muito grande (máximo 15 MB).")
 
     content_type = file_storage.content_type or None
 

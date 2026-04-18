@@ -39,7 +39,7 @@
   {% if can_upload %}
   <h6 class="text-secondary small text-uppercase mb-2">Enviar ou substituir</h6>
   <p class="small text-muted mb-2">É permitido <strong>um arquivo por tipo</strong> por contrato. Enviar novamente substitui o arquivo daquele tipo.</p>
-  <form method="post" action="{{ upload_url }}" enctype="multipart/form-data" data-turbo-frame="main-content">
+  <form method="post" action="{{ upload_url }}" enctype="multipart/form-data" data-turbo="false">
     <input type="hidden" name="next" value="{{ request.full_path }}" />
     <div class="row g-2 align-items-end">
       <div class="col-12 col-md-4">
