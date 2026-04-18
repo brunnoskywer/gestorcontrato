@@ -3,6 +3,9 @@
 
 {% block content %}
 {% set table_id = 'list-table' %}
+{% set _attachments_base = url_for('admin.motoboy_contract_attachments_form', contract_id=999999) %}
+{% set attachments_url_template = _attachments_base.replace('999999', '{id}') %}
+{% set attachments_title = 'Anexos do contrato' %}
 {% if current_user.is_admin or current_user.role != 'supervisor' %}
 {% set insert_url = url_for('admin.motoboy_contracts_form_new') %}
 {% set insert_title = 'Novo contrato de motoboy' %}

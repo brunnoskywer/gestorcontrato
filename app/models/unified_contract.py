@@ -51,3 +51,9 @@ class Contract(db.Model):
         lazy="dynamic",
         cascade="all, delete-orphan",
     )
+    attachments = db.relationship(
+        "ContractAttachment",
+        back_populates="contract",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )

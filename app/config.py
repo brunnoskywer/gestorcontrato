@@ -38,6 +38,8 @@ class Config:
     # Outros parâmetros de sistema
     APP_NAME = os.getenv("APP_NAME", "Contract Manager")
     ENVIRONMENT = os.getenv("FLASK_ENV", "development")
+    # Anexos de contrato (PDF, imagens, etc.); em produção pode apontar para volume persistente.
+    UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "instance" / "uploads"))
 
 
 class DevelopmentConfig(Config):

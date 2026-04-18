@@ -3,7 +3,10 @@ import calendar
 from datetime import date
 from typing import Optional, Tuple
 
-from flask import Blueprint, Response, flash, make_response, redirect, render_template, request, url_for
+from pathlib import Path
+
+from flask import Blueprint, Response, abort, current_app, flash, make_response, redirect, render_template, request, send_file, url_for
+from werkzeug.utils import secure_filename
 from flask_login import current_user, login_required
 
 from app.admin.auth_helpers import (
@@ -18,6 +21,9 @@ from app.models import (
     Company,
     Contract,
     ContractAbsence,
+    ContractAttachment,
+    CONTRACT_ATTACHMENT_KIND_LABELS_PT,
+    CONTRACT_ATTACHMENT_KIND_ORDER,
     CONTRACT_TYPE_MOTOBOY,
     FinancialBatch,
     FinancialEntry,
@@ -30,6 +36,10 @@ from app.models import (
     motoboy_supplier_operational,
 )
 from app.models.financial_entry import ENTRY_PAYABLE
+from app.services.contract_attachment_storage import (
+    delete_attachment_files_for_contract_ids,
+    store_motoboy_contract_upload,
+)
 from app.services.motoboy_distrato import compute_motoboy_distrato_net
 from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.services.motoboy_distrato_pdf import build_motoboy_distrato_pdf
@@ -63,6 +73,33 @@ def _delete_unsettled_payable(entry_id):
     entry = FinancialEntry.query.get(entry_id)
     if entry and entry.settled_at is None:
         db.session.delete(entry)
+
+
+def _format_attachment_bytes(num: Optional[int]) -> str:
+    if num is None:
+        return "—"
+    if num < 1024:
+        return f"{num} B"
+    if num < 1024 * 1024:
+        return f"{num / 1024:.1f} KB"
+    return f"{num / (1024 * 1024):.1f} MB"
+
+
+def _motoboy_attachment_modal_rows(contract: Contract):
+    by_kind = {a.kind: a for a in contract.attachments.all()}
+    rows = []
+    for kind in CONTRACT_ATTACHMENT_KIND_ORDER:
+        att = by_kind.get(kind)
+        rows.append(
+            {
+                "label": CONTRACT_ATTACHMENT_KIND_LABELS_PT[kind],
+                "attachment": att,
+                "original_filename": att.original_filename if att else "—",
+                "size_display": _format_attachment_bytes(att.file_size if att else None),
+                "created_at": att.created_at if att else None,
+            }
+        )
+    return rows
 
 
 def _motoboys_for_contract_select(contract: Optional[Contract] = None):
@@ -238,6 +275,73 @@ def register_routes(bp: Blueprint) -> None:
             motoboys=motoboys,
             clients=clients,
             action_url=url_for("admin.motoboy_contracts_edit", contract_id=contract_id),
+        )
+
+    @bp.route("/motoboy-contracts/<int:contract_id>/attachments/form")
+    @login_required
+    def motoboy_contract_attachments_form(contract_id: int):
+        require_supervisor_or_admin()
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        kind_choices = [
+            (k, CONTRACT_ATTACHMENT_KIND_LABELS_PT[k]) for k in CONTRACT_ATTACHMENT_KIND_ORDER
+        ]
+        return render_template(
+            "admin/motoboy_contracts/_attachments_fragment.html",
+            contract=contract,
+            attachment_rows=_motoboy_attachment_modal_rows(contract),
+            kind_choices=kind_choices,
+            upload_url=url_for(
+                "admin.motoboy_contract_attachment_upload", contract_id=contract_id
+            ),
+            can_upload=bool(getattr(current_user, "is_admin", False)),
+        )
+
+    @bp.post("/motoboy-contracts/<int:contract_id>/attachments")
+    @login_required
+    def motoboy_contract_attachment_upload(contract_id: int):
+        require_admin()
+        contract = Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        kind = (request.form.get("kind") or "").strip()
+        file_storage = request.files.get("file")
+        try:
+            store_motoboy_contract_upload(contract, kind, file_storage)
+            db.session.commit()
+            flash("Anexo salvo com sucesso.", "success")
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+        return redirect(resolve_next_url("admin.motoboy_contracts_list"))
+
+    @bp.route(
+        "/motoboy-contracts/<int:contract_id>/attachments/<int:attachment_id>/download"
+    )
+    @login_required
+    def motoboy_contract_attachment_download(contract_id: int, attachment_id: int):
+        require_supervisor_or_admin()
+        Contract.query.filter_by(
+            id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+        ).first_or_404()
+        att = ContractAttachment.query.filter_by(
+            id=attachment_id, contract_id=contract_id
+        ).first_or_404()
+        root = Path(current_app.config["UPLOAD_FOLDER"]).resolve()
+        path = (root / att.storage_relpath).resolve()
+        if not path.is_file():
+            abort(404)
+        try:
+            path.relative_to(root)
+        except ValueError:
+            abort(404)
+        dl_name = secure_filename(att.original_filename) or "anexo"
+        return send_file(
+            path,
+            mimetype=att.content_type or "application/octet-stream",
+            as_attachment=False,
+            download_name=dl_name,
         )
 
     @bp.route("/motoboy-contracts")
@@ -1051,6 +1155,7 @@ def register_routes(bp: Blueprint) -> None:
             flash("Nenhum contrato selecionado.", "warning")
             return redirect(next_url)
         try:
+            delete_attachment_files_for_contract_ids(ids)
             # Delete related absences first (bulk delete does not trigger ORM cascade)
             ContractAbsence.query.filter(ContractAbsence.contract_id.in_(ids)).delete(
                 synchronize_session=False

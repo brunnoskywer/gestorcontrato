@@ -698,6 +698,23 @@
         openFormModal(contractPrintTpl.replace('{id}', ids[0]), contractPrintTitle, 'md');
       });
 
+      var attachmentsTpl = toolbar.getAttribute('data-attachments-url-template');
+      var attachmentsTitle =
+        toolbar.getAttribute('data-attachments-title') || 'Anexos do contrato';
+      toolbar.querySelector('.admin-toolbar-attachments')?.addEventListener('click', function () {
+        if (!attachmentsTpl) return;
+        var ids = getSelectedIds();
+        if (ids.length === 0) {
+          showMessageModal('Selecione um contrato para ver ou enviar anexos.', 'Atenção');
+          return;
+        }
+        if (ids.length > 1) {
+          showMessageModal('Selecione apenas um contrato para anexos.', 'Atenção');
+          return;
+        }
+        openFormModal(attachmentsTpl.replace('{id}', ids[0]), attachmentsTitle, 'lg');
+      });
+
       var distratoPrintTpl = toolbar.getAttribute('data-distrato-print-url-template');
       var distratoPrintTitle =
         toolbar.getAttribute('data-distrato-print-title') || 'Distrato (PDF)';

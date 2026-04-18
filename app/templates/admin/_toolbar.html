@@ -15,6 +15,7 @@
   {% if distrato_url_template %}data-distrato-url-template="{{ distrato_url_template }}" data-distrato-title="{{ distrato_title | default('Gerar distrato') }}"{% endif %}
   {% if contract_print_url_template %}data-contract-print-url-template="{{ contract_print_url_template }}" data-contract-print-title="{{ contract_print_title | default('Gerar contrato (PDF)') }}"{% endif %}
   {% if distrato_print_url_template %}data-distrato-print-url-template="{{ distrato_print_url_template }}" data-distrato-print-title="{{ distrato_print_title | default('Distrato (PDF)') }}"{% endif %}
+  {% if attachments_url_template %}data-attachments-url-template="{{ attachments_url_template }}" data-attachments-title="{{ attachments_title | default('Anexos do contrato') }}"{% endif %}
   {% if revenue_batches_url %}data-revenue-batches-url="{{ revenue_batches_url }}" data-revenue-batches-title="{{ revenue_batches_title | default('Processar receitas') }}"{% endif %}
   {% if residual_detail_pdf_url_template %}data-residual-detail-pdf-url-template="{{ residual_detail_pdf_url_template }}" data-residual-detail-pdf-title="{{ residual_detail_pdf_title | default('Detalhamento residual (PDF)') }}"{% endif %}
   {% if motoboy_close_url_template %}data-motoboy-close-url-template="{{ motoboy_close_url_template }}"{% endif %}
@@ -88,6 +89,11 @@
   {% if distrato_print_url_template %}
   <button type="button" class="btn btn-light btn-sm admin-toolbar-distrato-print" title="{{ distrato_print_title | default('Distrato (PDF)') }}" aria-label="{{ distrato_print_title | default('Distrato (PDF)') }}">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="10" y1="12" x2="14" y2="16"/><line x1="14" y1="12" x2="10" y2="16"/></svg>
+  </button>
+  {% endif %}
+  {% if attachments_url_template %}
+  <button type="button" class="btn btn-light btn-sm admin-toolbar-attachments" title="{{ attachments_title | default('Anexos do contrato') }}" aria-label="{{ attachments_title | default('Anexos do contrato') }}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.49-8.49a4 4 0 0 1 5.66 5.66l-8.2 8.21a2 2 0 0 1-2.83-2.83l7.07-7.07"/></svg>
   </button>
   {% endif %}
   {% if calendar_url_template %}

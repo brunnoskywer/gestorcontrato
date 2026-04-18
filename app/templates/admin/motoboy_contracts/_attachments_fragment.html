@@ -1,0 +1,69 @@
+<div class="admin-form-modal">
+  <p class="text-muted small mb-3">
+    Contrato: <strong>{{ contract.supplier.name }}</strong>
+    {% if contract.other_supplier %} — Cliente: {{ (contract.other_supplier|client_display_label) }}{% endif %}
+  </p>
+
+  <h6 class="text-secondary small text-uppercase mb-2">Anexos atuais</h6>
+  <div class="table-responsive mb-4">
+    <table class="table table-sm table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Arquivo</th>
+          <th class="text-end">Tamanho</th>
+          <th class="text-end">Enviado em</th>
+          <th class="text-end">Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in attachment_rows %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="text-break">{{ row.original_filename }}</td>
+          <td class="text-end text-nowrap">{{ row.size_display }}</td>
+          <td class="text-end text-nowrap">{{ row.created_at.strftime('%d/%m/%Y %H:%M') if row.created_at else '-' }}</td>
+          <td class="text-end">
+            {% if row.attachment %}
+            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.motoboy_contract_attachment_download', contract_id=contract.id, attachment_id=row.attachment.id) }}" target="_blank" rel="noopener">Abrir</a>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if can_upload %}
+  <h6 class="text-secondary small text-uppercase mb-2">Enviar ou substituir</h6>
+  <p class="small text-muted mb-2">É permitido <strong>um arquivo por tipo</strong> por contrato. Enviar novamente substitui o arquivo daquele tipo.</p>
+  <form method="post" action="{{ upload_url }}" enctype="multipart/form-data" data-turbo-frame="main-content">
+    <input type="hidden" name="next" value="{{ request.full_path }}" />
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Tipo do documento *</label>
+        <select name="kind" class="form-select form-select-sm" required>
+          {% for k, label in kind_choices %}
+          <option value="{{ k }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-5">
+        <label class="form-label">Arquivo *</label>
+        <input type="file" name="file" class="form-control form-control-sm" required accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,application/pdf,image/*" />
+      </div>
+      <div class="col-12 col-md-3">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Anexar</button>
+      </div>
+    </div>
+  </form>
+  {% else %}
+  <p class="small text-muted mb-0">Apenas administradores podem enviar anexos. Você pode abrir os arquivos já cadastrados.</p>
+  {% endif %}
+
+  <div class="d-flex justify-content-end mt-4 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+  </div>
+</div>
