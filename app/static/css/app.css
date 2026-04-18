@@ -522,3 +522,34 @@ main.container {
   }
 }
 
+/* ---- Campos de formulário: exibição em MAIÚSCULAS (telas administrativas) ----
+   Não afeta email, senha, número, data, etc. Use class="form-no-uppercase" para exceções. */
+input[type="text"].form-control,
+input[type="text"].form-control-sm,
+input[type="text"].form-control-md,
+input.form-control:not([type]):not(.form-no-uppercase),
+input.form-control-sm:not([type]):not(.form-no-uppercase),
+input.form-control-md:not([type]):not(.form-no-uppercase),
+textarea.form-control:not(.form-no-uppercase),
+textarea.form-control-sm:not(.form-no-uppercase),
+textarea.form-control-md:not(.form-no-uppercase),
+input.search-entity-input:not(.form-no-uppercase),
+select.form-select:not(.form-no-uppercase),
+select.form-select-sm:not(.form-no-uppercase) {
+  text-transform: uppercase;
+}
+
+input[type="text"].form-control::placeholder,
+input.form-control:not([type])::placeholder,
+textarea.form-control::placeholder,
+input.search-entity-input::placeholder {
+  text-transform: none;
+}
+
+.form-no-uppercase,
+input.form-no-uppercase,
+textarea.form-no-uppercase,
+select.form-no-uppercase {
+  text-transform: none !important;
+}
+

@@ -65,14 +65,6 @@ def _active_clients():
     )
 
 
-def _active_suppliers():
-    return (
-        Supplier.query.filter_by(is_active=True)
-        .order_by(Supplier.name)
-        .all()
-    )
-
-
 def _financial_natures():
     # Retorna todas as naturezas ativas (payable, receivable e both).
     return FinancialNature.query.filter_by(is_active=True).order_by(FinancialNature.name).all()
@@ -267,7 +259,6 @@ def register_routes(bp: Blueprint) -> None:
             "admin/financeiro/manual_entry.html",
             companies=companies,
             natures=natures,
-            suppliers=_active_suppliers(),
             entries=entries,
             filters={
                 "date_from": date_from_str,

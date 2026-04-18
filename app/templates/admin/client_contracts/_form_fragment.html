@@ -24,34 +24,7 @@
       <label class="form-label">Data distrato</label>
       <input type="date" name="end_date" class="form-control form-control-md" value="{{ contract.end_date if contract else '' }}" />
     </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <label class="form-label">Valor contrato (R$)</label>
-      <input type="text" name="contract_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.contract_value|format_currency if contract else '' }}" placeholder="0,00" />
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <label class="form-label">Qtd. motoboys</label>
-      <input type="number" name="motoboy_quantity" class="form-control form-control-md" value="{{ contract.motoboy_quantity if contract else '' }}" />
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <label class="form-label">Valor motorista (R$)</label>
-      <input type="text" name="client_driver_unit_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.client_driver_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <label class="form-label">Qtd. motoristas</label>
-      <input type="number" name="client_driver_quantity" class="form-control form-control-md" value="{{ contract.client_driver_quantity if contract else '' }}" />
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <label class="form-label">Outros (R$ / unid.)</label>
-      <input type="text" name="client_other_unit_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.client_other_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <label class="form-label">Qtd. outros</label>
-      <input type="number" name="client_other_quantity" class="form-control form-control-md" value="{{ contract.client_other_quantity if contract else '' }}" />
-    </div>
-    <div class="col-12 col-sm-6 col-md-3">
-      <label class="form-label">Ressarcimento falta s/ subst. (R$)</label>
-      <input type="text" name="client_absence_reimburse_unit_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.client_absence_reimburse_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
-    </div>
+
     <div class="col-12 col-md-6">
       <label class="form-label">Natureza financeira (receita)</label>
       <select name="revenue_financial_nature_id" class="form-select form-control-md">
@@ -60,6 +33,38 @@
         <option value="{{ n.id }}" {% if contract and contract.revenue_financial_nature_id == n.id %}selected{% endif %}>{{ n.name }}</option>
         {% endfor %}
       </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Ressarcimento falta s/ subst. (R$)</label>
+      <input type="text" name="client_absence_reimburse_unit_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.client_absence_reimburse_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
+    </div>
+
+    <div class="col-12 mt-1 pt-3 border-top">
+      <span class="small text-muted text-uppercase">Valores e quantidades</span>
+    </div>
+    <div class="col-12 col-md-7">
+      <label class="form-label">Valor contrato (R$)</label>
+      <input type="text" name="contract_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.contract_value|format_currency if contract else '' }}" placeholder="0,00" />
+    </div>
+    <div class="col-12 col-md-5">
+      <label class="form-label">Qtd. motoboys</label>
+      <input type="number" name="motoboy_quantity" class="form-control form-control-md" value="{{ contract.motoboy_quantity if contract else '' }}" />
+    </div>
+    <div class="col-12 col-md-7">
+      <label class="form-label">Valor motorista (R$)</label>
+      <input type="text" name="client_driver_unit_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.client_driver_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
+    </div>
+    <div class="col-12 col-md-5">
+      <label class="form-label">Qtd. motoristas</label>
+      <input type="number" name="client_driver_quantity" class="form-control form-control-md" value="{{ contract.client_driver_quantity if contract else '' }}" />
+    </div>
+    <div class="col-12 col-md-7">
+      <label class="form-label">Outros (R$ / unid.)</label>
+      <input type="text" name="client_other_unit_value" class="form-control form-control-md" data-mask="currency" value="{{ contract.client_other_unit_value|format_currency if contract else '' }}" placeholder="0,00" />
+    </div>
+    <div class="col-12 col-md-5">
+      <label class="form-label">Qtd. outros</label>
+      <input type="number" name="client_other_quantity" class="form-control form-control-md" value="{{ contract.client_other_quantity if contract else '' }}" />
     </div>
   </div>
   <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
