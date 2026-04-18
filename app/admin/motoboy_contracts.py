@@ -430,9 +430,17 @@ def register_routes(bp: Blueprint) -> None:
                         flash("Selecione um cliente válido (cadastro de cliente).", "danger")
                     else:
                         mb = Supplier.query.filter_by(id=int(motoboy_id), type=SUPPLIER_MOTOBOY).first()
-                        if not mb or not motoboy_supplier_operational(mb):
-                            flash("Motoboy inválido ou encerrado no cadastro.", "danger")
-                        else:
+                        if not mb:
+                            flash("Motoboy inválido.", "danger")
+                        elif not motoboy_supplier_operational(mb):
+                            flash(
+                                "Não é possível criar contrato para motoboy encerrado no cadastro.",
+                                "danger",
+                            )
+                        if (
+                            mb
+                            and motoboy_supplier_operational(mb)
+                        ):
                             start_date_val = date.fromisoformat(start_date_str)
                             end_date_val = date.fromisoformat(end_date_str) if end_date_str else None
                             contract = Contract(
@@ -496,13 +504,17 @@ def register_routes(bp: Blueprint) -> None:
                     if not client_row:
                         flash("Selecione um cliente válido (cadastro de cliente).", "danger")
                     else:
-                        mb = Supplier.query.filter_by(id=contract.supplier_id, type=SUPPLIER_MOTOBOY).first()
-                        if not mb or not motoboy_supplier_operational(mb):
-                            flash("Motoboy inválido ou encerrado no cadastro.", "danger")
+                        mb = Supplier.query.filter_by(
+                            id=contract.supplier_id, type=SUPPLIER_MOTOBOY
+                        ).first()
+                        if not mb:
+                            flash("Motoboy inválido.", "danger")
                         else:
                             contract.other_supplier_id = client_pk
                             contract.start_date = date.fromisoformat(start_date_str)
-                            contract.end_date = date.fromisoformat(end_date_str) if end_date_str else None
+                            contract.end_date = (
+                                date.fromisoformat(end_date_str) if end_date_str else None
+                            )
                             db.session.commit()
                             flash("Contrato de motoboy atualizado com sucesso.", "success")
                             return redirect(resolve_next_url("admin.motoboy_contracts_list"))
