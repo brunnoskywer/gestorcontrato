@@ -90,8 +90,10 @@
       <td data-label="Data início">{{ c.start_date }}</td>
       <td data-label="Data distrato">{{ c.end_date or '-' }}</td>
       <td data-label="Situação">
-        {% if c.is_blocked %}<span class="badge text-bg-warning">Bloqueado</span>
-        {% elif c.supplier and c.supplier.status in ['terminated', 'inactive'] %}<span class="badge text-bg-secondary">Encerrado</span>
+        {# Prioridade crescente: Distrato < Bloqueado < Encerrado (mostra o de maior prioridade) #}
+        {% if c.supplier and c.supplier.status in ['terminated', 'inactive'] %}<span class="badge text-bg-secondary">Encerrado</span>
+        {% elif c.is_blocked %}<span class="badge text-bg-warning">Bloqueado</span>
+        {% elif c.end_date %}<span class="badge text-bg-info">Distrato</span>
         {% else %}<span class="text-muted">—</span>{% endif %}
       </td>
       <td data-label="Valor prestação" class="text-end">{{ c.service_value|format_currency if c.service_value is not none else '-' }}</td>
