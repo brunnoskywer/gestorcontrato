@@ -58,9 +58,17 @@ def build_residual_entry_detail_pdf(snapshot: dict[str, Any]) -> bytes:
     y -= 16
     pdf.setFont("Helvetica", 10)
     line("Base (prestação + premiação conforme regra)", f"R$ {_fmt_br(snapshot.get('gross_amount'))}")
+    bonus_val = snapshot.get("bonus_value")
     if snapshot.get("has_absences"):
-        line("Observação", "Houve falta(s) no mês — premiação zerada na base.")
-    line("Desconto por valor de falta(s)", f"- R$ {_fmt_br(snapshot.get('missing_total'))}")
+        show_bonus_note = bonus_val is None or float(bonus_val or 0) > 0
+        if show_bonus_note:
+            line("Observação", "Houve falta(s) no mês — premiação zerada na base.")
+    abs_n = snapshot.get("absence_count")
+    if abs_n is not None and abs_n > 0:
+        disc_lbl = f"Desconto por valor de falta(s) ({abs_n})"
+    else:
+        disc_lbl = "Desconto por valor de falta(s)"
+    line(disc_lbl, f"- R$ {_fmt_br(snapshot.get('missing_total'))}")
     line("Subtotal após faltas", f"R$ {_fmt_br(snapshot.get('after_missing'))}")
 
     y -= 6
@@ -72,24 +80,6 @@ def build_residual_entry_detail_pdf(snapshot: dict[str, Any]) -> bytes:
         nm = row.get("name") or "-"
         am = _fmt_br(row.get("amount"))
         line(f"  {nm}", f"- R$ {am}")
-
-    excluded = snapshot.get("paid_excluded_residual_nature") or snapshot.get(
-        "paid_excluded_discount_nature"
-    ) or []
-    if excluded:
-        y -= 4
-        pdf.setFont("Helvetica-Bold", 9)
-        pdf.drawString(
-            40,
-            y,
-            "Naturezas marcadas como 'Não considera para abatimento?' (não abatem o residual)",
-        )
-        y -= 12
-        pdf.setFont("Helvetica", 9)
-        for row in excluded:
-            nm = row.get("name") or "-"
-            am = _fmt_br(row.get("amount"))
-            line(f"  {nm} (ignorado)", f"R$ {am}")
 
     y -= 10
     pdf.setFont("Helvetica-Bold", 11)

@@ -315,7 +315,9 @@ def register_routes(bp: Blueprint) -> None:
             return _manual_entry_redirect()
         resp = make_response(pdf_bytes)
         resp.headers["Content-Type"] = "application/pdf"
-        resp.headers["Content-Disposition"] = f'attachment; filename="residual_detalhe_{entry.id}.pdf"'
+        resp.headers["Content-Disposition"] = (
+            f'inline; filename="residual_detalhe_{entry.id}.pdf"'
+        )
         return resp
 
     @bp.route("/financeiro/processamentos")
@@ -1005,6 +1007,9 @@ def register_routes(bp: Blueprint) -> None:
                 skipped_no_base += 1
                 continue
 
+            absence_count = sum(
+                1 for a in absences if eff_start <= a.absence_date <= eff_end
+            )
             missing_total = 0.0
             if c.missing_value:
                 mv = float(c.missing_value)
@@ -1081,6 +1086,8 @@ def register_routes(bp: Blueprint) -> None:
                 "period_label": f"{_meses[month]} de {year}",
                 "gross_amount": gross_amount,
                 "has_absences": has_absences,
+                "bonus_value": base_bonus,
+                "absence_count": absence_count,
                 "missing_total": missing_total,
                 "after_missing": after_missing,
                 "paid_total": paid_total,

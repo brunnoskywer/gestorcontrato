@@ -909,7 +909,7 @@ def register_routes(bp: Blueprint) -> None:
         filename = f"contrato_motoboy_{contract.id}.pdf"
         resp = make_response(pdf_bytes)
         resp.headers["Content-Type"] = "application/pdf"
-        resp.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        resp.headers["Content-Disposition"] = f'inline; filename="{filename}"'
         return resp
 
     @bp.post("/motoboy-contracts/<int:contract_id>/delete")
