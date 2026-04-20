@@ -1537,14 +1537,34 @@ def register_routes(bp: Blueprint) -> None:
             handle_delete_constraint_error()
         return redirect(next_url)
 
+    @bp.route("/financeiro/processamento/<int:batch_id>/relatorio/form")
+    @login_required
+    def finance_batch_report_form(batch_id: int):
+        require_admin()
+        batch = FinancialBatch.query.get_or_404(batch_id)
+        return render_template(
+            "admin/financeiro/_batch_report_form_fragment.html",
+            batch=batch,
+            action_url=url_for("admin.finance_batch_report", batch_id=batch.id),
+            default_mode=(request.args.get("report_mode") or "synthetic").strip().lower(),
+        )
+
     @bp.route("/financeiro/processamento/<int:batch_id>/relatorio.pdf")
     @login_required
     def finance_batch_report(batch_id: int):
         require_admin()
         batch = FinancialBatch.query.get_or_404(batch_id)
+        report_mode = (request.args.get("report_mode") or "synthetic").strip().lower()
+        if report_mode not in ("synthetic", "analytic"):
+            report_mode = "synthetic"
         entries = (
             FinancialEntry.query.filter_by(financial_batch_id=batch.id)
-            .order_by(FinancialEntry.company_id, FinancialEntry.supplier_id)
+            .order_by(
+                FinancialEntry.company_id,
+                FinancialEntry.supplier_id,
+                FinancialEntry.due_date,
+                FinancialEntry.id,
+            )
             .all()
         )
 
@@ -1555,7 +1575,7 @@ def register_routes(bp: Blueprint) -> None:
             )
             return _manual_entry_redirect()
 
-        # Preparar dados agrupados: Empresa -> Cliente -> [motoboys]
+        # Preparar dados agrupados: Empresa -> Cliente -> [itens]
         grouped: dict[str, dict[str, list[dict]]] = {}
 
         # Intervalo do mês para localizar contratos (para adiantamento/residual)
@@ -1617,6 +1637,15 @@ def register_routes(bp: Blueprint) -> None:
                     "motoboy": motoboy_name or "-",
                     "pix": pix_key or "-",
                     "amount": val,
+                    "date": (
+                        e.due_date.strftime("%d/%m/%Y")
+                        if e.due_date
+                        else (
+                            e.settled_at.strftime("%d/%m/%Y")
+                            if e.settled_at
+                            else "-"
+                        )
+                    ),
                 }
             )
 
@@ -1651,7 +1680,8 @@ def register_routes(bp: Blueprint) -> None:
         )
         tipo = tipo_map.get(batch.batch_type, batch.batch_type)
         mes_label = f"{month_names[batch.month]} de {batch.year}"
-        titulo = f"Relatório de {tipo}"
+        modo_label = "Analítico" if report_mode == "analytic" else "Sintético"
+        titulo = f"Relatório de {tipo} ({modo_label})"
 
         pdf.setFont("Helvetica-Bold", 16)
         pdf.drawString(40, height - 40, titulo)
@@ -1667,6 +1697,8 @@ def register_routes(bp: Blueprint) -> None:
 
         y = height - 120
         pdf.setFont("Helvetica", 10)
+        left_x = 68
+        right_x = 540
 
         def new_page():
             nonlocal y
@@ -1681,6 +1713,8 @@ def register_routes(bp: Blueprint) -> None:
             if y < 80:
                 new_page()
             pdf.setFont("Helvetica-Bold", 11)
+            pdf.setStrokeGray(0.55)
+            pdf.line(40, y + 4, right_x, y + 4)
             pdf.drawString(40, y, f"Empresa: {company_name}")
             y -= 18
 
@@ -1695,13 +1729,20 @@ def register_routes(bp: Blueprint) -> None:
                 pdf.drawString(60, y, f"Cliente: {client_name}")
                 y -= 14
 
-                # Cabeçalho da sub-tabela de motoboys (com linha inferior)
+                # Cabeçalho da sub-tabela
                 pdf.setFont("Helvetica-Bold", 9)
-                pdf.drawString(70, y, "Motoboy")
-                pdf.drawString(260, y, "PIX")
+                pdf.setStrokeGray(0.45)
+                pdf.line(left_x, y + 2, right_x, y + 2)
+                if report_mode == "analytic":
+                    pdf.drawString(70, y, "Data")
+                    pdf.drawString(140, y, "Motoboy")
+                    pdf.drawString(300, y, "PIX")
+                else:
+                    pdf.drawString(70, y, "Motoboy")
+                    pdf.drawString(260, y, "PIX")
                 pdf.drawRightString(540, y, "Valor a pagar")
                 # linha horizontal abaixo do cabeçalho
-                pdf.line(68, y - 2, 540, y - 2)
+                pdf.line(left_x, y - 2, right_x, y - 2)
                 y -= 12
 
                 pdf.setFont("Helvetica", 9)
@@ -1717,20 +1758,33 @@ def register_routes(bp: Blueprint) -> None:
                         pdf.drawString(60, y, f"Cliente: {client_name}")
                         y -= 14
                         pdf.setFont("Helvetica-Bold", 9)
-                        pdf.drawString(70, y, "Motoboy")
-                        pdf.drawString(260, y, "PIX")
+                        pdf.setStrokeGray(0.45)
+                        pdf.line(left_x, y + 2, right_x, y + 2)
+                        if report_mode == "analytic":
+                            pdf.drawString(70, y, "Data")
+                            pdf.drawString(140, y, "Motoboy")
+                            pdf.drawString(300, y, "PIX")
+                        else:
+                            pdf.drawString(70, y, "Motoboy")
+                            pdf.drawString(260, y, "PIX")
                         pdf.drawRightString(540, y, "Valor a pagar")
+                        pdf.line(left_x, y - 2, right_x, y - 2)
                         y -= 12
                         pdf.setFont("Helvetica", 9)
 
                     # Fundo listrado alternado (um pouco mais escuro dentro da área da tabela)
                     if row_index % 2 == 0:
                         pdf.setFillGray(0.92)
-                        pdf.rect(68, y - 1, 472, 11, fill=1, stroke=0)
+                        pdf.rect(left_x, y - 1, right_x - left_x, 11, fill=1, stroke=0)
                         pdf.setFillGray(0.0)
 
-                    pdf.drawString(70, y, (item["motoboy"] or "")[:30])
-                    pdf.drawString(260, y, (item["pix"] or "")[:24])
+                    if report_mode == "analytic":
+                        pdf.drawString(70, y, (item.get("date") or "-")[:10])
+                        pdf.drawString(140, y, (item["motoboy"] or "")[:24])
+                        pdf.drawString(300, y, (item["pix"] or "")[:18])
+                    else:
+                        pdf.drawString(70, y, (item["motoboy"] or "")[:30])
+                        pdf.drawString(260, y, (item["pix"] or "")[:24])
                     val = item["amount"] or 0.0
                     subtotal += val
                     total_geral += val
@@ -1742,7 +1796,8 @@ def register_routes(bp: Blueprint) -> None:
                         .replace("X", "."),
                     )
                     # linha horizontal separando as linhas da tabela
-                    pdf.line(68, y - 2, 540, y - 2)
+                    pdf.setStrokeGray(0.82)
+                    pdf.line(left_x, y - 2, right_x, y - 2)
                     y -= 12
                     row_index += 1
 
@@ -1750,6 +1805,8 @@ def register_routes(bp: Blueprint) -> None:
                 if y < 50:
                     new_page()
                 pdf.setFont("Helvetica-Bold", 9)
+                pdf.setStrokeGray(0.45)
+                pdf.line(400, y + 3, right_x, y + 3)
                 pdf.drawRightString(
                     540,
                     y,
@@ -1758,6 +1815,7 @@ def register_routes(bp: Blueprint) -> None:
                     .replace(".", ",")
                     .replace("X", "."),
                 )
+                pdf.line(400, y - 2, right_x, y - 2)
                 y -= 18
 
             y -= 6
@@ -1766,6 +1824,8 @@ def register_routes(bp: Blueprint) -> None:
         if y < 40:
             new_page()
         pdf.setFont("Helvetica-Bold", 11)
+        pdf.setStrokeGray(0.25)
+        pdf.line(360, y + 6, right_x, y + 6)
         pdf.drawRightString(
             540,
             y,
@@ -1773,6 +1833,7 @@ def register_routes(bp: Blueprint) -> None:
             .replace(".", ",")
             .replace("X", "."),
         )
+        pdf.line(360, y - 2, right_x, y - 2)
 
         pdf.showPage()
         pdf.save()
