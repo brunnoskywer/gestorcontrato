@@ -11,40 +11,36 @@
   {% if details %}
   <div class="table-responsive">
     <table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list mb-0">
-      <thead>
+      <thead class="table-primary">
         <tr>
-          <th>Cliente</th>
-          <th class="text-end">Total</th>
-          <th class="text-center" style="width: 80px;">Ações</th>
+          <th class="text-white">Cliente</th>
+          <th class="text-end text-white">Total</th>
+          <th class="text-center text-white" style="width: 80px;">Ações</th>
         </tr>
       </thead>
       <tbody>
         {% for d in details %}
-        <tr>
+        <tr
+          role="button"
+          tabindex="0"
+          style="cursor: pointer;"
+          data-bs-toggle="collapse"
+          data-bs-target="#dre-client-body-{{ loop.index }}"
+          aria-expanded="false"
+          aria-controls="dre-client-body-{{ loop.index }}"
+        >
           <td class="fw-semibold">{{ d.client }}</td>
           <td class="text-end {{ color_class }}">R$ {{ d.total|format_currency }}</td>
-          <td class="text-center">
-            <button
-              class="btn btn-outline-secondary btn-sm"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#dre-client-body-{{ loop.index }}"
-              aria-expanded="false"
-              aria-controls="dre-client-body-{{ loop.index }}"
-              title="Expandir terceiros"
-            >
-              Ver
-            </button>
-          </td>
+          <td class="text-center text-muted">▾</td>
         </tr>
         <tr class="collapse" id="dre-client-body-{{ loop.index }}">
           <td colspan="3" class="p-0">
             <table class="table table-sm mb-0">
-              <thead>
+              <thead class="table-light">
                 <tr>
-                  <th class="ps-3 small text-muted">Tipo</th>
-                  <th class="small text-muted">Terceiro</th>
-                  <th class="small text-muted text-end pe-3">Valor</th>
+                  <th class="ps-3 small text-secondary">Tipo</th>
+                  <th class="small text-secondary">Terceiro</th>
+                  <th class="small text-secondary text-end pe-3">Valor</th>
                 </tr>
               </thead>
               <tbody>
