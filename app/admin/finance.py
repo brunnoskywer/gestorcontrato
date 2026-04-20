@@ -1737,7 +1737,6 @@ def register_routes(bp: Blueprint) -> None:
                 # Cabeçalho da sub-tabela
                 pdf.setFont("Helvetica-Bold", 9)
                 pdf.setStrokeGray(0.45)
-                pdf.line(left_x, y + 2, right_x, y + 2)
                 pdf.drawString(70, y, "Motoboy")
                 pdf.drawString(260, y, "PIX")
                 pdf.drawRightString(540, y, "Valor a pagar")
@@ -1759,7 +1758,6 @@ def register_routes(bp: Blueprint) -> None:
                         y -= 14
                         pdf.setFont("Helvetica-Bold", 9)
                         pdf.setStrokeGray(0.45)
-                        pdf.line(left_x, y + 2, right_x, y + 2)
                         pdf.drawString(70, y, "Motoboy")
                         pdf.drawString(260, y, "PIX")
                         pdf.drawRightString(540, y, "Valor a pagar")
@@ -1796,7 +1794,7 @@ def register_routes(bp: Blueprint) -> None:
                     new_page()
                 pdf.setFont("Helvetica-Bold", 9)
                 pdf.setStrokeGray(0.45)
-                pdf.line(400, y + 3, right_x, y + 3)
+                pdf.line(400, y + 6, right_x, y + 6)
                 pdf.drawRightString(
                     540,
                     y,
@@ -1805,7 +1803,6 @@ def register_routes(bp: Blueprint) -> None:
                     .replace(".", ",")
                     .replace("X", "."),
                 )
-                pdf.line(400, y - 2, right_x, y - 2)
                 y -= 18
 
             y -= 6
@@ -1815,7 +1812,7 @@ def register_routes(bp: Blueprint) -> None:
             new_page()
         pdf.setFont("Helvetica-Bold", 11)
         pdf.setStrokeGray(0.25)
-        pdf.line(360, y + 6, right_x, y + 6)
+        pdf.line(360, y + 8, right_x, y + 8)
         pdf.drawRightString(
             540,
             y,
@@ -1823,7 +1820,6 @@ def register_routes(bp: Blueprint) -> None:
             .replace(".", ",")
             .replace("X", "."),
         )
-        pdf.line(360, y - 2, right_x, y - 2)
 
         pdf.showPage()
         pdf.save()
