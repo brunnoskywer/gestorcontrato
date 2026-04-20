@@ -416,6 +416,7 @@ def dre_detail():
     period_start_param = request.args.get("date_from", "").strip()
     period_end_param = request.args.get("date_to", "").strip()
     company_id = request.args.get("company_id", type=int)
+    nature_id = request.args.get("nature_id", type=int)
     first_day, last_day = _dashboard_period_range(period_start_param, period_end_param)
     settled_start = datetime.combine(first_day, time(0, 0, 0))
     settled_end = datetime.combine(last_day, time(23, 59, 59))
@@ -435,6 +436,12 @@ def dre_detail():
     )
     if company_id:
         q = q.filter(FinancialEntry.company_id == company_id)
+    selected_nature_name = None
+    if nature_id:
+        nature = FinancialNature.query.get(nature_id)
+        if nature:
+            q = q.filter(FinancialEntry.financial_nature_id == nature_id)
+            selected_nature_name = nature.name
     entries = q.all()
 
     contract_cache: dict[tuple[int, date], str] = {}
@@ -479,6 +486,7 @@ def dre_detail():
         kind_label=kind_label,
         color_class=color_class,
         period_label=period_label,
+        selected_nature_name=selected_nature_name,
         details=details,
         grand_total=grand_total,
     )

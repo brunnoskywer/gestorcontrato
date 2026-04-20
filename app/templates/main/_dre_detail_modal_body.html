@@ -2,41 +2,66 @@
   <p class="small text-muted mb-2">
     <strong>{{ kind_label }}</strong> quitadas no período {{ period_label }}.
   </p>
+  {% if selected_nature_name %}
+  <div class="alert alert-info py-2 px-3 small mb-3">
+    Natureza em análise: <strong>{{ selected_nature_name }}</strong>
+  </div>
+  {% endif %}
 
   {% if details %}
-  <div class="accordion" id="dreDetailAccordion">
-    {% for d in details %}
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="dre-client-{{ loop.index }}">
-        <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#dre-client-body-{{ loop.index }}" aria-expanded="false" aria-controls="dre-client-body-{{ loop.index }}">
-          <span class="me-2 fw-semibold">{{ d.client }}</span>
-          <span class="ms-auto {{ color_class }}">R$ {{ d.total|format_currency }}</span>
-        </button>
-      </h2>
-      <div id="dre-client-body-{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="dre-client-{{ loop.index }}" data-bs-parent="#dreDetailAccordion">
-        <div class="accordion-body p-0">
-          <table class="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th class="small text-muted ps-3">Terceiro</th>
-                <th class="small text-muted">Nome</th>
-                <th class="small text-muted text-end pe-3">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for t in d.thirds %}
-              <tr>
-                <td class="ps-3">{{ t.type }}</td>
-                <td>{{ t.name }}</td>
-                <td class="text-end pe-3 {{ color_class }}">R$ {{ t.total|format_currency }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list mb-0">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th class="text-end">Total</th>
+          <th class="text-center" style="width: 80px;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in details %}
+        <tr>
+          <td class="fw-semibold">{{ d.client }}</td>
+          <td class="text-end {{ color_class }}">R$ {{ d.total|format_currency }}</td>
+          <td class="text-center">
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#dre-client-body-{{ loop.index }}"
+              aria-expanded="false"
+              aria-controls="dre-client-body-{{ loop.index }}"
+              title="Expandir terceiros"
+            >
+              Ver
+            </button>
+          </td>
+        </tr>
+        <tr class="collapse" id="dre-client-body-{{ loop.index }}">
+          <td colspan="3" class="p-0">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-3 small text-muted">Tipo</th>
+                  <th class="small text-muted">Terceiro</th>
+                  <th class="small text-muted text-end pe-3">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for t in d.thirds %}
+                <tr>
+                  <td class="ps-3">{{ t.type }}</td>
+                  <td>{{ t.name }}</td>
+                  <td class="text-end pe-3 {{ color_class }}">R$ {{ t.total|format_currency }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% else %}
   <p class="small text-muted mb-0">Não há {{ kind }} quitadas para o período selecionado.</p>

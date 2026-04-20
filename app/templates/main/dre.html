@@ -38,7 +38,16 @@
         {% if rec_por_natureza %}
           {% for r in rec_por_natureza %}
           <tr class="border-bottom">
-            <td class="py-2 ps-5 text-muted small">{{ r.name }}</td>
+            <td class="py-2 ps-5 text-muted small">
+              <button
+                type="button"
+                class="btn btn-link btn-sm p-0 text-decoration-none dre-detail-trigger"
+                data-kind="receitas"
+                data-nature-id="{{ r.financial_nature_id }}"
+              >
+                {{ r.name }}
+              </button>
+            </td>
             <td class="py-2 pe-3 text-end text-success small">R$ {{ r.total|format_currency }}</td>
           </tr>
           {% endfor %}
@@ -60,7 +69,16 @@
         {% if pay_por_natureza %}
           {% for p in pay_por_natureza %}
           <tr class="border-bottom">
-            <td class="py-2 ps-5 text-muted small">{{ p.name }}</td>
+            <td class="py-2 ps-5 text-muted small">
+              <button
+                type="button"
+                class="btn btn-link btn-sm p-0 text-decoration-none dre-detail-trigger"
+                data-kind="despesas"
+                data-nature-id="{{ p.financial_nature_id }}"
+              >
+                {{ p.name }}
+              </button>
+            </td>
             <td class="py-2 pe-3 text-end text-danger small">R$ {{ p.total|format_currency }}</td>
           </tr>
           {% endfor %}
@@ -220,6 +238,7 @@
     document.querySelectorAll('.dre-detail-trigger').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var kind = btn.getAttribute('data-kind') || 'receitas';
+        var natureId = btn.getAttribute('data-nature-id') || '';
         titleEl.textContent = kind === 'despesas' ? 'Detalhamento de Despesas' : 'Detalhamento de Receitas';
         bodyEl.innerHTML = '<p class="text-muted mb-0">Carregando...</p>';
         modal.show();
@@ -228,6 +247,7 @@
         url.searchParams.set('kind', kind);
         url.searchParams.set('date_from', dateFrom);
         url.searchParams.set('date_to', dateTo);
+        if (natureId) url.searchParams.set('nature_id', natureId);
         if (companyId) url.searchParams.set('company_id', String(companyId));
 
         fetch(url.toString(), {
