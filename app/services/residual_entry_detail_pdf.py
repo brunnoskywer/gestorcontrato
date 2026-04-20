@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from io import BytesIO
+from datetime import datetime
 from typing import Any
 
 try:
@@ -19,6 +20,14 @@ def _fmt_br(value: Any) -> str:
     except (TypeError, ValueError):
         n = 0.0
     return f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _parse_br_date(value: Any) -> datetime:
+    raw = str(value or "").strip()
+    try:
+        return datetime.strptime(raw, "%d/%m/%Y")
+    except ValueError:
+        return datetime.min
 
 
 def build_residual_entry_detail_pdf(
@@ -100,6 +109,8 @@ def build_residual_entry_detail_pdf(
         y -= 12
         pdf.setFont("Helvetica", 9)
         paid_entries = snapshot.get("paid_entries") or []
+        paid_entries = [r for r in paid_entries if not r.get("excluded_residual")]
+        paid_entries.sort(key=lambda r: _parse_br_date(r.get("date")))
         if paid_entries:
             for row in paid_entries:
                 if y < 72:
@@ -115,8 +126,6 @@ def build_residual_entry_detail_pdf(
                 dt = str(row.get("date") or "-")
                 nat = str(row.get("nature") or "-")
                 amt = _fmt_br(row.get("amount"))
-                if row.get("excluded_residual"):
-                    nat = f"{nat} (não abate residual)"
                 pdf.drawString(44, y, dt[:10])
                 pdf.drawString(130, y, nat[:46])
                 pdf.drawRightString(w - 40, y, f"R$ {amt}")

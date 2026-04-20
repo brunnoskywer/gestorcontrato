@@ -923,7 +923,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
             );
             return;
           }
-          openFormModal(residualPdfTpl.replace('{id}', ids[0]), residualPdfTitle, 'sm');
+          openFormModal(residualPdfTpl.replace('{id}', ids[0]), residualPdfTitle, 'md');
         });
       }
     });
