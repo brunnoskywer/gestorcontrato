@@ -803,10 +803,15 @@ def register_routes(bp: Blueprint) -> None:
         skipped_motoboy_encerrado = 0
         skipped_distrato_no_mes = 0
         skipped_blocked = 0
+        skipped_started_in_month = 0
 
         for c in contracts:
             if contract_has_distrato_in_month(c, year, month):
                 skipped_distrato_no_mes += 1
+                continue
+            # Regra: contrato iniciado no mês processado não entra em adiantamento.
+            if c.start_date and c.start_date.year == year and c.start_date.month == month:
+                skipped_started_in_month += 1
                 continue
             if not motoboy_contract_in_processing_scope(c):
                 if getattr(c, "is_blocked", False):
@@ -879,6 +884,10 @@ def register_routes(bp: Blueprint) -> None:
             )
         if skipped_blocked:
             msg_parts.append(f"{skipped_blocked} contrato(s) ignorados: contrato bloqueado.")
+        if skipped_started_in_month:
+            msg_parts.append(
+                f"{skipped_started_in_month} contrato(s) ignorados: início no mês de processamento do adiantamento."
+            )
 
         if not msg_parts:
             flash("Nenhum lançamento de adiantamento foi gerado.", "warning")
