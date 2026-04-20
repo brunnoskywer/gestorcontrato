@@ -21,7 +21,9 @@ def _fmt_br(value: Any) -> str:
     return f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def build_residual_entry_detail_pdf(snapshot: dict[str, Any]) -> bytes:
+def build_residual_entry_detail_pdf(
+    snapshot: dict[str, Any], detail_mode: str = "synthetic"
+) -> bytes:
     if A4 is None or canvas is None:  # pragma: no cover
         raise RuntimeError("reportlab não está instalado no ambiente.")
     buf = BytesIO()
@@ -42,6 +44,10 @@ def build_residual_entry_detail_pdf(snapshot: dict[str, Any]) -> bytes:
     cli = snapshot.get("client_name") or "-"
     pdf.drawString(40, y, f"Cliente (contrato): {cli}")
     y -= 22
+
+    detail_mode = (detail_mode or "synthetic").strip().lower()
+    if detail_mode not in ("synthetic", "analytic"):
+        detail_mode = "synthetic"
 
     def line(label: str, value: str):
         nonlocal y
@@ -80,6 +86,44 @@ def build_residual_entry_detail_pdf(snapshot: dict[str, Any]) -> bytes:
         nm = row.get("name") or "-"
         am = _fmt_br(row.get("amount"))
         line(f"  {nm}", f"- R$ {am}")
+
+    if detail_mode == "analytic":
+        y -= 4
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(40, y, "Extrato analítico de pagamentos quitados no mês")
+        y -= 12
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(44, y, "Data")
+        pdf.drawString(130, y, "Natureza")
+        pdf.drawRightString(w - 40, y, "Valor")
+        pdf.line(40, y - 2, w - 40, y - 2)
+        y -= 12
+        pdf.setFont("Helvetica", 9)
+        paid_entries = snapshot.get("paid_entries") or []
+        if paid_entries:
+            for row in paid_entries:
+                if y < 72:
+                    pdf.showPage()
+                    y = h - 48
+                    pdf.setFont("Helvetica-Bold", 9)
+                    pdf.drawString(44, y, "Data")
+                    pdf.drawString(130, y, "Natureza")
+                    pdf.drawRightString(w - 40, y, "Valor")
+                    pdf.line(40, y - 2, w - 40, y - 2)
+                    y -= 12
+                    pdf.setFont("Helvetica", 9)
+                dt = str(row.get("date") or "-")
+                nat = str(row.get("nature") or "-")
+                amt = _fmt_br(row.get("amount"))
+                if row.get("excluded_residual"):
+                    nat = f"{nat} (não abate residual)"
+                pdf.drawString(44, y, dt[:10])
+                pdf.drawString(130, y, nat[:46])
+                pdf.drawRightString(w - 40, y, f"R$ {amt}")
+                pdf.line(40, y - 2, w - 40, y - 2)
+                y -= 12
+        else:
+            line("Sem extrato por data no snapshot", "-")
 
     y -= 10
     pdf.setFont("Helvetica-Bold", 11)

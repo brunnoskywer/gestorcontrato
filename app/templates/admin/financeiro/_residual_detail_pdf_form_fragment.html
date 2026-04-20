@@ -1,0 +1,15 @@
+<form method="get" action="{{ action_url }}" class="admin-form-modal admin-finance-modal-form" data-turbo="false" target="_blank">
+  <div class="row g-2">
+    <div class="col-12">
+      <label class="form-label mb-1">Formato do detalhamento</label>
+      <select name="detail_mode" class="form-select form-select-sm">
+        <option value="synthetic">Sintético (como atualmente)</option>
+        <option value="analytic">Analítico (pagamentos estratificados por data)</option>
+      </select>
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary btn-sm">Gerar PDF</button>
+  </div>
+</form>

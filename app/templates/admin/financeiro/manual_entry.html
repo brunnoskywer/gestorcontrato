@@ -17,7 +17,7 @@
 {% set transfer_url = url_for('admin.finance_transfer_form') %}
 {% set revenue_batches_url = url_for('admin.finance_batches', next=request.full_path) %}
 {% set revenue_batches_title = 'Processar' %}
-{% set _residual_pdf_base = url_for('admin.finance_entry_residual_detail_pdf', entry_id=999999) %}
+{% set _residual_pdf_base = url_for('admin.finance_entry_residual_detail_form', entry_id=999999) %}
 {% set residual_detail_pdf_url_template = _residual_pdf_base.replace('999999', '{id}') %}
 {% set residual_detail_pdf_title = 'Detalhamento residual (PDF)' %}
 

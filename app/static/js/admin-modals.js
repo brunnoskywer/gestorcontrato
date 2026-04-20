@@ -896,6 +896,8 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
         });
 
         var residualPdfTpl = toolbar.getAttribute('data-residual-detail-pdf-url-template');
+        var residualPdfTitle =
+          toolbar.getAttribute('data-residual-detail-pdf-title') || 'Detalhamento residual (PDF)';
         toolbar.querySelector('.admin-toolbar-residual-detail-pdf')?.addEventListener('click', function () {
           if (!residualPdfTpl) return;
           var ids = getSelectedIds();
@@ -921,7 +923,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
             );
             return;
           }
-          window.open(residualPdfTpl.replace('{id}', ids[0]), '_blank', 'noopener,noreferrer');
+          openFormModal(residualPdfTpl.replace('{id}', ids[0]), residualPdfTitle, 'sm');
         });
       }
     });

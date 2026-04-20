@@ -77,17 +77,15 @@
         <td>{{ b.company.legal_name if b.company else "-" }}</td>
         <td>{{ b.entries.count() }}</td>
         <td class="text-end">
-          <button
-            type="button"
+          <a
+            href="{{ url_for('admin.finance_batch_report', batch_id=b.id) }}"
             class="btn btn-outline-secondary btn-sm me-1"
-            data-form-url="{{ url_for('admin.finance_batch_report_form', batch_id=b.id) }}"
-            data-form-title="Gerar relatório de motoboy"
-            data-modal-size="sm"
+            target="_blank"
             title="Relatório"
             aria-label="Relatório"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="16" x2="16" y2="16"/></svg>
-          </button>
+          </a>
           <form method="post" action="{{ url_for('admin.finance_batch_delete', batch_id=b.id) }}" data-turbo-frame="main-content" class="d-inline admin-confirm-submit" data-confirm-message="Excluir este processamento e todos os lançamentos pendentes gerados por ele?" data-confirm-label="Excluir">
             <input type="hidden" name="next" value="{{ next_url }}">
             <button type="submit" class="btn btn-danger btn-sm">Excluir</button>

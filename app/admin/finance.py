@@ -311,8 +311,11 @@ def register_routes(bp: Blueprint) -> None:
         if not snap:
             flash("Não foi possível ler o detalhamento deste lançamento.", "danger")
             return _manual_entry_redirect()
+        detail_mode = (request.args.get("detail_mode") or "synthetic").strip().lower()
+        if detail_mode not in ("synthetic", "analytic"):
+            detail_mode = "synthetic"
         try:
-            pdf_bytes = build_residual_entry_detail_pdf(snap)
+            pdf_bytes = build_residual_entry_detail_pdf(snap, detail_mode=detail_mode)
         except RuntimeError:
             flash("Geração de PDF indisponível: instale o pacote 'reportlab' no ambiente.", "danger")
             return _manual_entry_redirect()
@@ -322,6 +325,20 @@ def register_routes(bp: Blueprint) -> None:
             f'inline; filename="residual_detalhe_{entry.id}.pdf"'
         )
         return resp
+
+    @bp.get("/financeiro/lancamento/<int:entry_id>/residual-detalhe/form")
+    @login_required
+    def finance_entry_residual_detail_form(entry_id: int):
+        require_admin()
+        entry = FinancialEntry.query.options(joinedload(FinancialEntry.batch)).get_or_404(entry_id)
+        if entry.entry_type != ENTRY_PAYABLE or not entry.processing_snapshot:
+            return '<p class="text-danger small mb-0">Detalhamento disponível apenas para lançamentos residuais.</p>'
+        if entry.batch is None or entry.batch.batch_type != BATCH_TYPE_RESIDUAL:
+            return '<p class="text-danger small mb-0">Detalhamento disponível apenas para processamento residual.</p>'
+        return render_template(
+            "admin/financeiro/_residual_detail_pdf_form_fragment.html",
+            action_url=url_for("admin.finance_entry_residual_detail_pdf", entry_id=entry_id),
+        )
 
     @bp.route("/financeiro/processamentos")
     @login_required
@@ -1044,18 +1061,32 @@ def register_routes(bp: Blueprint) -> None:
             paid_total = 0.0
             paid_by_nature: dict[str, float] = {}
             paid_excluded: list[dict] = []
+            paid_entries_detail: list[dict] = []
             for e in paid_qs.all():
                 try:
                     amt = float(e.amount)
                 except (TypeError, ValueError):
                     continue
                 nat = e.financial_nature
+                row = {
+                    "date": (
+                        e.settled_at.strftime("%d/%m/%Y")
+                        if e.settled_at
+                        else (e.due_date.strftime("%d/%m/%Y") if e.due_date else "-")
+                    ),
+                    "nature": (nat.name if nat else "-"),
+                    "amount": amt,
+                    "excluded_residual": False,
+                }
                 if nat is not None and getattr(nat, "does_not_consider_residual", False):
                     paid_excluded.append({"name": nat.name, "amount": amt})
+                    row["excluded_residual"] = True
+                    paid_entries_detail.append(row)
                     continue
                 paid_total += amt
                 if nat:
                     paid_by_nature[nat.name] = paid_by_nature.get(nat.name, 0.0) + amt
+                paid_entries_detail.append(row)
 
             net_amount = gross_amount - missing_total - paid_total
             if net_amount <= 0:
@@ -1110,6 +1141,7 @@ def register_routes(bp: Blueprint) -> None:
                     for nm, val in sorted(paid_by_nature.items(), key=lambda x: x[0])
                 ],
                 "paid_excluded_residual_nature": paid_excluded,
+                "paid_entries": paid_entries_detail,
                 "net_amount": net_amount,
             }
 
@@ -1537,33 +1569,16 @@ def register_routes(bp: Blueprint) -> None:
             handle_delete_constraint_error()
         return redirect(next_url)
 
-    @bp.route("/financeiro/processamento/<int:batch_id>/relatorio/form")
-    @login_required
-    def finance_batch_report_form(batch_id: int):
-        require_admin()
-        batch = FinancialBatch.query.get_or_404(batch_id)
-        return render_template(
-            "admin/financeiro/_batch_report_form_fragment.html",
-            batch=batch,
-            action_url=url_for("admin.finance_batch_report", batch_id=batch.id),
-            default_mode=(request.args.get("report_mode") or "synthetic").strip().lower(),
-        )
-
     @bp.route("/financeiro/processamento/<int:batch_id>/relatorio.pdf")
     @login_required
     def finance_batch_report(batch_id: int):
         require_admin()
         batch = FinancialBatch.query.get_or_404(batch_id)
-        report_mode = (request.args.get("report_mode") or "synthetic").strip().lower()
-        if report_mode not in ("synthetic", "analytic"):
-            report_mode = "synthetic"
         entries = (
             FinancialEntry.query.filter_by(financial_batch_id=batch.id)
             .order_by(
                 FinancialEntry.company_id,
                 FinancialEntry.supplier_id,
-                FinancialEntry.due_date,
-                FinancialEntry.id,
             )
             .all()
         )
@@ -1637,15 +1652,6 @@ def register_routes(bp: Blueprint) -> None:
                     "motoboy": motoboy_name or "-",
                     "pix": pix_key or "-",
                     "amount": val,
-                    "date": (
-                        e.due_date.strftime("%d/%m/%Y")
-                        if e.due_date
-                        else (
-                            e.settled_at.strftime("%d/%m/%Y")
-                            if e.settled_at
-                            else "-"
-                        )
-                    ),
                 }
             )
 
@@ -1680,8 +1686,7 @@ def register_routes(bp: Blueprint) -> None:
         )
         tipo = tipo_map.get(batch.batch_type, batch.batch_type)
         mes_label = f"{month_names[batch.month]} de {batch.year}"
-        modo_label = "Analítico" if report_mode == "analytic" else "Sintético"
-        titulo = f"Relatório de {tipo} ({modo_label})"
+        titulo = f"Relatório de {tipo}"
 
         pdf.setFont("Helvetica-Bold", 16)
         pdf.drawString(40, height - 40, titulo)
@@ -1733,13 +1738,8 @@ def register_routes(bp: Blueprint) -> None:
                 pdf.setFont("Helvetica-Bold", 9)
                 pdf.setStrokeGray(0.45)
                 pdf.line(left_x, y + 2, right_x, y + 2)
-                if report_mode == "analytic":
-                    pdf.drawString(70, y, "Data")
-                    pdf.drawString(140, y, "Motoboy")
-                    pdf.drawString(300, y, "PIX")
-                else:
-                    pdf.drawString(70, y, "Motoboy")
-                    pdf.drawString(260, y, "PIX")
+                pdf.drawString(70, y, "Motoboy")
+                pdf.drawString(260, y, "PIX")
                 pdf.drawRightString(540, y, "Valor a pagar")
                 # linha horizontal abaixo do cabeçalho
                 pdf.line(left_x, y - 2, right_x, y - 2)
@@ -1760,13 +1760,8 @@ def register_routes(bp: Blueprint) -> None:
                         pdf.setFont("Helvetica-Bold", 9)
                         pdf.setStrokeGray(0.45)
                         pdf.line(left_x, y + 2, right_x, y + 2)
-                        if report_mode == "analytic":
-                            pdf.drawString(70, y, "Data")
-                            pdf.drawString(140, y, "Motoboy")
-                            pdf.drawString(300, y, "PIX")
-                        else:
-                            pdf.drawString(70, y, "Motoboy")
-                            pdf.drawString(260, y, "PIX")
+                        pdf.drawString(70, y, "Motoboy")
+                        pdf.drawString(260, y, "PIX")
                         pdf.drawRightString(540, y, "Valor a pagar")
                         pdf.line(left_x, y - 2, right_x, y - 2)
                         y -= 12
@@ -1778,13 +1773,8 @@ def register_routes(bp: Blueprint) -> None:
                         pdf.rect(left_x, y - 1, right_x - left_x, 11, fill=1, stroke=0)
                         pdf.setFillGray(0.0)
 
-                    if report_mode == "analytic":
-                        pdf.drawString(70, y, (item.get("date") or "-")[:10])
-                        pdf.drawString(140, y, (item["motoboy"] or "")[:24])
-                        pdf.drawString(300, y, (item["pix"] or "")[:18])
-                    else:
-                        pdf.drawString(70, y, (item["motoboy"] or "")[:30])
-                        pdf.drawString(260, y, (item["pix"] or "")[:24])
+                    pdf.drawString(70, y, (item["motoboy"] or "")[:30])
+                    pdf.drawString(260, y, (item["pix"] or "")[:24])
                     val = item["amount"] or 0.0
                     subtotal += val
                     total_geral += val
