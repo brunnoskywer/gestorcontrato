@@ -1,5 +1,5 @@
 import calendar
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from flask import Blueprint, render_template, request
 from flask_login import login_required
@@ -28,6 +28,30 @@ def _dashboard_month_range(month_param):
     first = today.replace(day=1)
     last = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
     return first, last, today.year, today.month
+
+
+def _dashboard_period_range(start_param: str, end_param: str):
+    """Return (first_day, last_day) from YYYY-MM-DD inputs; fallback current month."""
+    today = date.today()
+    default_first = today.replace(day=1)
+    default_last = date(
+        today.year, today.month, calendar.monthrange(today.year, today.month)[1]
+    )
+    first = default_first
+    last = default_last
+    if start_param:
+        try:
+            first = date.fromisoformat(start_param)
+        except ValueError:
+            first = default_first
+    if end_param:
+        try:
+            last = date.fromisoformat(end_param)
+        except ValueError:
+            last = default_last
+    if first > last:
+        first, last = last, first
+    return first, last
 
 
 @main_bp.route("/")
@@ -153,10 +177,11 @@ def dashboard():
 @login_required
 def dre():
     """DRE Gerencial: receitas e despesas realizadas (quitadas) no período."""
-    month_param = request.args.get("month", "").strip()
+    period_start_param = request.args.get("date_from", "").strip()
+    period_end_param = request.args.get("date_to", "").strip()
     company_id = request.args.get("company_id", type=int)
-    first_day, last_day, year, month = _dashboard_month_range(month_param)
-    month_label = f"{year}-{month:02d}"
+    first_day, last_day = _dashboard_period_range(period_start_param, period_end_param)
+    period_label = f"{first_day.strftime('%d/%m/%Y')} a {last_day.strftime('%d/%m/%Y')}"
     companies = Company.query.order_by(Company.legal_name).all()
 
     settled_start = datetime.combine(first_day, time(0, 0, 0))
@@ -206,6 +231,7 @@ def dre():
         )
         .all()
     )
+    rec_por_natureza = sorted(rec_por_natureza, key=lambda x: (x.name or "").lower())
     # Detalhamento por natureza (despesas)
     pay_por_natureza = (
         _company_filter(
@@ -224,17 +250,81 @@ def dre():
         )
         .all()
     )
+    pay_por_natureza = sorted(pay_por_natureza, key=lambda x: (x.name or "").lower())
+
+    # Gráficos: composição por natureza (quitados no período)
+    chart_rec_labels = [r.name or "Sem natureza" for r in rec_por_natureza]
+    chart_rec_values = [float(r.total or 0) for r in rec_por_natureza]
+    chart_pay_labels = [p.name or "Sem natureza" for p in pay_por_natureza]
+    chart_pay_values = [float(p.total or 0) for p in pay_por_natureza]
+
+    # Gráfico: evolução diária do resultado acumulado (por data de quitação)
+    rec_by_day_rows = (
+        _company_filter(
+            db.session.query(
+                func.date(FinancialEntry.settled_at).label("settled_date"),
+                func.sum(FinancialEntry.amount).label("total"),
+            ).filter(
+                FinancialEntry.entry_type == ENTRY_RECEIVABLE,
+                FinancialEntry.settled_at >= settled_start,
+                FinancialEntry.settled_at <= settled_end,
+            )
+        )
+        .group_by(func.date(FinancialEntry.settled_at))
+        .all()
+    )
+    pay_by_day_rows = (
+        _company_filter(
+            db.session.query(
+                func.date(FinancialEntry.settled_at).label("settled_date"),
+                func.sum(FinancialEntry.amount).label("total"),
+            ).filter(
+                FinancialEntry.entry_type == ENTRY_PAYABLE,
+                FinancialEntry.settled_at >= settled_start,
+                FinancialEntry.settled_at <= settled_end,
+            )
+        )
+        .group_by(func.date(FinancialEntry.settled_at))
+        .all()
+    )
+    rec_by_day = {d: float(total or 0) for d, total in rec_by_day_rows if d}
+    pay_by_day = {d: float(total or 0) for d, total in pay_by_day_rows if d}
+
+    chart_day_labels = []
+    chart_day_rec = []
+    chart_day_pay = []
+    chart_day_balance = []
+    running_balance = 0.0
+    cur = first_day
+    while cur <= last_day:
+        rec_val = rec_by_day.get(cur, 0.0)
+        pay_val = pay_by_day.get(cur, 0.0)
+        running_balance += rec_val - pay_val
+        chart_day_labels.append(cur.strftime("%d/%m"))
+        chart_day_rec.append(rec_val)
+        chart_day_pay.append(pay_val)
+        chart_day_balance.append(round(running_balance, 2))
+        cur = cur + timedelta(days=1)
 
     return render_template(
         "main/dre.html",
         companies=companies,
         company_id=company_id,
-        month_label=month_label,
-        month_param=month_param or month_label,
+        period_label=period_label,
+        date_from=first_day.isoformat(),
+        date_to=last_day.isoformat(),
         total_receitas=float(total_receitas),
         total_despesas=float(total_despesas),
         resultado=resultado,
         rec_por_natureza=rec_por_natureza,
         pay_por_natureza=pay_por_natureza,
+        chart_rec_labels=chart_rec_labels,
+        chart_rec_values=chart_rec_values,
+        chart_pay_labels=chart_pay_labels,
+        chart_pay_values=chart_pay_values,
+        chart_day_labels=chart_day_labels,
+        chart_day_rec=chart_day_rec,
+        chart_day_pay=chart_day_pay,
+        chart_day_balance=chart_day_balance,
     )
 
