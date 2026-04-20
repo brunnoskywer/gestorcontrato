@@ -4,9 +4,23 @@ from datetime import date, datetime, time, timedelta
 from flask import Blueprint, render_template, request
 from flask_login import login_required
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
-from app.models import Company, FinancialEntry, FinancialNature, ENTRY_PAYABLE, ENTRY_RECEIVABLE
+from app.models import (
+    Company,
+    Contract,
+    FinancialEntry,
+    FinancialNature,
+    Supplier,
+    CONTRACT_TYPE_MOTOBOY,
+    ENTRY_PAYABLE,
+    ENTRY_RECEIVABLE,
+    SUPPLIER_CLIENT,
+    SUPPLIER_MOTOBOY,
+    SUPPLIER_SUPPLIER,
+)
+from app.models.supplier import client_display_label
 
 main_bp = Blueprint("main", __name__, template_folder="../templates/main")
 
@@ -52,6 +66,65 @@ def _dashboard_period_range(start_param: str, end_param: str):
     if first > last:
         first, last = last, first
     return first, last
+
+
+def _dre_resolve_client_label_for_entry(
+    entry: FinancialEntry, contract_cache: dict[tuple[int, date], str]
+) -> str:
+    """Resolve cliente relacionado ao lançamento para agrupamento da DRE."""
+    supplier = entry.supplier
+    if supplier and supplier.type == SUPPLIER_CLIENT:
+        return client_display_label(supplier)
+
+    if (
+        entry.batch
+        and entry.batch.client_supplier
+        and entry.batch.client_supplier.type == SUPPLIER_CLIENT
+    ):
+        return client_display_label(entry.batch.client_supplier)
+
+    if supplier and supplier.type == SUPPLIER_MOTOBOY:
+        ref_date = (
+            entry.settled_at.date()
+            if entry.settled_at
+            else (entry.due_date or date.today())
+        )
+        cache_key = (supplier.id, ref_date)
+        if cache_key in contract_cache:
+            return contract_cache[cache_key]
+
+        contract = (
+            Contract.query.filter(
+                Contract.contract_type == CONTRACT_TYPE_MOTOBOY,
+                Contract.supplier_id == supplier.id,
+                Contract.start_date <= ref_date,
+                (Contract.end_date.is_(None)) | (Contract.end_date >= ref_date),
+            )
+            .order_by(Contract.start_date.desc())
+            .first()
+        )
+        label = (
+            client_display_label(contract.other_supplier)
+            if contract and contract.other_supplier
+            else "Sem cliente vinculado"
+        )
+        contract_cache[cache_key] = label
+        return label
+
+    return "Sem cliente vinculado"
+
+
+def _dre_third_party_label(entry: FinancialEntry) -> tuple[str, str]:
+    supplier = entry.supplier
+    if not supplier:
+        return "Sem terceiro", "-"
+    if supplier.type == SUPPLIER_MOTOBOY:
+        return "Motoboy", supplier.name or "-"
+    if supplier.type == SUPPLIER_CLIENT:
+        return "Cliente", client_display_label(supplier)
+    if supplier.type == SUPPLIER_SUPPLIER:
+        return "Fornecedor", supplier.name or "-"
+    return "Outro", supplier.name or "-"
 
 
 @main_bp.route("/")
@@ -326,5 +399,87 @@ def dre():
         chart_day_rec=chart_day_rec,
         chart_day_pay=chart_day_pay,
         chart_day_balance=chart_day_balance,
+    )
+
+
+@main_bp.get("/dre/detail")
+@login_required
+def dre_detail():
+    """Detalhamento clicável da DRE por cliente e terceiro."""
+    kind = (request.args.get("kind") or "").strip().lower()
+    if kind not in ("receitas", "despesas"):
+        kind = "receitas"
+    entry_type = ENTRY_RECEIVABLE if kind == "receitas" else ENTRY_PAYABLE
+    kind_label = "Receitas" if kind == "receitas" else "Despesas"
+    color_class = "text-success" if kind == "receitas" else "text-danger"
+
+    period_start_param = request.args.get("date_from", "").strip()
+    period_end_param = request.args.get("date_to", "").strip()
+    company_id = request.args.get("company_id", type=int)
+    first_day, last_day = _dashboard_period_range(period_start_param, period_end_param)
+    settled_start = datetime.combine(first_day, time(0, 0, 0))
+    settled_end = datetime.combine(last_day, time(23, 59, 59))
+    period_label = f"{first_day.strftime('%d/%m/%Y')} a {last_day.strftime('%d/%m/%Y')}"
+
+    q = (
+        FinancialEntry.query.options(
+            joinedload(FinancialEntry.supplier),
+            joinedload(FinancialEntry.batch),
+        )
+        .filter(
+            FinancialEntry.entry_type == entry_type,
+            FinancialEntry.settled_at >= settled_start,
+            FinancialEntry.settled_at <= settled_end,
+        )
+        .order_by(FinancialEntry.settled_at, FinancialEntry.id)
+    )
+    if company_id:
+        q = q.filter(FinancialEntry.company_id == company_id)
+    entries = q.all()
+
+    contract_cache: dict[tuple[int, date], str] = {}
+    by_client: dict[str, dict] = {}
+    for e in entries:
+        try:
+            amount = float(e.amount or 0)
+        except (TypeError, ValueError):
+            amount = 0.0
+        client_label = _dre_resolve_client_label_for_entry(e, contract_cache)
+        third_type, third_name = _dre_third_party_label(e)
+
+        bucket = by_client.setdefault(
+            client_label,
+            {"client": client_label, "total": 0.0, "thirds": {}},
+        )
+        bucket["total"] += amount
+        third_key = (third_type, third_name)
+        thirds = bucket["thirds"]
+        if third_key not in thirds:
+            thirds[third_key] = {"type": third_type, "name": third_name, "total": 0.0}
+        thirds[third_key]["total"] += amount
+
+    details = []
+    for _, bucket in sorted(by_client.items(), key=lambda kv: kv[0].lower()):
+        thirds_list = sorted(
+            bucket["thirds"].values(),
+            key=lambda x: (x["type"], x["name"].lower()),
+        )
+        details.append(
+            {
+                "client": bucket["client"],
+                "total": bucket["total"],
+                "thirds": thirds_list,
+            }
+        )
+
+    grand_total = sum(d["total"] for d in details)
+    return render_template(
+        "main/_dre_detail_modal_body.html",
+        kind=kind,
+        kind_label=kind_label,
+        color_class=color_class,
+        period_label=period_label,
+        details=details,
+        grand_total=grand_total,
     )
 

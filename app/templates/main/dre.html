@@ -28,7 +28,11 @@
     <table class="table table-borderless mb-0 dre-table">
       <tbody>
         <tr class="border-bottom">
-          <td class="py-2 ps-3 fw-semibold">Receitas</td>
+          <td class="py-2 ps-3 fw-semibold">
+            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none dre-detail-trigger" data-kind="receitas">
+              Receitas
+            </button>
+          </td>
           <td class="py-2 pe-3 text-end fw-semibold text-success">R$ {{ total_receitas|format_currency }}</td>
         </tr>
         {% if rec_por_natureza %}
@@ -45,7 +49,12 @@
           </tr>
         {% endif %}
         <tr class="border-bottom">
-          <td class="py-2 ps-3">(-) Despesas</td>
+          <td class="py-2 ps-3">
+            (-)
+            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none dre-detail-trigger" data-kind="despesas">
+              Despesas
+            </button>
+          </td>
           <td class="py-2 pe-3 text-end text-danger">R$ {{ total_despesas|format_currency }}</td>
         </tr>
         {% if pay_por_natureza %}
@@ -104,6 +113,20 @@
 
 <div class="mt-3">
   <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Voltar ao Dashboard</a>
+</div>
+
+<div class="modal fade" id="dreDetailModal" tabindex="-1" aria-labelledby="dreDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dreDetailModalLabel">Detalhamento DRE</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="dreDetailModalBody">
+        <p class="text-muted mb-0">Carregando...</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
@@ -180,6 +203,45 @@
       }
     });
   }
+})();
+</script>
+<script>
+(function () {
+  function initDreDetailModal() {
+    var modalEl = document.getElementById('dreDetailModal');
+    if (!modalEl || typeof bootstrap === 'undefined') return;
+    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    var bodyEl = document.getElementById('dreDetailModalBody');
+    var titleEl = document.getElementById('dreDetailModalLabel');
+    var dateFrom = {{ date_from | tojson }};
+    var dateTo = {{ date_to | tojson }};
+    var companyId = {{ company_id | tojson }};
+
+    document.querySelectorAll('.dre-detail-trigger').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var kind = btn.getAttribute('data-kind') || 'receitas';
+        titleEl.textContent = kind === 'despesas' ? 'Detalhamento de Despesas' : 'Detalhamento de Receitas';
+        bodyEl.innerHTML = '<p class="text-muted mb-0">Carregando...</p>';
+        modal.show();
+
+        var url = new URL({{ url_for('main.dre_detail') | tojson }}, window.location.origin);
+        url.searchParams.set('kind', kind);
+        url.searchParams.set('date_from', dateFrom);
+        url.searchParams.set('date_to', dateTo);
+        if (companyId) url.searchParams.set('company_id', String(companyId));
+
+        fetch(url.toString(), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
+        })
+          .then(function (r) { return r.text(); })
+          .then(function (html) { bodyEl.innerHTML = html; })
+          .catch(function () {
+            bodyEl.innerHTML = '<p class="text-danger mb-0">Erro ao carregar detalhamento.</p>';
+          });
+      });
+    });
+  }
+  initDreDetailModal();
 })();
 </script>
 {% endblock %}
