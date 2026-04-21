@@ -109,7 +109,7 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
     )
     company_cnpj = _format_doc(company.cnpj)
 
-    contractor_name = (supplier.name if supplier else "").strip() or "-"
+    contractor_name = ((supplier.name if supplier else "").strip() or "-").upper()
     contractor_address = (
         format_address_line(
             supplier.street,
@@ -195,17 +195,17 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
         fontSize=10,
-        leading=13,
-        spaceBefore=4,
-        spaceAfter=1,
+        leading=14,
+        spaceBefore=18,
+        spaceAfter=10,
     )
     style_signature_text = ParagraphStyle(
         "signatureText",
         parent=styles["Normal"],
         fontName="Helvetica",
         fontSize=10,
-        leading=13,
-        spaceAfter=3,
+        leading=16,
+        spaceAfter=10,
     )
 
     story = []
@@ -295,20 +295,26 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
             style_body,
         )
     )
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 28))
 
     signatures = [
         ("CONTRATANTE:", company_name, f"CNPJ: {company_cnpj}"),
         ("CONTRATADA:", contractor_name, f"CNPJ: {contractor_cnpj}"),
     ]
-    for role, name, doc_text in signatures:
+    for idx, (role, name, doc_text) in enumerate(signatures):
+        if idx:
+            story.append(Spacer(1, 22))
         story.append(Paragraph(role, style_signature_label))
+        story.append(Spacer(1, 36))
         story.append(Paragraph(name, style_signature_text))
         story.append(Paragraph(doc_text, style_signature_text))
-        story.append(Spacer(1, 16))
+        story.append(Spacer(1, 28))
 
+    story.append(Spacer(1, 14))
     story.append(Paragraph("TESTEMUNHAS:", style_signature_label))
+    story.append(Spacer(1, 20))
     story.append(Paragraph("NOME: __________________________   CPF: __________________________", style_signature_text))
+    story.append(Spacer(1, 16))
     story.append(Paragraph("NOME: __________________________   CPF: __________________________", style_signature_text))
 
     doc.build(story, onFirstPage=_draw_page_footer, onLaterPages=_draw_page_footer)
