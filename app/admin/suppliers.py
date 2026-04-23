@@ -4,6 +4,7 @@ from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.constants.brazil_ufs import is_valid_uf
 from app.extensions import db
 from app.models import (
     Supplier,
@@ -61,13 +62,27 @@ def register_routes(bp: Blueprint) -> None:
         if request.method == "POST":
             name = request.form.get("name", "").strip()
             document = request.form.get("document", "").strip() or None
+            cep = request.form.get("cep", "").strip() or None
+            street = request.form.get("street", "").strip() or None
+            neighborhood = request.form.get("neighborhood", "").strip() or None
+            city = request.form.get("city", "").strip() or None
+            state = (request.form.get("state") or "").strip().upper() or None
+            address = request.form.get("address", "").strip() or None
             is_active = request.form.get("is_active") == "on"
             if not name:
                 flash("Nome é obrigatório.", "danger")
+            elif state and not is_valid_uf(state):
+                flash("UF inválida para o fornecedor.", "danger")
             else:
                 supplier = Supplier(
                     name=name,
                     document=document,
+                    cep=cep,
+                    street=street,
+                    neighborhood=neighborhood,
+                    city=city,
+                    state=state,
+                    address=address,
                     type=SUPPLIER_SUPPLIER,
                     is_active=is_active,
                 )
@@ -85,9 +100,17 @@ def register_routes(bp: Blueprint) -> None:
         if request.method == "POST":
             supplier.name = request.form.get("name", "").strip()
             supplier.document = request.form.get("document", "").strip() or None
+            supplier.cep = request.form.get("cep", "").strip() or None
+            supplier.street = request.form.get("street", "").strip() or None
+            supplier.neighborhood = request.form.get("neighborhood", "").strip() or None
+            supplier.city = request.form.get("city", "").strip() or None
+            supplier.state = (request.form.get("state") or "").strip().upper() or None
+            supplier.address = request.form.get("address", "").strip() or None
             supplier.is_active = request.form.get("is_active") == "on"
             if not supplier.name:
                 flash("Nome é obrigatório.", "danger")
+            elif supplier.state and not is_valid_uf(supplier.state):
+                flash("UF inválida para o fornecedor.", "danger")
             else:
                 db.session.commit()
                 flash("Fornecedor atualizado com sucesso.", "success")

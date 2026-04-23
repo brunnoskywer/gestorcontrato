@@ -25,6 +25,15 @@
 
   <div class="row">
     <div class="col-md-6 mb-3">
+      <label class="form-label">CEP</label>
+      <div class="input-group">
+        <input type="text" name="cep" class="form-control" value="{{ motoboy.cep if motoboy else '' }}" data-mask="cep" maxlength="9" placeholder="00000-000" />
+        <button type="button" class="btn btn-outline-secondary" data-cep-consult-btn>Consultar CEP</button>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6 mb-3">
       <label class="form-label">Rua / logradouro *</label>
       <input type="text" name="street" class="form-control" required value="{{ motoboy.street if motoboy else '' }}" />
     </div>

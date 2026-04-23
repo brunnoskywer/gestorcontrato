@@ -34,6 +34,12 @@
     return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, '$1.$2.$3/$4-$5');
   }
 
+  function maskCep(value) {
+    var d = (value || '').replace(/\D/g, '').slice(0, 8);
+    if (d.length <= 5) return d;
+    return d.replace(/(\d{5})(\d+)/, '$1-$2');
+  }
+
   /** Brazilian currency: display as 1.234,56 (comma as decimal separator). */
   function maskCurrency(value) {
     if (value === null || value === undefined || value === '') return '';
@@ -99,6 +105,7 @@
     if (!container || !container.querySelector) return;
     var cpfInputs = container.querySelectorAll('[data-mask="cpf"]');
     var cnpjInputs = container.querySelectorAll('[data-mask="cnpj"]');
+    var cepInputs = container.querySelectorAll('[data-mask="cep"]');
     var currencyInputs = container.querySelectorAll('[data-mask="currency"]');
 
     cpfInputs.forEach(function (input) {
@@ -119,6 +126,15 @@
       });
     });
 
+    cepInputs.forEach(function (input) {
+      if (input.dataset.maskApplied) return;
+      input.dataset.maskApplied = '1';
+      input.value = maskCep(input.value);
+      input.addEventListener('input', function () {
+        input.value = maskCep(input.value);
+      });
+    });
+
     currencyInputs.forEach(function (input) {
       if (input.dataset.maskApplied) return;
       input.dataset.maskApplied = '1';
@@ -133,12 +149,15 @@
     });
 
     var form = container.tagName === 'FORM' ? container : container.querySelector('form');
-    if (form && (cpfInputs.length || cnpjInputs.length || currencyInputs.length)) {
+    if (form && (cpfInputs.length || cnpjInputs.length || cepInputs.length || currencyInputs.length)) {
       form.addEventListener('submit', function stripMasksOnce() {
         form.querySelectorAll('[data-mask="cpf"]').forEach(function (el) {
           el.value = (el.value || '').replace(/\D/g, '');
         });
         form.querySelectorAll('[data-mask="cnpj"]').forEach(function (el) {
+          el.value = (el.value || '').replace(/\D/g, '');
+        });
+        form.querySelectorAll('[data-mask="cep"]').forEach(function (el) {
           el.value = (el.value || '').replace(/\D/g, '');
         });
         // Para currency, só limpamos caracteres inválidos e deixamos o backend interpretar
@@ -155,6 +174,74 @@
         });
       }, { capture: true, once: true });
     }
+  }
+
+  function showLookupMessage(message, title) {
+    if (typeof window.showMessageModal === 'function') {
+      window.showMessageModal(message, title || 'Atenção');
+      return;
+    }
+    window.alert(message);
+  }
+
+  function initCepLookup(container) {
+    if (!container || !container.querySelectorAll) return;
+    container.querySelectorAll('[data-cep-consult-btn]').forEach(function (btn) {
+      if (btn.dataset.cepLookupBound) return;
+      btn.dataset.cepLookupBound = '1';
+
+      btn.addEventListener('click', function () {
+        var form = btn.closest('form');
+        if (!form) return;
+        var cepInput = form.querySelector('input[name="cep"]');
+        if (!cepInput) return;
+
+        var cep = (cepInput.value || '').replace(/\D/g, '');
+        if (cep.length !== 8) {
+          showLookupMessage('Informe um CEP válido com 8 dígitos.', 'Consulta de CEP');
+          return;
+        }
+
+        var streetInput = form.querySelector('input[name="street"]');
+        var neighborhoodInput = form.querySelector('input[name="neighborhood"]');
+        var cityInput = form.querySelector('input[name="city"]');
+        var stateInput = form.querySelector('select[name="state"], input[name="state"]');
+        var complementInput = form.querySelector('input[name="address"]');
+
+        var originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Consultando...';
+
+        fetch('/admin/address/cep-lookup?cep=' + encodeURIComponent(cep), {
+          headers: { Accept: 'application/json' }
+        })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (payload) {
+            if (!payload || payload.ok !== true || !payload.data) {
+              showLookupMessage((payload && payload.message) || 'Não foi possível consultar este CEP.', 'Consulta de CEP');
+              return;
+            }
+            var data = payload.data;
+            if (data.cep) cepInput.value = maskCep(data.cep);
+            if (streetInput && data.street) streetInput.value = data.street;
+            if (neighborhoodInput && data.neighborhood) neighborhoodInput.value = data.neighborhood;
+            if (cityInput && data.city) cityInput.value = data.city;
+            if (stateInput && data.state) stateInput.value = String(data.state).toUpperCase();
+            if (complementInput && data.complement && !complementInput.value) {
+              complementInput.value = data.complement;
+            }
+          })
+          .catch(function () {
+            showLookupMessage('Falha ao consultar CEP. Tente novamente em instantes.', 'Consulta de CEP');
+          })
+          .finally(function () {
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+          });
+      });
+    });
   }
 
   function initConfirmModal() {
@@ -258,6 +345,7 @@
         bodyEl.innerHTML = html;
         runScriptsInElement(bodyEl);
         applyMasks(bodyEl);
+        initCepLookup(bodyEl);
         injectListReturnNextOnPostForms(bodyEl);
         initSearchInputs(bodyEl);
       })
@@ -343,6 +431,7 @@
           bodyEl.innerHTML = html;
           runScriptsInElement(bodyEl);
           applyMasks(bodyEl);
+          initCepLookup(bodyEl);
           initSearchInputs(bodyEl);
         })
         .catch(function () {
@@ -1079,6 +1168,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     initToolbar();
     initTableListRowClick();
     applyMasks(document);
+    initCepLookup(document);
     initSearchInputs(document);
     showFlashModalIfNeeded();
   }
@@ -1096,6 +1186,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     initToolbar();
     initTableListRowClick(container);
     applyMasks(container);
+    initCepLookup(container);
     initSearchInputs(container);
     runScriptsInElement(container);
   });
@@ -1105,6 +1196,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
       initToolbar();
       initTableListRowClick();
       applyMasks(e.target);
+      initCepLookup(e.target);
       runScriptsInElement(e.target);
       var modalEl = document.getElementById('adminFormModal');
       if (modalEl) {

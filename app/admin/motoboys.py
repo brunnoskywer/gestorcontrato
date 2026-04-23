@@ -122,6 +122,7 @@ def register_routes(bp: Blueprint) -> None:
             full_name = request.form.get("full_name", "").strip()
             cpf = request.form.get("cpf", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
+            cep = request.form.get("cep", "").strip()
             address = request.form.get("address", "").strip()
             street = request.form.get("street", "").strip()
             neighborhood = request.form.get("neighborhood", "").strip()
@@ -146,6 +147,7 @@ def register_routes(bp: Blueprint) -> None:
                     type=SUPPLIER_MOTOBOY,
                     is_active=status not in MOTOBOY_TERMINATED_STATUSES,
                     address=address or None,
+                    cep=cep or None,
                     street=street,
                     neighborhood=neighborhood,
                     city=city,
@@ -184,6 +186,7 @@ def register_routes(bp: Blueprint) -> None:
             full_name = request.form.get("full_name", "").strip()
             cpf = request.form.get("cpf", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
+            cep = request.form.get("cep", "").strip()
             address = request.form.get("address", "").strip()
             street = request.form.get("street", "").strip()
             neighborhood = request.form.get("neighborhood", "").strip()
@@ -207,6 +210,7 @@ def register_routes(bp: Blueprint) -> None:
                 motoboy.name = full_name
                 motoboy.document = cpf
                 motoboy.address = address or None
+                motoboy.cep = cep or None
                 motoboy.street = street
                 motoboy.neighborhood = neighborhood
                 motoboy.city = city

@@ -40,6 +40,9 @@ class Config:
     ENVIRONMENT = os.getenv("FLASK_ENV", "development")
     # Anexos de contrato (PDF, imagens, etc.); em produção pode apontar para volume persistente.
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "instance" / "uploads"))
+    CEP_LOOKUP_URL = os.getenv("CEP_LOOKUP_URL", "https://buscarcep.com.br/")
+    CEP_LOOKUP_KEY = os.getenv("CEP_LOOKUP_KEY", "1yDDoV7.XlC163D3JF/1dHfFYhQZhu.")
+    CEP_LOOKUP_TIMEOUT_SECONDS = float(os.getenv("CEP_LOOKUP_TIMEOUT_SECONDS", "6"))
 
 
 class DevelopmentConfig(Config):

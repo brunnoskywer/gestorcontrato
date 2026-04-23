@@ -108,6 +108,7 @@ def register_routes(bp: Blueprint) -> None:
             legal_name = request.form.get("legal_name", "").strip()
             trade_name = request.form.get("trade_name", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
+            cep = request.form.get("cep", "").strip()
             address = request.form.get("address", "").strip()
             street = request.form.get("street", "").strip()
             neighborhood = request.form.get("neighborhood", "").strip()
@@ -131,6 +132,7 @@ def register_routes(bp: Blueprint) -> None:
                     legal_name=legal_name,
                     trade_name=trade_name or None,
                     address=address or None,
+                    cep=cep or None,
                     street=street,
                     neighborhood=neighborhood,
                     city=city,
@@ -162,6 +164,7 @@ def register_routes(bp: Blueprint) -> None:
             legal_name = request.form.get("legal_name", "").strip()
             trade_name = request.form.get("trade_name", "").strip()
             cnpj = request.form.get("cnpj", "").strip()
+            cep = request.form.get("cep", "").strip()
             address = request.form.get("address", "").strip()
             street = request.form.get("street", "").strip()
             neighborhood = request.form.get("neighborhood", "").strip()
@@ -184,6 +187,7 @@ def register_routes(bp: Blueprint) -> None:
                 client.legal_name = legal_name
                 client.trade_name = trade_name or None
                 client.address = address or None
+                client.cep = cep or None
                 client.street = street
                 client.neighborhood = neighborhood
                 client.city = city

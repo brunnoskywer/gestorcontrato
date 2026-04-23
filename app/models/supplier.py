@@ -37,6 +37,7 @@ class Supplier(db.Model):
     legal_name = db.Column(db.String(255), nullable=True)
     trade_name = db.Column(db.String(255), nullable=True)
     address = db.Column(db.String(255), nullable=True)
+    cep = db.Column(db.String(9), nullable=True)
     street = db.Column(db.String(255), nullable=True)
     neighborhood = db.Column(db.String(120), nullable=True)
     city = db.Column(db.String(120), nullable=True)

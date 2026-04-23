@@ -12,6 +12,7 @@ class Company(db.Model):
     cnpj = db.Column(db.String(20), unique=True, nullable=False)
     partner_name = db.Column(db.String(255), nullable=True)  # Sócio
     address = db.Column(db.String(255), nullable=True)
+    cep = db.Column(db.String(9), nullable=True)
     street = db.Column(db.String(255), nullable=True)
     neighborhood = db.Column(db.String(120), nullable=True)
     city = db.Column(db.String(120), nullable=True)
