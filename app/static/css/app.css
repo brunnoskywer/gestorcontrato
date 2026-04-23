@@ -509,7 +509,12 @@ main.container {
 
 /* Modal extra-largo: garante margem em viewports estreitos */
 #adminFormModal .modal-dialog.modal-xl {
-  max-width: min(1140px, calc(100vw - 2rem));
+  max-width: min(1440px, calc(100vw - 1rem));
+}
+
+#adminFormModal .input-group .btn[data-cnpj-consult-btn],
+#adminFormModal .input-group .btn[data-cep-consult-btn] {
+  white-space: nowrap;
 }
 
 /* Formulários compactos no modal admin (financeiro, processamentos) */

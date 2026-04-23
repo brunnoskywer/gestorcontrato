@@ -135,6 +135,30 @@ def _diarist_motoboys_for_select(contract: Contract, absence: Optional[ContractA
     return rows
 
 
+def _render_motoboy_contract_form(
+    contract: Optional[Contract],
+    motoboys,
+    clients,
+    action_url: str,
+):
+    is_modal_request = (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or request.headers.get("Turbo-Frame") == "main-content"
+    )
+    template = (
+        "admin/motoboy_contracts/_form_fragment.html"
+        if is_modal_request
+        else "admin/motoboy_contracts/form.html"
+    )
+    return render_template(
+        template,
+        contract=contract,
+        motoboys=motoboys,
+        clients=clients,
+        action_url=action_url,
+    )
+
+
 def _resolve_substitute_amount_from_form(
     contract: Contract, substitute_id: Optional[int]
 ) -> Tuple[Optional[float], Optional[str]]:
@@ -461,11 +485,11 @@ def register_routes(bp: Blueprint) -> None:
                             flash("Contrato de motoboy criado com sucesso.", "success")
                             return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
-        return render_template(
-            "admin/motoboy_contracts/form.html",
+        return _render_motoboy_contract_form(
             contract=None,
             motoboys=motoboys,
             clients=clients,
+            action_url=url_for("admin.motoboy_contracts_create"),
         )
 
     @bp.route("/motoboy-contracts/<int:contract_id>/edit", methods=["GET", "POST"])
@@ -519,11 +543,11 @@ def register_routes(bp: Blueprint) -> None:
                             flash("Contrato de motoboy atualizado com sucesso.", "success")
                             return redirect(resolve_next_url("admin.motoboy_contracts_list"))
 
-        return render_template(
-            "admin/motoboy_contracts/form.html",
+        return _render_motoboy_contract_form(
             contract=contract,
             motoboys=motoboys,
             clients=clients,
+            action_url=url_for("admin.motoboy_contracts_edit", contract_id=contract_id),
         )
 
     @bp.route("/motoboy-contracts/<int:contract_id>/falta/form")
