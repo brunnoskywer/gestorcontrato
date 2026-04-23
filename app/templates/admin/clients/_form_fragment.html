@@ -1,62 +1,62 @@
 {% from "admin/_macros.html" import uf_select %}
 <form method="post" action="{{ action_url }}" data-turbo-frame="main-content">
   <div class="row">
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Razão social *</label>
       <input type="text" name="legal_name" class="form-control" required value="{{ client.legal_name if client else '' }}" />
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Nome fantasia</label>
       <input type="text" name="trade_name" class="form-control" value="{{ client.trade_name if client else '' }}" />
     </div>
   </div>
   <div class="row">
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">CNPJ *</label>
       <div class="input-group">
         <input type="text" name="cnpj" class="form-control" required value="{{ client.document if client else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
         <button type="button" class="btn btn-primary" data-cnpj-consult-btn>Buscar CNPJ</button>
       </div>
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">E-mail</label>
       <input type="email" name="email" class="form-control" value="{{ client.email if client else '' }}" />
     </div>
   </div>
   <div class="row">
-    <div class="col-12 col-md-4 mb-3">
+    <div class="col-12 col-md-4 mb-2">
       <label class="form-label">CEP</label>
       <div class="input-group">
         <input type="text" name="cep" class="form-control" value="{{ client.cep if client else '' }}" data-mask="cep" maxlength="9" placeholder="00000-000" />
         <button type="button" class="btn btn-primary" data-cep-consult-btn>Consultar CEP</button>
       </div>
     </div>
-    <div class="col-12 col-md-5 mb-3">
+    <div class="col-12 col-md-5 mb-2">
       <label class="form-label">Cidade *</label>
       <input type="text" name="city" class="form-control" required value="{{ client.city if client else '' }}" />
     </div>
-    <div class="col-12 col-md-3 mb-3">
+    <div class="col-12 col-md-3 mb-2">
       <label class="form-label d-block">Estado (UF) *</label>
       {{ uf_select('state', client.state if client else '', 'client_state') }}
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Rua / logradouro *</label>
       <input type="text" name="street" class="form-control" required value="{{ client.street if client else '' }}" />
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Bairro *</label>
       <input type="text" name="neighborhood" class="form-control" required value="{{ client.neighborhood if client else '' }}" />
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Complemento (opcional)</label>
       <input type="text" name="address" class="form-control" value="{{ client.address if client else '' }}" />
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Contato</label>
       <input type="text" name="contact_name" class="form-control" value="{{ client.contact_name if client else '' }}" />
     </div>
   </div>
-  <div class="mb-3">
+  <div class="mb-2">
     <label class="form-label">Empresa emissão NF</label>
     <select name="billing_company_id" class="form-select">
       <option value="">-- Selecione a empresa --</option>
@@ -65,7 +65,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="mb-3">
+  <div class="mb-2">
     <label class="form-label">Observações</label>
     <textarea name="notes" class="form-control" rows="3" placeholder="Anotações internas sobre este cliente">{{ client.notes if client and client.notes else "" }}</textarea>
   </div>

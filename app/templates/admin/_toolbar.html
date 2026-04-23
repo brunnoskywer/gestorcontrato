@@ -1,6 +1,7 @@
 {# Barra de comandos para listagens. Botões apenas ícones, fundo branco com moldura. #}
 <div class="admin-toolbar d-flex flex-wrap align-items-center gap-2 py-2 mb-2 border-bottom"
   data-table-id="{{ table_id }}"
+  {% if modal_size %}data-modal-size="{{ modal_size }}"{% endif %}
   {% if insert_url %}data-insert-url="{{ insert_url }}" data-insert-title="{{ insert_title | default('Inserir') }}"{% endif %}
   {% if edit_url_template %}data-edit-url-template="{{ edit_url_template }}"{% endif %}
   {% if delete_bulk_url %}data-delete-bulk-url="{{ delete_bulk_url }}"{% endif %}

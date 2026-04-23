@@ -668,8 +668,9 @@
       var table = document.getElementById(tableId);
       if (!table) return;
 
+      var toolbarModalSize = toolbar.getAttribute('data-modal-size') || '';
       var financeModalSize =
-        toolbar.getAttribute('data-finance-actions') === '1' ? 'md' : '';
+        toolbar.getAttribute('data-finance-actions') === '1' ? 'md' : toolbarModalSize;
 
       function getSelectedIds() {
         var ids = [];

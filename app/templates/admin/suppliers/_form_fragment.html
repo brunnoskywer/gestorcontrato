@@ -1,6 +1,6 @@
 {% from "admin/_macros.html" import uf_select %}
 <form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
-  <div class="row g-3">
+  <div class="row g-2">
     <div class="col-12">
       <label class="form-label">Nome *</label>
       <input type="text" name="name" class="form-control form-control-md" required value="{{ supplier.name if supplier else '' }}" placeholder="Nome do fornecedor" />

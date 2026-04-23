@@ -1,59 +1,59 @@
 {% from "admin/_macros.html" import uf_select %}
 <form method="post" action="{{ action_url }}" data-turbo-frame="main-content">
   <div class="row">
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Razão social *</label>
       <input type="text" name="legal_name" class="form-control" required value="{{ company.legal_name if company else '' }}" />
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Nome fantasia</label>
       <input type="text" name="trade_name" class="form-control" value="{{ company.trade_name if company else '' }}" />
     </div>
   </div>
   <div class="row">
-    <div class="col-12 col-md-4 mb-3">
+    <div class="col-12 col-md-4 mb-2">
       <label class="form-label">CEP</label>
       <div class="input-group">
         <input type="text" name="cep" class="form-control" value="{{ company.cep if company else '' }}" data-mask="cep" maxlength="9" placeholder="00000-000" />
         <button type="button" class="btn btn-primary" data-cep-consult-btn>Consultar CEP</button>
       </div>
     </div>
-    <div class="col-12 col-md-5 mb-3">
+    <div class="col-12 col-md-5 mb-2">
       <label class="form-label">Cidade *</label>
       <input type="text" name="city" class="form-control" required value="{{ company.city if company else '' }}" />
     </div>
-    <div class="col-12 col-md-3 mb-3">
+    <div class="col-12 col-md-3 mb-2">
       <label class="form-label d-block">Estado (UF) *</label>
       {{ uf_select('state', company.state if company else '', 'company_state') }}
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Rua / logradouro *</label>
       <input type="text" name="street" class="form-control" required value="{{ company.street if company else '' }}" />
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Bairro *</label>
       <input type="text" name="neighborhood" class="form-control" required value="{{ company.neighborhood if company else '' }}" />
     </div>
-    <div class="col-12 mb-3">
+    <div class="col-12 mb-2">
       <label class="form-label">Complemento (opcional)</label>
       <input type="text" name="address" class="form-control" value="{{ company.address if company else '' }}" placeholder="Referência, número, etc." />
     </div>
   </div>
   <div class="row">
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">CNPJ *</label>
       <div class="input-group">
         <input type="text" name="cnpj" class="form-control" required value="{{ company.cnpj if company else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
         <button type="button" class="btn btn-primary" data-cnpj-consult-btn>Buscar CNPJ</button>
       </div>
     </div>
-    <div class="col-12 col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-2">
       <label class="form-label">Sócio</label>
       <input type="text" name="partner_name" class="form-control" value="{{ company.partner_name if company else '' }}" />
     </div>
   </div>
   <div class="row">
-    <div class="col-12 mb-3">
+    <div class="col-12 mb-2">
       <div class="form-check">
         <input
           class="form-check-input"
