@@ -7,7 +7,10 @@
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Documento (CPF/CNPJ)</label>
-      <input type="text" name="document" class="form-control form-control-md" value="{{ supplier.document if supplier else '' }}" placeholder="Opcional" />
+      <div class="input-group">
+        <input type="text" name="document" class="form-control form-control-md" value="{{ supplier.document if supplier else '' }}" placeholder="Opcional" />
+        <button type="button" class="btn btn-primary" data-cnpj-consult-btn>Buscar CNPJ</button>
+      </div>
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">CEP</label>

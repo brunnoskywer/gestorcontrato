@@ -13,7 +13,10 @@
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label">Documento (CPF/CNPJ)</label>
-          <input type="text" name="document" class="form-control" value="{{ supplier.document if supplier else '' }}" />
+          <div class="input-group">
+            <input type="text" name="document" class="form-control" value="{{ supplier.document if supplier else '' }}" />
+            <button type="button" class="btn btn-primary" data-cnpj-consult-btn>Buscar CNPJ</button>
+          </div>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label">CEP</label>

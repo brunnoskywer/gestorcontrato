@@ -244,6 +244,88 @@
     });
   }
 
+  function initCnpjLookup(container) {
+    if (!container || !container.querySelectorAll) return;
+    container.querySelectorAll('[data-cnpj-consult-btn]').forEach(function (btn) {
+      if (btn.dataset.cnpjLookupBound) return;
+      btn.dataset.cnpjLookupBound = '1';
+
+      btn.addEventListener('click', function () {
+        var form = btn.closest('form');
+        if (!form) return;
+
+        var cnpjInput =
+          form.querySelector('input[name="cnpj"]') ||
+          form.querySelector('input[name="document"]') ||
+          form.querySelector('input[name="document_secondary"]');
+        if (!cnpjInput) return;
+
+        var cnpj = (cnpjInput.value || '').replace(/\D/g, '');
+        if (cnpj.length !== 14) {
+          showLookupMessage('Informe um CNPJ válido com 14 dígitos.', 'Consulta de CNPJ');
+          return;
+        }
+
+        var legalNameInput = form.querySelector('input[name="legal_name"]');
+        var tradeNameInput = form.querySelector('input[name="trade_name"]');
+        var fullNameInput = form.querySelector('input[name="full_name"]');
+        var supplierNameInput = form.querySelector('input[name="name"]');
+        var emailInput = form.querySelector('input[name="email"]');
+        var contactPhoneInput = form.querySelector('input[name="contact_phone"]');
+        var cepInput = form.querySelector('input[name="cep"]');
+        var streetInput = form.querySelector('input[name="street"]');
+        var neighborhoodInput = form.querySelector('input[name="neighborhood"]');
+        var cityInput = form.querySelector('input[name="city"]');
+        var stateInput = form.querySelector('select[name="state"], input[name="state"]');
+        var complementInput = form.querySelector('input[name="address"]');
+
+        var originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Buscando...';
+
+        fetch('/admin/address/cnpj-lookup?cnpj=' + encodeURIComponent(cnpj), {
+          headers: { Accept: 'application/json' }
+        })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (payload) {
+            if (!payload || payload.ok !== true || !payload.data) {
+              showLookupMessage((payload && payload.message) || 'Não foi possível consultar este CNPJ.', 'Consulta de CNPJ');
+              return;
+            }
+            var data = payload.data;
+            if (data.cnpj) cnpjInput.value = maskCnpj(data.cnpj);
+            if (legalNameInput && data.legal_name) legalNameInput.value = data.legal_name;
+            if (tradeNameInput && data.trade_name) tradeNameInput.value = data.trade_name;
+            if (fullNameInput) {
+              var motoboyName = data.legal_name || data.trade_name;
+              if (motoboyName) fullNameInput.value = motoboyName;
+            }
+            if (supplierNameInput) {
+              var supplierName = data.trade_name || data.legal_name;
+              if (supplierName) supplierNameInput.value = supplierName;
+            }
+            if (emailInput && data.email) emailInput.value = data.email;
+            if (contactPhoneInput && data.phone) contactPhoneInput.value = data.phone;
+            if (cepInput && data.cep) cepInput.value = maskCep(data.cep);
+            if (streetInput && data.street) streetInput.value = data.street;
+            if (neighborhoodInput && data.neighborhood) neighborhoodInput.value = data.neighborhood;
+            if (cityInput && data.city) cityInput.value = data.city;
+            if (stateInput && data.state) stateInput.value = String(data.state).toUpperCase();
+            if (complementInput && data.complement) complementInput.value = data.complement;
+          })
+          .catch(function () {
+            showLookupMessage('Falha ao consultar CNPJ. Tente novamente em instantes.', 'Consulta de CNPJ');
+          })
+          .finally(function () {
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+          });
+      });
+    });
+  }
+
   function initConfirmModal() {
     var modal = document.getElementById('adminConfirmModal');
     if (!modal) return;
@@ -346,6 +428,7 @@
         runScriptsInElement(bodyEl);
         applyMasks(bodyEl);
         initCepLookup(bodyEl);
+        initCnpjLookup(bodyEl);
         injectListReturnNextOnPostForms(bodyEl);
         initSearchInputs(bodyEl);
       })
@@ -432,6 +515,7 @@
           runScriptsInElement(bodyEl);
           applyMasks(bodyEl);
           initCepLookup(bodyEl);
+          initCnpjLookup(bodyEl);
           initSearchInputs(bodyEl);
         })
         .catch(function () {
@@ -1169,6 +1253,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     initTableListRowClick();
     applyMasks(document);
     initCepLookup(document);
+    initCnpjLookup(document);
     initSearchInputs(document);
     showFlashModalIfNeeded();
   }
@@ -1187,6 +1272,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     initTableListRowClick(container);
     applyMasks(container);
     initCepLookup(container);
+    initCnpjLookup(container);
     initSearchInputs(container);
     runScriptsInElement(container);
   });
@@ -1197,6 +1283,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
       initTableListRowClick();
       applyMasks(e.target);
       initCepLookup(e.target);
+      initCnpjLookup(e.target);
       runScriptsInElement(e.target);
       var modalEl = document.getElementById('adminFormModal');
       if (modalEl) {

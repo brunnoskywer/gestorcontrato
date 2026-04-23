@@ -43,6 +43,8 @@ class Config:
     CEP_LOOKUP_URL = os.getenv("CEP_LOOKUP_URL", "https://buscarcep.com.br/")
     CEP_LOOKUP_KEY = os.getenv("CEP_LOOKUP_KEY", "1yDDoV7.XlC163D3JF/1dHfFYhQZhu.")
     CEP_LOOKUP_TIMEOUT_SECONDS = float(os.getenv("CEP_LOOKUP_TIMEOUT_SECONDS", "6"))
+    OPENCNPJ_LOOKUP_URL = os.getenv("OPENCNPJ_LOOKUP_URL", "https://api.opencnpj.org")
+    OPENCNPJ_LOOKUP_TIMEOUT_SECONDS = float(os.getenv("OPENCNPJ_LOOKUP_TIMEOUT_SECONDS", "6"))
 
 
 class DevelopmentConfig(Config):

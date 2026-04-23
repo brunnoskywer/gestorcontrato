@@ -42,7 +42,10 @@
   <div class="row">
     <div class="col-12 col-md-6 mb-3">
       <label class="form-label">CNPJ *</label>
-      <input type="text" name="cnpj" class="form-control" required value="{{ company.cnpj if company else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
+      <div class="input-group">
+        <input type="text" name="cnpj" class="form-control" required value="{{ company.cnpj if company else '' }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
+        <button type="button" class="btn btn-primary" data-cnpj-consult-btn>Buscar CNPJ</button>
+      </div>
     </div>
     <div class="col-12 col-md-6 mb-3">
       <label class="form-label">Sócio</label>
