@@ -53,15 +53,21 @@
   </div>
 
   <div class="row">
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <label class="form-label">CEP</label>
       <div class="input-group">
         <input type="text" name="cep" class="form-control" value="{{ client.cep if client else '' }}" data-mask="cep" maxlength="9" placeholder="00000-000" />
-        <button type="button" class="btn btn-outline-secondary" data-cep-consult-btn>Consultar CEP</button>
+        <button type="button" class="btn btn-primary" data-cep-consult-btn>Consultar CEP</button>
       </div>
     </div>
-  </div>
-  <div class="row">
+    <div class="col-md-5 mb-3">
+      <label class="form-label">Cidade *</label>
+      <input type="text" name="city" class="form-control" required value="{{ client.city if client else '' }}" />
+    </div>
+    <div class="col-md-3 mb-3">
+      <label class="form-label d-block">Estado (UF) *</label>
+      {{ uf_select('state', client.state if client else '', 'client_state_page') }}
+    </div>
     <div class="col-md-6 mb-3">
       <label class="form-label">Rua / logradouro *</label>
       <input type="text" name="street" class="form-control" required value="{{ client.street if client else '' }}" />
@@ -69,14 +75,6 @@
     <div class="col-md-6 mb-3">
       <label class="form-label">Bairro *</label>
       <input type="text" name="neighborhood" class="form-control" required value="{{ client.neighborhood if client else '' }}" />
-    </div>
-    <div class="col-md-6 mb-3">
-      <label class="form-label">Cidade *</label>
-      <input type="text" name="city" class="form-control" required value="{{ client.city if client else '' }}" />
-    </div>
-    <div class="col-md-3 mb-3">
-      <label class="form-label d-block">Estado (UF) *</label>
-      {{ uf_select('state', client.state if client else '', 'client_state_page') }}
     </div>
     <div class="col-md-6 mb-3">
       <label class="form-label">Complemento (opcional)</label>
