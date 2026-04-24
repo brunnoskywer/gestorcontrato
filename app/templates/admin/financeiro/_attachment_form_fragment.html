@@ -1,0 +1,60 @@
+<div class="container-fluid px-0">
+  <div class="mb-3">
+    <div class="small text-muted">Lançamento #{{ entry.id }}</div>
+    <div class="fw-semibold">{{ entry.description }}</div>
+  </div>
+
+  <div class="table-responsive mb-3">
+    <table class="table table-sm table-striped align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Arquivo</th>
+          <th class="text-center">Enviado em</th>
+          <th class="text-end" style="width: 180px;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if entry.attachment %}
+          <tr>
+            <td>{{ entry.attachment.original_filename }}</td>
+            <td class="text-center">{{ entry.attachment.created_at.strftime('%d/%m/%Y') if entry.attachment.created_at else '-' }}</td>
+            <td class="text-end">
+              <a
+                class="btn btn-outline-primary btn-sm"
+                href="{{ url_for('admin.finance_entry_attachment_download', entry_id=entry.id, attachment_id=entry.attachment.id) }}"
+                target="_blank"
+                rel="noopener"
+              >
+                Abrir
+              </a>
+              {% if can_upload %}
+                <form method="post" action="{{ url_for('admin.finance_entry_attachment_delete', entry_id=entry.id, attachment_id=entry.attachment.id) }}" data-turbo="false" class="d-inline" onsubmit="return confirm('Excluir este anexo?');">
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="3" class="text-center text-muted">Nenhum documento anexado.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if can_upload %}
+    <form method="post" action="{{ upload_url }}" enctype="multipart/form-data" data-turbo="false">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-9">
+          <label class="form-label mb-1">Documento</label>
+          <input type="file" name="file" class="form-control form-control-sm" required />
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-primary btn-sm w-100">Salvar anexo</button>
+        </div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Apenas 1 arquivo por lançamento. Um novo upload substitui o anterior.</p>
+    </form>
+  {% endif %}
+</div>

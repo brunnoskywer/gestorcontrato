@@ -20,6 +20,9 @@
 {% set _residual_pdf_base = url_for('admin.finance_entry_residual_detail_form', entry_id=999999) %}
 {% set residual_detail_pdf_url_template = _residual_pdf_base.replace('999999', '{id}') %}
 {% set residual_detail_pdf_title = 'Detalhamento residual (PDF)' %}
+{% set _attachments_base = url_for('admin.finance_entry_attachment_form', entry_id=999999) %}
+{% set attachments_url_template = _attachments_base.replace('999999', '{id}') %}
+{% set attachments_title = 'Anexo do lançamento' %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Movimentos Financeiros</h1>
@@ -131,6 +134,7 @@
       <th>Conta</th>
       <th class="text-end text-nowrap">Valor</th>
       <th class="text-center text-nowrap">Vencimento</th>
+      <th class="text-center">Doc</th>
       <th>Status</th>
     </tr>
   </thead>
@@ -156,11 +160,18 @@
       <td data-label="Conta">{{ e.account.name if e.account else "-" }}</td>
       <td data-label="Valor" class="text-end text-nowrap">R$ {{ e.amount|format_currency }}</td>
       <td data-label="Vencimento" class="text-center text-nowrap">{{ e.due_date or "-" }}</td>
+      <td data-label="Doc" class="text-center">
+        {% if e.attachment %}
+          <span class="text-success" title="Possui documento vinculado">✓</span>
+        {% else %}
+          <span class="text-muted" title="Sem documento">-</span>
+        {% endif %}
+      </td>
       <td data-label="Status">{% if e.settled_at %}Quitado ({{ e.settled_at.strftime('%d/%m/%Y') }}){% else %}Pendente{% endif %}</td>
     </tr>
     {% else %}
     <tr>
-      <td colspan="10" class="text-center text-muted">Nenhum lançamento financeiro cadastrado.</td>
+      <td colspan="11" class="text-center text-muted">Nenhum lançamento financeiro cadastrado.</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -171,7 +182,7 @@
       <td></td>
       <td colspan="5" class="text-end align-middle">Total (lista filtrada)</td>
       <td class="text-end text-nowrap align-middle">R$ {{ entries_total|format_currency }}</td>
-      <td colspan="2"></td>
+      <td colspan="3"></td>
     </tr>
   </tfoot>
   {% endif %}

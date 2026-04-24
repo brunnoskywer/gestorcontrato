@@ -879,11 +879,11 @@
         if (!attachmentsTpl) return;
         var ids = getSelectedIds();
         if (ids.length === 0) {
-          showMessageModal('Selecione um contrato para ver ou enviar anexos.', 'Atenção');
+          showMessageModal('Selecione um registro para ver ou enviar anexo.', 'Atenção');
           return;
         }
         if (ids.length > 1) {
-          showMessageModal('Selecione apenas um contrato para anexos.', 'Atenção');
+          showMessageModal('Selecione apenas um registro para anexar arquivo.', 'Atenção');
           return;
         }
         openFormModal(attachmentsTpl.replace('{id}', ids[0]), attachmentsTitle, 'lg');

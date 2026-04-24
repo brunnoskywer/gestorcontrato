@@ -46,3 +46,9 @@ class FinancialEntry(db.Model):
     )
     supplier = db.relationship("Supplier", foreign_keys=[supplier_id])
     batch = db.relationship("FinancialBatch", back_populates="entries", foreign_keys=[financial_batch_id])
+    attachment = db.relationship(
+        "FinancialEntryAttachment",
+        back_populates="entry",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

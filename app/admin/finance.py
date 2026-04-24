@@ -44,6 +44,10 @@ from app.services.motoboy_contract_finance import (
     motoboy_contract_in_processing_scope,
     motoboy_supplier_accepts_manual_financial_entries,
 )
+from app.services.contract_attachment_storage import (
+    store_financial_entry_upload,
+    delete_attachment_files_for_financial_entry_ids,
+)
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -235,6 +239,7 @@ def register_routes(bp: Blueprint) -> None:
                 joinedload(FinancialEntry.financial_nature),
                 joinedload(FinancialEntry.supplier),
                 joinedload(FinancialEntry.batch),
+                joinedload(FinancialEntry.attachment),
             ).outerjoin(Supplier)
         )
         if date_from_filter:
@@ -287,6 +292,87 @@ def register_routes(bp: Blueprint) -> None:
                 "status": status,
             },
         )
+
+    @bp.get("/financeiro/lancamento/<int:entry_id>/anexo/form")
+    @login_required
+    def finance_entry_attachment_form(entry_id: int):
+        require_admin()
+        entry = FinancialEntry.query.options(joinedload(FinancialEntry.attachment)).get_or_404(entry_id)
+        return render_template(
+            "admin/financeiro/_attachment_form_fragment.html",
+            entry=entry,
+            upload_url=url_for("admin.finance_entry_attachment_upload", entry_id=entry.id),
+            can_upload=getattr(current_user, "is_admin", False),
+        )
+
+    @bp.post("/financeiro/lancamento/<int:entry_id>/anexo/upload")
+    @login_required
+    def finance_entry_attachment_upload(entry_id: int):
+        require_admin()
+        entry = FinancialEntry.query.get_or_404(entry_id)
+        if not getattr(current_user, "is_admin", False):
+            flash("Apenas administradores podem enviar anexos.", "danger")
+            return _manual_entry_redirect()
+        file = request.files.get("file")
+        try:
+            store_financial_entry_upload(entry, file)
+            db.session.commit()
+            flash("Anexo financeiro salvo com sucesso.", "success")
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "warning")
+        except Exception:
+            db.session.rollback()
+            flash("Falha ao salvar anexo financeiro.", "danger")
+        return _manual_entry_redirect()
+
+    @bp.get("/financeiro/lancamento/<int:entry_id>/anexo/<int:attachment_id>/abrir")
+    @login_required
+    def finance_entry_attachment_download(entry_id: int, attachment_id: int):
+        require_admin()
+        from pathlib import Path
+
+        from flask import abort, send_file
+
+        from app.services.contract_attachment_storage import get_upload_root
+        from app.models import FinancialEntryAttachment
+
+        attachment = FinancialEntryAttachment.query.filter_by(
+            id=attachment_id,
+            financial_entry_id=entry_id,
+        ).first_or_404()
+        root = get_upload_root().resolve()
+        path = (root / attachment.storage_relpath).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError:
+            abort(404)
+        if not path.exists():
+            abort(404)
+        return send_file(
+            Path(path),
+            mimetype=attachment.content_type or "application/octet-stream",
+            as_attachment=False,
+            download_name=attachment.original_filename,
+        )
+
+    @bp.post("/financeiro/lancamento/<int:entry_id>/anexo/<int:attachment_id>/delete")
+    @login_required
+    def finance_entry_attachment_delete(entry_id: int, attachment_id: int):
+        require_admin()
+        from app.models import FinancialEntryAttachment
+
+        if not getattr(current_user, "is_admin", False):
+            flash("Apenas administradores podem excluir anexos.", "danger")
+            return _manual_entry_redirect()
+        attachment = FinancialEntryAttachment.query.filter_by(
+            id=attachment_id,
+            financial_entry_id=entry_id,
+        ).first_or_404()
+        db.session.delete(attachment)
+        db.session.commit()
+        flash("Anexo financeiro excluído.", "info")
+        return _manual_entry_redirect()
 
     @bp.get("/financeiro/lancamento/<int:entry_id>/residual-detalhe.pdf")
     @login_required
@@ -1561,6 +1647,7 @@ def register_routes(bp: Blueprint) -> None:
             pending_ids = [x for x in ids if x not in settled_ids]
             count = 0
             if pending_ids:
+                delete_attachment_files_for_financial_entry_ids(pending_ids)
                 count = FinancialEntry.query.filter(FinancialEntry.id.in_(pending_ids)).delete(
                     synchronize_session=False
                 )

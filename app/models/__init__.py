@@ -3,6 +3,7 @@ from .company import Company
 from .account import Account
 from .financial_nature import FinancialNature
 from .financial_entry import FinancialEntry, ENTRY_PAYABLE, ENTRY_RECEIVABLE
+from .financial_entry_attachment import FinancialEntryAttachment
 from .financial_batch import (
     FinancialBatch,
     BATCH_TYPE_REVENUE,
@@ -45,6 +46,7 @@ __all__ = [
     "FinancialEntry",
     "ENTRY_PAYABLE",
     "ENTRY_RECEIVABLE",
+    "FinancialEntryAttachment",
     "FinancialBatch",
     "BATCH_TYPE_REVENUE",
     "BATCH_TYPE_PAYMENT",
