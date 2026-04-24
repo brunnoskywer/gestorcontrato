@@ -326,6 +326,47 @@
     });
   }
 
+  function initWhatsappDataRequest(container) {
+    if (!container || !container.querySelectorAll) return;
+    container.querySelectorAll('[data-whatsapp-request-btn]').forEach(function (btn) {
+      if (btn.dataset.whatsappRequestBound) return;
+      btn.dataset.whatsappRequestBound = '1';
+
+      btn.addEventListener('click', function () {
+        var form = btn.closest('form');
+        if (!form) return;
+        var phoneInput = form.querySelector('input[name="contact_phone"]');
+        var phone = (phoneInput && phoneInput.value ? phoneInput.value : '').replace(/\D/g, '');
+        if (!phone) {
+          showLookupMessage('Informe o telefone de contato para abrir o WhatsApp.', 'Solicitação de dados');
+          return;
+        }
+
+        var messageLines = [
+          'Olá! Para concluir seu cadastro de motoboy, envie por favor:',
+          '',
+          '*Nome Completo*',
+          '*CPF*',
+          '*CNPJ*',
+          '*CEP*',
+          '*LOGRADOURO/NUMERO*',
+          '*PIX*',
+          '*BAIRRO*',
+          '*EMAIL*',
+          '*PLACA*',
+          '',
+          'Obrigado!'
+        ];
+        var text = messageLines.join('\n');
+        var url = 'https://web.whatsapp.com/send/?phone=' +
+          encodeURIComponent(phone) +
+          '&text=' +
+          encodeURIComponent(text);
+        window.open(url, '_blank', 'noopener');
+      });
+    });
+  }
+
   function initConfirmModal() {
     var modal = document.getElementById('adminConfirmModal');
     if (!modal) return;
@@ -429,6 +470,7 @@
         applyMasks(bodyEl);
         initCepLookup(bodyEl);
         initCnpjLookup(bodyEl);
+        initWhatsappDataRequest(bodyEl);
         injectListReturnNextOnPostForms(bodyEl);
         initSearchInputs(bodyEl);
       })
@@ -516,6 +558,7 @@
           applyMasks(bodyEl);
           initCepLookup(bodyEl);
           initCnpjLookup(bodyEl);
+          initWhatsappDataRequest(bodyEl);
           initSearchInputs(bodyEl);
         })
         .catch(function () {
@@ -1255,6 +1298,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     applyMasks(document);
     initCepLookup(document);
     initCnpjLookup(document);
+    initWhatsappDataRequest(document);
     initSearchInputs(document);
     showFlashModalIfNeeded();
   }
@@ -1274,6 +1318,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     applyMasks(container);
     initCepLookup(container);
     initCnpjLookup(container);
+    initWhatsappDataRequest(container);
     initSearchInputs(container);
     runScriptsInElement(container);
   });
@@ -1285,6 +1330,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
       applyMasks(e.target);
       initCepLookup(e.target);
       initCnpjLookup(e.target);
+      initWhatsappDataRequest(e.target);
       runScriptsInElement(e.target);
       var modalEl = document.getElementById('adminFormModal');
       if (modalEl) {

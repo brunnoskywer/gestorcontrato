@@ -81,9 +81,12 @@
         <option value="terminated" {% if raw_st in ['terminated', 'inactive'] %}selected{% endif %}>Encerrado</option>
       </select>
     </div>
-    <div class="col-md-8 mb-3">
+    <div class="col-md-4 mb-3">
       <label class="form-label">Telefone de contato</label>
       <input type="text" name="contact_phone" class="form-control" value="{{ motoboy.contact_phone if motoboy else '' }}" />
+    </div>
+    <div class="col-md-4 mb-3 d-flex align-items-end">
+      <button type="button" class="btn btn-success w-100" data-whatsapp-request-btn>Solicitar dados WhatsApp</button>
     </div>
     <div class="col-12 mb-3">
       <div class="form-check">

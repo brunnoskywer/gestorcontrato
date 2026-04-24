@@ -73,6 +73,9 @@
       <input type="text" name="contact_phone" class="form-control" value="{{ motoboy.contact_phone or '' if motoboy else '' }}" />
     </div>
     <div class="col-12 col-md-3 mb-2 d-flex align-items-end">
+      <button type="button" class="btn btn-success w-100" data-whatsapp-request-btn>Solicitar dados WhatsApp</button>
+    </div>
+    <div class="col-12 col-md-3 mb-2 d-flex align-items-end">
       <div class="form-check mb-2">
         <input class="form-check-input" type="checkbox" name="is_diarist" value="1" id="motoboy_is_diarist" {% if motoboy and motoboy.is_diarist %}checked{% endif %} />
         <label class="form-check-label" for="motoboy_is_diarist">Diarista</label>
