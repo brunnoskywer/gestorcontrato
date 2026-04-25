@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Arquivo de anexo indisponível{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 640px;">
+  <h1 class="h4 mb-3">Arquivo não encontrado no servidor</h1>
+  <p class="text-muted">
+    Existe registro deste anexo no sistema, porém o arquivo não está no caminho de armazenamento configurado.
+    Isso costuma ocorrer após <strong>reimplantação do servidor</strong> sem <strong>volume persistente</strong> para a pasta de uploads,
+    ou quando a variável <code>UPLOAD_FOLDER</code> foi alterada.
+  </p>
+  {% if original_filename %}
+  <p class="mb-2"><strong>Arquivo esperado:</strong> {{ original_filename }}</p>
+  {% endif %}
+  {% if storage_relpath %}
+  <p class="mb-2 small text-break"><strong>Caminho relativo no cadastro:</strong> {{ storage_relpath }}</p>
+  {% endif %}
+  {% if upload_root %}
+  <p class="mb-3 small text-break"><strong>Pasta de uploads atual (UPLOAD_FOLDER):</strong> {{ upload_root }}</p>
+  {% endif %}
+  <div class="alert alert-warning small mb-3">
+    Em produção, configure um volume persistente montado no mesmo caminho usado em <code>UPLOAD_FOLDER</code> para não perder anexos entre deploys.
+  </div>
+  <p class="mb-0">
+    <a href="{{ back_url }}" class="btn btn-primary">Voltar</a>
+  </p>
+</div>
+{% endblock %}

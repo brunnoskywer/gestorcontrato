@@ -26,7 +26,11 @@
           <td class="text-end">
             {% if row.attachment %}
             <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+              {% if row.file_missing %}
+              <span class="badge text-bg-warning align-self-center" title="Registro existe, mas o arquivo não está na pasta de uploads (verifique volume persistente / UPLOAD_FOLDER).">Arquivo ausente</span>
+              {% else %}
               <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.motoboy_contract_attachment_download', contract_id=contract.id, attachment_id=row.attachment.id) }}" target="_blank" rel="noopener">Abrir</a>
+              {% endif %}
               {% if can_upload %}
               <form method="post" action="{{ url_for('admin.motoboy_contract_attachment_delete', contract_id=contract.id, attachment_id=row.attachment.id) }}" data-turbo="false" class="d-inline" onsubmit="return confirm('Excluir este anexo?');">
                 <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>

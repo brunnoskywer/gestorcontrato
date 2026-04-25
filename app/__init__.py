@@ -27,6 +27,7 @@ def create_app(config_class: type[Config] | None = None) -> Flask:
     app.register_blueprint(api_v1_bp, url_prefix="/api/v1")
 
     from .filters import (
+        attachment_file_on_disk,
         format_currency,
         finance_entry_stripe_class,
         finance_supplier_display,
@@ -41,6 +42,7 @@ def create_app(config_class: type[Config] | None = None) -> Flask:
     app.jinja_env.filters["motoboy_status_stripe_class"] = motoboy_status_stripe_class
     app.jinja_env.filters["motoboy_status_label_pt"] = motoboy_status_label_pt
     app.jinja_env.filters["finance_entry_stripe_class"] = finance_entry_stripe_class
+    app.jinja_env.filters["attachment_file_on_disk"] = attachment_file_on_disk
     app.jinja_env.filters["finance_supplier_display"] = finance_supplier_display
     app.jinja_env.filters["client_display_label"] = client_display_label
 

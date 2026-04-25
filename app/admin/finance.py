@@ -4,7 +4,7 @@ import json
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for, make_response
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for, make_response
 from flask_login import current_user, login_required
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -45,8 +45,11 @@ from app.services.motoboy_contract_finance import (
     motoboy_supplier_accepts_manual_financial_entries,
 )
 from app.services.contract_attachment_storage import (
-    store_financial_entry_upload,
     delete_attachment_files_for_financial_entry_ids,
+    describe_storage_miss,
+    resolve_stored_file_for_download,
+    store_financial_entry_upload,
+    stored_file_is_present,
 )
 
 try:
@@ -298,11 +301,16 @@ def register_routes(bp: Blueprint) -> None:
     def finance_entry_attachment_form(entry_id: int):
         require_admin()
         entry = FinancialEntry.query.options(joinedload(FinancialEntry.attachment)).get_or_404(entry_id)
+        attachment_file_missing = bool(
+            entry.attachment
+            and not stored_file_is_present(entry.attachment.storage_relpath)
+        )
         return render_template(
             "admin/financeiro/_attachment_form_fragment.html",
             entry=entry,
             upload_url=url_for("admin.finance_entry_attachment_upload", entry_id=entry.id),
             can_upload=getattr(current_user, "is_admin", False),
+            attachment_file_missing=attachment_file_missing,
         )
 
     @bp.post("/financeiro/lancamento/<int:entry_id>/anexo/upload")
@@ -330,27 +338,35 @@ def register_routes(bp: Blueprint) -> None:
     @login_required
     def finance_entry_attachment_download(entry_id: int, attachment_id: int):
         require_admin()
-        from pathlib import Path
+        from flask import send_file
 
-        from flask import abort, send_file
-
-        from app.services.contract_attachment_storage import get_upload_root
         from app.models import FinancialEntryAttachment
 
         attachment = FinancialEntryAttachment.query.filter_by(
             id=attachment_id,
             financial_entry_id=entry_id,
         ).first_or_404()
-        root = get_upload_root().resolve()
-        path = (root / attachment.storage_relpath).resolve()
-        try:
-            path.relative_to(root)
-        except ValueError:
-            abort(404)
-        if not path.exists():
-            abort(404)
+        path = resolve_stored_file_for_download(attachment.storage_relpath)
+        if path is None:
+            info = describe_storage_miss(attachment.storage_relpath)
+            current_app.logger.warning(
+                "Anexo financeiro sem arquivo no disco: entry_id=%s attachment_id=%s relpath=%s reason=%s root=%s expected=%s",
+                entry_id,
+                attachment_id,
+                attachment.storage_relpath,
+                info.get("reason"),
+                info.get("upload_root"),
+                info.get("expected_path"),
+            )
+            return render_template(
+                "admin/attachment_missing.html",
+                original_filename=attachment.original_filename,
+                storage_relpath=attachment.storage_relpath,
+                upload_root=info.get("upload_root"),
+                back_url=url_for("admin.finance_manual_entry"),
+            ), 404
         return send_file(
-            Path(path),
+            path,
             mimetype=attachment.content_type or "application/octet-stream",
             as_attachment=False,
             download_name=attachment.original_filename,

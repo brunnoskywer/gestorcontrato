@@ -1,5 +1,6 @@
 """Jinja2 filters for the application."""
 
+from app.services.contract_attachment_storage import stored_file_is_present
 from app.models.supplier import (
     MOTOBOY_STATUS_ACTIVE,
     MOTOBOY_STATUS_PENDING,
@@ -64,3 +65,10 @@ def finance_entry_stripe_class(entry) -> str:
     if getattr(entry, "settled_at", None):
         return "status-stripe-quitado"
     return "status-stripe-pendente"
+
+
+def attachment_file_on_disk(attachment) -> bool:
+    """True se o modelo de anexo existe e o arquivo está presente em UPLOAD_FOLDER."""
+    if attachment is None:
+        return False
+    return stored_file_is_present(getattr(attachment, "storage_relpath", None))

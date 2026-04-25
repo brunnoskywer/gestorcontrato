@@ -3,9 +3,7 @@ import calendar
 from datetime import date
 from typing import Optional, Tuple
 
-from pathlib import Path
-
-from flask import Blueprint, Response, abort, current_app, flash, make_response, redirect, render_template, request, send_file, url_for
+from flask import Blueprint, Response, current_app, flash, make_response, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
 from flask_login import current_user, login_required
 
@@ -38,7 +36,10 @@ from app.models import (
 from app.models.financial_entry import ENTRY_PAYABLE
 from app.services.contract_attachment_storage import (
     delete_attachment_files_for_contract_ids,
+    describe_storage_miss,
+    resolve_stored_file_for_download,
     store_motoboy_contract_upload,
+    stored_file_is_present,
 )
 from app.services.motoboy_contract_finance import motoboy_contract_in_processing_scope
 from app.services.motoboy_distrato import compute_motoboy_distrato_net
@@ -98,6 +99,7 @@ def _motoboy_attachment_modal_rows(contract: Contract):
                 "original_filename": att.original_filename if att else "—",
                 "size_display": _format_attachment_bytes(att.file_size if att else None),
                 "created_at": att.created_at if att else None,
+                "file_missing": bool(att and not stored_file_is_present(att.storage_relpath)),
             }
         )
     return rows
@@ -353,14 +355,25 @@ def register_routes(bp: Blueprint) -> None:
         att = ContractAttachment.query.filter_by(
             id=attachment_id, contract_id=contract_id
         ).first_or_404()
-        root = Path(current_app.config["UPLOAD_FOLDER"]).resolve()
-        path = (root / att.storage_relpath).resolve()
-        if not path.is_file():
-            abort(404)
-        try:
-            path.relative_to(root)
-        except ValueError:
-            abort(404)
+        path = resolve_stored_file_for_download(att.storage_relpath)
+        if path is None:
+            info = describe_storage_miss(att.storage_relpath)
+            current_app.logger.warning(
+                "Anexo de contrato sem arquivo no disco: contract_id=%s attachment_id=%s relpath=%s reason=%s root=%s expected=%s",
+                contract_id,
+                attachment_id,
+                att.storage_relpath,
+                info.get("reason"),
+                info.get("upload_root"),
+                info.get("expected_path"),
+            )
+            return render_template(
+                "admin/attachment_missing.html",
+                original_filename=att.original_filename,
+                storage_relpath=att.storage_relpath,
+                upload_root=info.get("upload_root"),
+                back_url=url_for("admin.motoboy_contracts_list"),
+            ), 404
         dl_name = secure_filename(att.original_filename) or "anexo"
         return send_file(
             path,

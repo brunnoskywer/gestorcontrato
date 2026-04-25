@@ -38,7 +38,9 @@ class Config:
     # Outros parâmetros de sistema
     APP_NAME = os.getenv("APP_NAME", "Contract Manager")
     ENVIRONMENT = os.getenv("FLASK_ENV", "development")
-    # Anexos de contrato (PDF, imagens, etc.); em produção pode apontar para volume persistente.
+    # Anexos (contratos, financeiro, etc.). Deve apontar para um diretório persistente em produção
+    # (volume Docker/Coolify montado no mesmo path em todos os containers/restarts). Caso contrário,
+    # os registros no banco permanecem mas os arquivos somem após redeploy.
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "instance" / "uploads"))
     CEP_LOOKUP_URL = os.getenv("CEP_LOOKUP_URL", "https://buscarcep.com.br/")
     CEP_LOOKUP_KEY = os.getenv("CEP_LOOKUP_KEY", "1yDDoV7.XlC163D3JF/1dHfFYhQZhu.")

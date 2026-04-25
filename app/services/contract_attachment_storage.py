@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from flask import current_app, has_app_context
@@ -34,20 +34,100 @@ def get_upload_root() -> Path:
     return Path(os.environ.get("UPLOAD_FOLDER", str(BASE_DIR / "instance" / "uploads")))
 
 
+def normalize_storage_relpath(storage_relpath: str | None) -> str:
+    if not storage_relpath:
+        return ""
+    return str(storage_relpath).strip().replace("\\", "/")
+
+
 def _safe_relpath(relpath: str) -> bool:
-    if not relpath or not relpath.strip():
+    norm = normalize_storage_relpath(relpath)
+    if not norm:
         return False
-    norm = relpath.replace("\\", "/")
     if norm.startswith("/") or ".." in norm.split("/"):
         return False
     return True
+
+
+def resolve_stored_file_for_download(storage_relpath: str | None) -> Path | None:
+    """Caminho absoluto do arquivo se existir, estiver sob UPLOAD_FOLDER e for arquivo regular."""
+    norm = normalize_storage_relpath(storage_relpath)
+    if not _safe_relpath(norm):
+        return None
+    root = get_upload_root().resolve()
+    path = (root / norm).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return None
+    if not path.is_file():
+        return None
+    return path
+
+
+def stored_file_is_present(storage_relpath: str | None) -> bool:
+    return resolve_stored_file_for_download(storage_relpath) is not None
+
+
+def describe_storage_miss(storage_relpath: str | None) -> dict[str, Any]:
+    """Informações para log ou tela quando o arquivo não está no disco."""
+    norm = normalize_storage_relpath(storage_relpath)
+    root = get_upload_root().resolve()
+    out: dict[str, Any] = {
+        "upload_root": str(root),
+        "storage_relpath": norm or None,
+        "expected_path": None,
+        "reason": "empty_relpath",
+    }
+    if not norm:
+        return out
+    if not _safe_relpath(norm):
+        out["reason"] = "unsafe_or_invalid_relpath"
+        return out
+    path = (root / norm).resolve()
+    out["expected_path"] = str(path)
+    try:
+        path.relative_to(root)
+    except ValueError:
+        out["reason"] = "path_outside_upload_root"
+        return out
+    if path.is_dir():
+        out["reason"] = "path_is_directory"
+        return out
+    if not path.exists():
+        out["reason"] = "file_not_found"
+        return out
+    out["reason"] = "not_a_regular_file"
+    return out
+
+
+def _save_upload_atomic(file_storage: FileStorage, abs_path: Path) -> int:
+    """Grava upload em arquivo temporário e faz replace atômico (reduz risco de arquivo parcial)."""
+    abs_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = abs_path.with_name(f"{abs_path.name}.upload-{uuid4().hex}.part")
+    try:
+        file_storage.save(tmp)
+        size = tmp.stat().st_size
+        if size == 0:
+            raise ValueError("Arquivo vazio.")
+        if size > MAX_ATTACHMENT_BYTES:
+            raise ValueError("Arquivo muito grande (máximo 15 MB).")
+        os.replace(tmp, abs_path)
+        return size
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
 
 
 def delete_stored_file(storage_relpath: str) -> None:
     if not _safe_relpath(storage_relpath):
         return
     root = get_upload_root().resolve()
-    path = (root / storage_relpath).resolve()
+    norm = normalize_storage_relpath(storage_relpath)
+    path = (root / norm).resolve()
     try:
         path.relative_to(root)
     except ValueError:
@@ -106,16 +186,11 @@ def store_motoboy_contract_upload(
     stored_name = f"{uuid4().hex}{ext}"
     relpath = f"contracts/{contract.id}/{stored_name}"
     abs_path = target_dir / stored_name
-    # Medir tamanho após gravar: content_length multipart costuma vir 0 no Werkzeug;
-    # seek no stream também falha em alguns wrappers.
-    file_storage.save(abs_path)
-    size = abs_path.stat().st_size
-    if size == 0:
+    try:
+        size = _save_upload_atomic(file_storage, abs_path)
+    except ValueError:
         abs_path.unlink(missing_ok=True)
-        raise ValueError("Arquivo vazio.")
-    if size > MAX_ATTACHMENT_BYTES:
-        abs_path.unlink(missing_ok=True)
-        raise ValueError("Arquivo muito grande (máximo 15 MB).")
+        raise
 
     content_type = file_storage.content_type or None
 
@@ -164,15 +239,11 @@ def store_financial_entry_upload(
     stored_name = f"{uuid4().hex}{ext}"
     relpath = f"financial_entries/{entry.id}/{stored_name}"
     abs_path = target_dir / stored_name
-
-    file_storage.save(abs_path)
-    size = abs_path.stat().st_size
-    if size == 0:
+    try:
+        size = _save_upload_atomic(file_storage, abs_path)
+    except ValueError:
         abs_path.unlink(missing_ok=True)
-        raise ValueError("Arquivo vazio.")
-    if size > MAX_ATTACHMENT_BYTES:
-        abs_path.unlink(missing_ok=True)
-        raise ValueError("Arquivo muito grande (máximo 15 MB).")
+        raise
 
     content_type = file_storage.content_type or None
     existing = FinancialEntryAttachment.query.filter_by(financial_entry_id=entry.id).first()

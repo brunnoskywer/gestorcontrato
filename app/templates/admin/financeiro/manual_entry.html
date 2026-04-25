@@ -162,7 +162,11 @@
       <td data-label="Vencimento" class="text-center text-nowrap">{{ e.due_date or "-" }}</td>
       <td data-label="Doc" class="text-center">
         {% if e.attachment %}
+          {% if e.attachment|attachment_file_on_disk %}
           <span class="text-success" title="Possui documento vinculado">✓</span>
+          {% else %}
+          <span class="text-warning" title="Registro de anexo sem arquivo no servidor (reenvie ou verifique UPLOAD_FOLDER)">!</span>
+          {% endif %}
         {% else %}
           <span class="text-muted" title="Sem documento">-</span>
         {% endif %}

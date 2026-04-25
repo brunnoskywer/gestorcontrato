@@ -4,6 +4,13 @@
     <div class="fw-semibold">{{ entry.description }}</div>
   </div>
 
+  {% if attachment_file_missing %}
+  <div class="alert alert-warning small py-2 mb-3">
+    O registro do anexo existe, mas o arquivo não foi encontrado na pasta de uploads.
+    Envie o documento novamente ou configure <code>UPLOAD_FOLDER</code> com volume persistente entre deploys.
+  </div>
+  {% endif %}
+
   <div class="table-responsive mb-3">
     <table class="table table-sm table-striped align-middle mb-0">
       <thead>
@@ -19,6 +26,9 @@
             <td>{{ entry.attachment.original_filename }}</td>
             <td class="text-center">{{ entry.attachment.created_at.strftime('%d/%m/%Y') if entry.attachment.created_at else '-' }}</td>
             <td class="text-end">
+              {% if attachment_file_missing %}
+              <span class="badge text-bg-warning">Arquivo ausente</span>
+              {% else %}
               <a
                 class="btn btn-outline-primary btn-sm"
                 href="{{ url_for('admin.finance_entry_attachment_download', entry_id=entry.id, attachment_id=entry.attachment.id) }}"
@@ -27,6 +37,7 @@
               >
                 Abrir
               </a>
+              {% endif %}
               {% if can_upload %}
                 <form method="post" action="{{ url_for('admin.finance_entry_attachment_delete', entry_id=entry.id, attachment_id=entry.attachment.id) }}" data-turbo="false" class="d-inline" onsubmit="return confirm('Excluir este anexo?');">
                   <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
