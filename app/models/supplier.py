@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy.orm import validates
+
 from app.extensions import db
 
 
@@ -60,6 +62,18 @@ class Supplier(db.Model):
     is_diarist = db.Column(db.Boolean, nullable=False, default=False)
 
     billing_company = db.relationship("Company", back_populates="billing_suppliers", foreign_keys=[billing_company_id])
+
+    @validates("name", "legal_name", "trade_name", "contact_name", "reference_contact")
+    def _normalize_supplier_name_fields(self, key: str, value):
+        """Cliente, fornecedor e motoboy: nomes sempre em caixa alta."""
+        if key == "name":
+            if value is None:
+                return ""
+            return str(value).strip().upper()
+        if value is None:
+            return None
+        s = str(value).strip().upper()
+        return s if s else None
 
 
 def client_display_label(supplier: "Supplier | None") -> str:

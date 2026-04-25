@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy.orm import validates
+
 from app.extensions import db
 
 
@@ -36,4 +38,16 @@ class Company(db.Model):
         lazy="dynamic",
         cascade="all, delete-orphan",
     )
+
+    @validates("legal_name", "trade_name", "partner_name")
+    def _normalize_company_name_fields(self, key: str, value):
+        """Razão social, fantasia e sócio sempre em caixa alta."""
+        if key == "legal_name":
+            if value is None:
+                return ""
+            return str(value).strip().upper()
+        if value is None:
+            return None
+        s = str(value).strip().upper()
+        return s if s else None
 
