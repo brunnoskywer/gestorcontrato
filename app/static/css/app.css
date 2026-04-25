@@ -424,9 +424,9 @@ main.container {
 
 .admin-pagination-bar {
   padding: 0.5rem 0.75rem;
-  background-color: #eaf4ff;
-  border: 1px solid rgba(var(--bs-primary-rgb), 0.22);
-  border-top: 1px solid rgba(var(--bs-primary-rgb), 0.35);
+  background-color: #d9ebff;
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.28);
+  border-top: 1px solid rgba(var(--bs-primary-rgb), 0.45);
   border-radius: 0 0 var(--bs-border-radius) var(--bs-border-radius);
   box-shadow: var(--bs-box-shadow-sm);
   margin-bottom: 1rem;
