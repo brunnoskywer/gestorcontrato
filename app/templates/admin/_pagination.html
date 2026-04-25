@@ -1,10 +1,11 @@
 {# Paginação Bootstrap para listagens admin. link_class_extra: ex. "admin-modal-pagination" ou "dre-detail-pagination" #}
 {% macro render_admin_pagination(pagination, endpoint, link_class_extra='') %}
 {% if pagination and pagination.total %}
-<nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2 mb-2" aria-label="Paginação">
-  <span class="text-muted small">{{ pagination.total }} registro(s){% if pagination.pages > 1 %} — página {{ pagination.page }}/{{ pagination.pages }}{% endif %}</span>
+<div class="admin-pagination-bar">
+  <nav class="admin-pagination-bar__nav d-flex flex-wrap justify-content-between align-items-center gap-2" aria-label="Paginação">
+  <span class="admin-pagination-bar__meta text-body-secondary small">{{ pagination.total }} registro(s){% if pagination.pages > 1 %} — página {{ pagination.page }}/{{ pagination.pages }}{% endif %}</span>
   {% if pagination.pages > 1 %}
-  <ul class="pagination pagination-sm mb-0">
+  <ul class="pagination pagination-sm mb-0 flex-shrink-0">
     <li class="page-item{% if not pagination.has_prev %} disabled{% endif %}">
       {% if pagination.has_prev %}
       <a class="page-link {{ link_class_extra }}" href="{{ paginated_url(endpoint, pagination.prev_num) }}">Anterior</a>
@@ -30,6 +31,7 @@
     </li>
   </ul>
   {% endif %}
-</nav>
+  </nav>
+</div>
 {% endif %}
 {% endmacro %}

@@ -407,6 +407,37 @@ main.container {
   min-width: 600px;
 }
 
+/* Bloco tabela + paginação: sem “vão” entre os dois; borda e sombra contínuas */
+.table-responsive:has(+ .admin-pagination-bar) {
+  margin-bottom: 0;
+  border: 1px solid var(--bs-border-color);
+  border-bottom: none;
+  border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+  background-color: var(--bs-body-bg);
+}
+.table-responsive:has(+ .admin-pagination-bar) .table.table-list.shadow-sm {
+  box-shadow: none !important;
+}
+.table-responsive:has(+ .admin-pagination-bar) .table {
+  margin-bottom: 0;
+}
+
+.admin-pagination-bar {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-top: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+  border-radius: 0 0 var(--bs-border-radius) var(--bs-border-radius);
+  box-shadow: var(--bs-box-shadow-sm);
+  margin-bottom: 1rem;
+}
+.admin-pagination-bar__nav {
+  min-height: 2rem;
+}
+.modal-body .admin-pagination-bar {
+  margin-bottom: 0.75rem;
+}
+
 /* Toolbar: larger touch targets on mobile */
 @media (max-width: 575.98px) {
   .admin-toolbar {
