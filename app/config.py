@@ -6,6 +6,12 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Pasta de uploads em desenvolvimento (projeto).
+_UPLOAD_FOLDER_DEV = str(BASE_DIR / "instance" / "uploads")
+# Em Linux/produção: caminho estável para montar volume persistente (Docker/Coolify).
+# Sem volume neste path, os arquivos ainda somem a cada novo container — configure o bind/volume no painel.
+_UPLOAD_FOLDER_PROD = "/data/gestorcontrato/uploads"
+
 # Carrega variáveis de ambiente de um arquivo .env se existir
 load_dotenv(BASE_DIR / ".env")
 
@@ -38,10 +44,9 @@ class Config:
     # Outros parâmetros de sistema
     APP_NAME = os.getenv("APP_NAME", "Contract Manager")
     ENVIRONMENT = os.getenv("FLASK_ENV", "development")
-    # Anexos (contratos, financeiro, etc.). Deve apontar para um diretório persistente em produção
-    # (volume Docker/Coolify montado no mesmo path em todos os containers/restarts). Caso contrário,
-    # os registros no banco permanecem mas os arquivos somem após redeploy.
-    UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "instance" / "uploads"))
+    # Anexos (contratos, financeiro, etc.). Em desenvolvimento: pasta dentro do projeto.
+    # Em produção use ProductionConfig (FLASK_ENV=production) ou defina UPLOAD_FOLDER explicitamente.
+    UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", _UPLOAD_FOLDER_DEV)
     CEP_LOOKUP_URL = os.getenv("CEP_LOOKUP_URL", "https://buscarcep.com.br/")
     CEP_LOOKUP_KEY = os.getenv("CEP_LOOKUP_KEY", "1yDDoV7.XlC163D3JF/1dHfFYhQZhu.")
     CEP_LOOKUP_TIMEOUT_SECONDS = float(os.getenv("CEP_LOOKUP_TIMEOUT_SECONDS", "6"))
@@ -55,4 +60,10 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    # Padrão em servidores Linux: um único path para você mapear volume persistente no Coolify/Docker.
+    # No Windows (produção rara), mantém instance/uploads a menos que UPLOAD_FOLDER esteja no .env.
+    UPLOAD_FOLDER = os.getenv(
+        "UPLOAD_FOLDER",
+        _UPLOAD_FOLDER_PROD if os.name != "nt" else _UPLOAD_FOLDER_DEV,
+    )
 

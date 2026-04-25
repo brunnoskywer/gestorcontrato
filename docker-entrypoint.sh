@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+# Pasta de anexos (persistente quando houver volume em UPLOAD_FOLDER)
+UPLOAD_DIR="${UPLOAD_FOLDER:-/data/gestorcontrato/uploads}"
+mkdir -p "$UPLOAD_DIR"
+
 # SQLAlchemy 2 não aceita postgres://; normaliza para postgresql+psycopg2://
 if [ -n "$DATABASE_URL" ] && echo "$DATABASE_URL" | grep -q '^postgres://'; then
   export DATABASE_URL="postgresql+psycopg2://$(echo "$DATABASE_URL" | cut -c12-)"

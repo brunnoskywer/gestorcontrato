@@ -7,6 +7,9 @@ ENV PYTHONUNBUFFERED=1
 
 # Porta padrão (Coolify pode sobrescrever via PORT)
 ENV PORT=5000
+# Produção: anexos em path fixo — no Coolify adicione "Persistent Storage" apontando para este caminho.
+ENV FLASK_ENV=production
+ENV UPLOAD_FOLDER=/data/gestorcontrato/uploads
 
 WORKDIR /app
 
@@ -25,5 +28,7 @@ COPY . .
 # Entrypoint: migrações + Gunicorn
 ENV FLASK_APP=run.py
 RUN chmod +x docker-entrypoint.sh
+# Declara ponto de montagem para volume persistente (bind ou named volume no painel).
+VOLUME ["/data/gestorcontrato/uploads"]
 EXPOSE 5000
 CMD ["./docker-entrypoint.sh"]

@@ -1,14 +1,29 @@
+import os
+from pathlib import Path
+
 from flask import Flask
 from .extensions import db, migrate, login_manager
-from .config import Config
+from .config import Config, ProductionConfig
 
 
 def create_app(config_class: type[Config] | None = None) -> Flask:
     app = Flask(__name__)
 
     # Configuração
-    config_obj = config_class() if config_class else Config()
+    if config_class is None:
+        config_class = (
+            ProductionConfig
+            if os.getenv("FLASK_ENV", "").strip().lower() == "production"
+            else Config
+        )
+    config_obj = config_class()
     app.config.from_object(config_obj)
+
+    # Garante diretório de uploads (volume montado ou pasta local).
+    try:
+        Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        app.logger.warning("Não foi possível criar UPLOAD_FOLDER (%s): %s", app.config.get("UPLOAD_FOLDER"), exc)
 
     # Extensões
     db.init_app(app)
