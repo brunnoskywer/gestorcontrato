@@ -235,6 +235,21 @@
     var dateTo = {{ date_to | tojson }};
     var companyId = {{ company_id | tojson }};
 
+    modalEl.addEventListener('click', function (e) {
+      var pageLink = e.target.closest('a.dre-detail-pagination');
+      if (!pageLink || !pageLink.href) return;
+      e.preventDefault();
+      bodyEl.innerHTML = '<p class="text-muted mb-0">Carregando...</p>';
+      fetch(pageLink.href, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
+      })
+        .then(function (r) { return r.text(); })
+        .then(function (html) { bodyEl.innerHTML = html; })
+        .catch(function () {
+          bodyEl.innerHTML = '<p class="text-danger mb-0">Erro ao carregar detalhamento.</p>';
+        });
+    });
+
     document.querySelectorAll('.dre-detail-trigger').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var kind = btn.getAttribute('data-kind') || 'receitas';

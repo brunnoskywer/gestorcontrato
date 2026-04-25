@@ -4,6 +4,7 @@ from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
 from app.models import Account, Company
 
@@ -47,11 +48,14 @@ def register_routes(bp: Blueprint) -> None:
         if name:
             query = query.filter(Account.name.ilike(f"%{name}%"))
 
-        accounts = query.join(Company).order_by(Company.legal_name, Account.name).all()
+        pagination = query.join(Company).order_by(Company.legal_name, Account.name).paginate(
+            page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
+        )
         companies = Company.query.order_by(Company.legal_name).all()
         return render_template(
             "admin/accounts/list.html",
-            accounts=accounts,
+            accounts=pagination.items,
+            pagination=pagination,
             companies=companies,
             filters={"company_id": company_id, "name": name},
         )

@@ -21,6 +21,7 @@ from app.models import (
     SUPPLIER_SUPPLIER,
 )
 from app.models.supplier import client_display_label
+from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, SlicePagination, admin_list_page
 
 main_bp = Blueprint("main", __name__, template_folder="../templates/main")
 
@@ -480,6 +481,7 @@ def dre_detail():
         )
 
     grand_total = sum(d["total"] for d in details)
+    pagination = SlicePagination(details, admin_list_page(), ADMIN_LIST_PER_PAGE)
     return render_template(
         "main/_dre_detail_modal_body.html",
         kind=kind,
@@ -487,7 +489,8 @@ def dre_detail():
         color_class=color_class,
         period_label=period_label,
         selected_nature_name=selected_nature_name,
-        details=details,
+        details=pagination.items,
+        pagination=pagination,
         grand_total=grand_total,
     )
 

@@ -5,6 +5,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.constants.brazil_ufs import is_valid_uf
 from app.extensions import db
 from app.models import Company, Supplier, SUPPLIER_CLIENT
@@ -56,13 +57,14 @@ def register_routes(bp: Blueprint) -> None:
         if cnpj:
             query = query.filter(Supplier.document.ilike(f"%{cnpj}%"))
 
-        clients = query.order_by(
+        pagination = query.order_by(
             func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
-        ).all()
+        ).paginate(page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False)
         companies = Company.query.order_by(Company.legal_name).all()
         return render_template(
             "admin/clients/list.html",
-            clients=clients,
+            clients=pagination.items,
+            pagination=pagination,
             companies=companies,
             filters={"name": name, "cnpj": cnpj},
         )

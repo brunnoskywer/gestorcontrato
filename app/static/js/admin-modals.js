@@ -577,6 +577,11 @@
         e.preventDefault();
         replaceModalBodyWithUrl(clearLink.href);
       }
+      var pageLink = e.target.closest('a.admin-modal-pagination');
+      if (pageLink && pageLink.href) {
+        e.preventDefault();
+        replaceModalBodyWithUrl(pageLink.href);
+      }
     });
 
     bodyEl.addEventListener('submit', function (e) {

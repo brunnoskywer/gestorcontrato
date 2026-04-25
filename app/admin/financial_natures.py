@@ -4,6 +4,7 @@ from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
 from app.models import FinancialNature
 
@@ -40,10 +41,13 @@ def register_routes(bp: Blueprint) -> None:
         if name:
             query = query.filter(FinancialNature.name.ilike(f"%{name}%"))
 
-        natures = query.order_by(FinancialNature.name).all()
+        pagination = query.order_by(FinancialNature.name).paginate(
+            page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
+        )
         return render_template(
             "admin/financial_natures/list.html",
-            natures=natures,
+            natures=pagination.items,
+            pagination=pagination,
             filters={"name": name},
         )
 

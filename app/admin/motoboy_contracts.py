@@ -14,6 +14,7 @@ from app.admin.auth_helpers import (
     is_supervisor,
     resolve_next_url,
 )
+from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
 from app.models import (
     Company,
@@ -423,11 +424,14 @@ def register_routes(bp: Blueprint) -> None:
                     SupplierClient.trade_name.ilike(f"%{client_name}%"),
                 )
             )
-        contracts = query.order_by(Contract.start_date.desc()).all()
+        pagination = query.order_by(Contract.start_date.desc()).paginate(
+            page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
+        )
 
         return render_template(
             "admin/motoboy_contracts/list.html",
-            contracts=contracts,
+            contracts=pagination.items,
+            pagination=pagination,
             filters={"motoboy_name": motoboy_name, "client_name": client_name},
         )
 

@@ -2,6 +2,7 @@
 {% block title %}Fornecedores{% endblock %}
 
 {% block content %}
+{% from "admin/_pagination.html" import render_admin_pagination %}
 {% set table_id = 'list-table' %}
 {% set insert_url = url_for('admin.suppliers_form_new') %}
 {% set insert_title = 'Novo fornecedor' %}
@@ -54,6 +55,7 @@
   </tbody>
 </table>
 </div>
+{{ render_admin_pagination(pagination, 'admin.suppliers_list') }}
 <script>(function(){ var t=document.getElementById('list-table'); if(!t) return; var h=t.querySelector('thead .select-all'); if(h) h.addEventListener('change',function(){ var c=this.checked; t.querySelectorAll('tbody .row-select').forEach(function(cb){ cb.checked=c; }); }); })();</script>
 {% endblock %}
 

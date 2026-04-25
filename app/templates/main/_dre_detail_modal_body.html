@@ -1,3 +1,4 @@
+{% from "admin/_pagination.html" import render_admin_pagination %}
 <div>
   <p class="small text-muted mb-2">
     <strong>{{ kind_label }}</strong> quitadas no período {{ period_label }}.
@@ -62,6 +63,8 @@
   {% else %}
   <p class="small text-muted mb-0">Não há {{ kind }} quitadas para o período selecionado.</p>
   {% endif %}
+
+  {{ render_admin_pagination(pagination, 'main.dre_detail', link_class_extra='dre-detail-pagination') }}
 
   <div class="mt-3 text-end fw-semibold {{ color_class }}">
     Total: R$ {{ grand_total|format_currency }}

@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app.admin.auth_helpers import require_admin, handle_delete_constraint_error, resolve_next_url
+from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
 from app.models import (
     Account,
@@ -270,18 +271,18 @@ def register_routes(bp: Blueprint) -> None:
         elif status == "settled":
             query = query.filter(FinancialEntry.settled_at.isnot(None))
 
-        entries = query.order_by(
+        sum_val = query.with_entities(func.sum(FinancialEntry.amount)).order_by(None).scalar()
+        entries_total = Decimal(str(sum_val)) if sum_val is not None else Decimal("0")
+
+        pagination = query.order_by(
             FinancialEntry.due_date.desc().nullslast(), FinancialEntry.id.desc()
-        ).all()
-        entries_total = sum(
-            (e.amount for e in entries if e.amount is not None),
-            Decimal("0"),
-        )
+        ).paginate(page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False)
         return render_template(
             "admin/financeiro/manual_entry.html",
             companies=companies,
             natures=natures,
-            entries=entries,
+            entries=pagination.items,
+            pagination=pagination,
             entries_total=entries_total,
             supplier_filter_display=supplier_filter_display,
             filters={
@@ -505,11 +506,14 @@ def register_routes(bp: Blueprint) -> None:
             )
         q = q.filter(FinancialBatch.created_at >= datetime.combine(date_from, time.min))
         q = q.filter(FinancialBatch.created_at <= datetime.combine(date_to, time.max))
-        batches = q.order_by(FinancialBatch.created_at.desc()).all()
+        pagination = q.order_by(FinancialBatch.created_at.desc()).paginate(
+            page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
+        )
 
         return render_template(
             "admin/financeiro/_batches_modal.html",
-            batches=batches,
+            batches=pagination.items,
+            pagination=pagination,
             filters={"date_from": date_from_str, "date_to": date_to_str, "batch_type": batch_type_filter},
             next_url=next_param,
         )

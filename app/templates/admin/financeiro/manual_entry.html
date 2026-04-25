@@ -2,6 +2,7 @@
 {% block title %}Movimentos Financeiros{% endblock %}
 
 {% block content %}
+{% from "admin/_pagination.html" import render_admin_pagination %}
 {% set table_id = 'list-table' %}
 {% set insert_url = url_for('admin.finance_entry_form_new') %}
 {% set insert_title = 'Novo lançamento financeiro' %}
@@ -179,7 +180,7 @@
     </tr>
     {% endfor %}
   </tbody>
-  {% if entries %}
+  {% if pagination.total %}
   <tfoot class="border-top">
     <tr class="table-secondary fw-semibold">
       <td class="table-status-stripe-cell p-0 align-middle" aria-hidden="true"></td>
@@ -192,4 +193,5 @@
   {% endif %}
 </table>
 </div>
+{{ render_admin_pagination(pagination, 'admin.finance_manual_entry') }}
 {% endblock %}

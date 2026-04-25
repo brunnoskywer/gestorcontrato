@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import Flask
 from .extensions import db, migrate, login_manager
 from .config import Config, ProductionConfig
+from .admin.list_pagination import paginated_url
 
 
 def create_app(config_class: type[Config] | None = None) -> Flask:
@@ -60,6 +61,7 @@ def create_app(config_class: type[Config] | None = None) -> Flask:
     app.jinja_env.filters["attachment_file_on_disk"] = attachment_file_on_disk
     app.jinja_env.filters["finance_supplier_display"] = finance_supplier_display
     app.jinja_env.filters["client_display_label"] = client_display_label
+    app.add_template_global(paginated_url)
 
     return app
 

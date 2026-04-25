@@ -1,3 +1,4 @@
+{% from "admin/_pagination.html" import render_admin_pagination %}
 <form class="row g-2 mb-3 align-items-end admin-modal-filter-form" method="get" action="{{ url_for('admin.finance_batches') }}" data-replace-modal-body="1">
   <input type="hidden" name="next" value="{{ next_url }}">
   <div class="col-auto">
@@ -98,6 +99,8 @@
     </tbody>
   </table>
 </div>
+
+{{ render_admin_pagination(pagination, 'admin.finance_batches', link_class_extra='admin-modal-pagination') }}
 
 <div class="d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
   <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>

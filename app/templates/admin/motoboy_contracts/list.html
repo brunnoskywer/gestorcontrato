@@ -2,6 +2,7 @@
 {% block title %}Contratos de motoboy{% endblock %}
 
 {% block content %}
+{% from "admin/_pagination.html" import render_admin_pagination %}
 {% set table_id = 'list-table' %}
 {% set _attachments_base = url_for('admin.motoboy_contract_attachments_form', contract_id=999999) %}
 {% set attachments_url_template = _attachments_base.replace('999999', '{id}') %}
@@ -106,5 +107,6 @@
   </tbody>
 </table>
 </div>
+{{ render_admin_pagination(pagination, 'admin.motoboy_contracts_list') }}
 <script>(function(){ var t=document.getElementById('list-table'); if(!t) return; var h=t.querySelector('thead .select-all'); if(h) h.addEventListener('change',function(){ var c=this.checked; t.querySelectorAll('tbody .row-select').forEach(function(cb){ cb.checked=c; }); }); })();</script>
 {% endblock %}
