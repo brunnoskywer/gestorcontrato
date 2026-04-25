@@ -434,6 +434,9 @@ main.container {
 .admin-pagination-bar__nav {
   min-height: 2rem;
 }
+.admin-pagination-bar__meta {
+  color: #fff !important;
+}
 .modal-body .admin-pagination-bar {
   margin-bottom: 0.75rem;
 }
