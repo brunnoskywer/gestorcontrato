@@ -132,10 +132,10 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
     doc = SimpleDocTemplate(
         buf,
         pagesize=A4,
-        leftMargin=42,
-        rightMargin=42,
-        topMargin=42,
-        bottomMargin=38,
+        leftMargin=30,
+        rightMargin=30,
+        topMargin=28,
+        bottomMargin=30,
         title=f"Contrato Motoboy #{contract.id}",
     )
 
@@ -144,68 +144,68 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
         "contractTitle",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=12,
+        fontSize=11,
         alignment=TA_CENTER,
-        leading=15,
-        spaceAfter=12,
+        leading=12.5,
+        spaceAfter=6,
     )
     style_intro = ParagraphStyle(
         "contractIntro",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=14,
+        fontSize=8.8,
+        leading=10.8,
         alignment=TA_JUSTIFY,
-        firstLineIndent=22,
-        spaceAfter=8,
+        firstLineIndent=16,
+        spaceAfter=4,
     )
     style_clause = ParagraphStyle(
         "clauseTitle",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=10,
-        leading=14,
+        fontSize=9.1,
+        leading=11.2,
         alignment=TA_LEFT,
-        spaceBefore=5,
-        spaceAfter=3,
+        spaceBefore=2,
+        spaceAfter=1,
     )
     style_body = ParagraphStyle(
         "clauseBody",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=13.5,
+        fontSize=8.7,
+        leading=10.6,
         alignment=TA_JUSTIFY,
-        firstLineIndent=20,
-        spaceAfter=3,
+        firstLineIndent=14,
+        spaceAfter=1,
     )
     style_alinea = ParagraphStyle(
         "clauseAlinea",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=13.5,
+        fontSize=8.7,
+        leading=10.6,
         alignment=TA_JUSTIFY,
-        leftIndent=18,
-        firstLineIndent=-10,  # tabulação pendente para "a)"
-        spaceAfter=2,
+        leftIndent=12,
+        firstLineIndent=-8,  # tabulação pendente para "a)"
+        spaceAfter=1,
     )
     style_signature_label = ParagraphStyle(
         "signatureLabel",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=10,
-        leading=14,
-        spaceBefore=18,
-        spaceAfter=10,
+        fontSize=9,
+        leading=10.5,
+        spaceBefore=8,
+        spaceAfter=3,
     )
     style_signature_text = ParagraphStyle(
         "signatureText",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=16,
-        spaceAfter=10,
+        fontSize=8.7,
+        leading=10.5,
+        spaceAfter=2,
     )
 
     story = []
@@ -277,7 +277,7 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
                 story.append(Paragraph(line_fmt, style_alinea))
             else:
                 story.append(Paragraph(line_fmt, style_body))
-        story.append(Spacer(1, 2))
+        story.append(Spacer(1, 0.8))
 
     story.append(
         Paragraph(
@@ -285,7 +285,7 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
             style_body,
         )
     )
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 4))
 
     city = "Fortaleza"
     month_name = _MONTH_NAMES[signed_at.month] if 1 <= signed_at.month <= 12 else str(signed_at.month)
@@ -295,7 +295,7 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
             style_body,
         )
     )
-    story.append(Spacer(1, 28))
+    story.append(Spacer(1, 12))
 
     signatures = [
         ("CONTRATANTE:", company_name, f"CNPJ: {company_cnpj}"),
@@ -303,18 +303,18 @@ def build_motoboy_contract_pdf(contract: "Contract", company: "Company", signed_
     ]
     for idx, (role, name, doc_text) in enumerate(signatures):
         if idx:
-            story.append(Spacer(1, 22))
+            story.append(Spacer(1, 8))
         story.append(Paragraph(role, style_signature_label))
-        story.append(Spacer(1, 36))
+        story.append(Spacer(1, 12))
         story.append(Paragraph(name, style_signature_text))
         story.append(Paragraph(doc_text, style_signature_text))
-        story.append(Spacer(1, 28))
+        story.append(Spacer(1, 8))
 
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 6))
     story.append(Paragraph("TESTEMUNHAS:", style_signature_label))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 8))
     story.append(Paragraph("NOME: __________________________   CPF: __________________________", style_signature_text))
-    story.append(Spacer(1, 16))
+    story.append(Spacer(1, 6))
     story.append(Paragraph("NOME: __________________________   CPF: __________________________", style_signature_text))
 
     doc.build(story, onFirstPage=_draw_page_footer, onLaterPages=_draw_page_footer)
