@@ -73,10 +73,10 @@ def build_motoboy_distrato_pdf(
     doc = SimpleDocTemplate(
         buf,
         pagesize=A4,
-        leftMargin=42,
-        rightMargin=42,
-        topMargin=42,
-        bottomMargin=38,
+        leftMargin=30,
+        rightMargin=30,
+        topMargin=30,
+        bottomMargin=30,
         title=f"Distrato Motoboy #{contract.id}",
     )
 
@@ -85,113 +85,113 @@ def build_motoboy_distrato_pdf(
         "distratoTitle",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=11,
+        fontSize=10,
         alignment=TA_CENTER,
-        leading=14,
-        spaceAfter=10,
+        leading=12,
+        spaceAfter=6,
     )
     style_intro = ParagraphStyle(
         "distratoIntro",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=14,
+        fontSize=8.8,
+        leading=10.8,
         alignment=TA_JUSTIFY,
-        spaceAfter=10,
+        spaceAfter=5,
     )
     style_section = ParagraphStyle(
         "distratoSection",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=10,
-        leading=14,
+        fontSize=9,
+        leading=10.8,
         alignment=TA_LEFT,
-        spaceBefore=8,
-        spaceAfter=4,
+        spaceBefore=3,
+        spaceAfter=1,
     )
     style_body = ParagraphStyle(
         "distratoBody",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=13.5,
+        fontSize=8.6,
+        leading=10.4,
         alignment=TA_JUSTIFY,
-        spaceAfter=6,
+        spaceAfter=2,
     )
     style_sub = ParagraphStyle(
         "distratoSub",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=13.5,
+        fontSize=8.6,
+        leading=10.4,
         alignment=TA_JUSTIFY,
-        leftIndent=14,
-        spaceAfter=5,
+        leftIndent=8,
+        spaceAfter=2,
     )
     style_party_line = ParagraphStyle(
         "distratoParty",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=14,
+        fontSize=8.8,
+        leading=10.8,
         alignment=TA_LEFT,
-        spaceAfter=3,
+        spaceAfter=1,
     )
     style_sig_label = ParagraphStyle(
         "distratoSigLabel",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=10,
-        leading=13,
+        fontSize=9,
+        leading=10.5,
         alignment=TA_LEFT,
-        spaceBefore=14,
-        spaceAfter=8,
+        spaceBefore=6,
+        spaceAfter=3,
     )
     # Linha de assinatura (~60% da largura útil): texto curto centralizado
     style_sig_underline = ParagraphStyle(
         "distratoSigUnderline",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=16,
+        fontSize=8.7,
+        leading=10.6,
         alignment=TA_CENTER,
-        spaceAfter=6,
+        spaceAfter=2,
     )
     style_sig_name_center = ParagraphStyle(
         "distratoSigName",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        leading=13,
+        fontSize=8.7,
+        leading=10.4,
         alignment=TA_CENTER,
-        spaceAfter=4,
+        spaceAfter=1,
     )
     style_sig_cnpj_center = ParagraphStyle(
         "distratoSigCnpj",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=10,
-        leading=13,
+        fontSize=8.7,
+        leading=10.4,
         alignment=TA_CENTER,
-        spaceAfter=18,
+        spaceAfter=6,
     )
     style_sig_line = ParagraphStyle(
         "distratoSigLine",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=9,
-        leading=12,
+        fontSize=8.2,
+        leading=9.8,
         alignment=TA_CENTER,
-        spaceAfter=2,
+        spaceAfter=1,
     )
     style_center_small = ParagraphStyle(
         "distratoCenter",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=9,
+        fontSize=8.5,
         alignment=TA_CENTER,
-        leading=11,
-        spaceAfter=8,
+        leading=10.2,
+        spaceAfter=4,
     )
 
     story = []
@@ -223,7 +223,7 @@ def build_motoboy_distrato_pdf(
             style_party_line,
         )
     )
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 1))
     story.append(
         Paragraph(
             "Em comum acordo, as partes resolveram distratar o respectivo negócio jurídico, "
@@ -317,7 +317,7 @@ def build_motoboy_distrato_pdf(
             style_body,
         )
     )
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 4))
 
     city = "Fortaleza"
     month_name = (
@@ -331,7 +331,7 @@ def build_motoboy_distrato_pdf(
             style_center_small,
         )
     )
-    story.append(Spacer(1, 16))
+    story.append(Spacer(1, 6))
 
     _sig_line_chars = (
         "________________________________________________________"

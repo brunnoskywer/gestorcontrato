@@ -1174,28 +1174,6 @@ def register_routes(bp: Blueprint) -> None:
             flash("Esta empresa não está habilitada para geração de contrato/distrato.", "danger")
             return redirect(next_url)
 
-        def _endereco_estruturado_ok(ent) -> bool:
-            if not ent:
-                return False
-            return (
-                bool((ent.street or "").strip())
-                and bool((ent.neighborhood or "").strip())
-                and bool((ent.city or "").strip())
-                and bool((ent.state or "").strip())
-            )
-
-        if not _endereco_estruturado_ok(company):
-            flash(
-                "Preencha rua, bairro, cidade e UF da empresa antes de gerar o distrato.",
-                "danger",
-            )
-            return redirect(next_url)
-        if not _endereco_estruturado_ok(contract.supplier):
-            flash(
-                "Preencha rua, bairro, cidade e UF do motoboy antes de gerar o distrato.",
-                "danger",
-            )
-            return redirect(next_url)
         if not contract.supplier.document_secondary:
             flash(
                 "Preencha o CNPJ do motoboy (campo CNPJ no cadastro) antes de gerar o distrato.",
