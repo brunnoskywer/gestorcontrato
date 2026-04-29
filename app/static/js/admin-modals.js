@@ -934,7 +934,7 @@
           showMessageModal('Selecione apenas um registro para anexar arquivo.', 'Atenção');
           return;
         }
-        openFormModal(attachmentsTpl.replace('{id}', ids[0]), attachmentsTitle, 'lg');
+        openFormModal(attachmentsTpl.replace('{id}', ids[0]), attachmentsTitle, 'xl');
       });
 
       var distratoPrintTpl = toolbar.getAttribute('data-distrato-print-url-template');
