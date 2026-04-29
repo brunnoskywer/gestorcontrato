@@ -144,8 +144,8 @@ def build_motoboy_distrato_pdf(
         fontSize=9,
         leading=10.5,
         alignment=TA_LEFT,
-        spaceBefore=6,
-        spaceAfter=3,
+        spaceBefore=7,
+        spaceAfter=4,
     )
     # Linha de assinatura (~60% da largura útil): texto curto centralizado
     style_sig_underline = ParagraphStyle(
@@ -153,27 +153,27 @@ def build_motoboy_distrato_pdf(
         parent=styles["Normal"],
         fontName="Helvetica",
         fontSize=8.7,
-        leading=10.6,
+        leading=11.4,
         alignment=TA_CENTER,
-        spaceAfter=2,
+        spaceAfter=3,
     )
     style_sig_name_center = ParagraphStyle(
         "distratoSigName",
         parent=styles["Normal"],
         fontName="Helvetica",
         fontSize=8.7,
-        leading=10.4,
+        leading=10.8,
         alignment=TA_CENTER,
-        spaceAfter=1,
+        spaceAfter=2,
     )
     style_sig_cnpj_center = ParagraphStyle(
         "distratoSigCnpj",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
         fontSize=8.7,
-        leading=10.4,
+        leading=10.8,
         alignment=TA_CENTER,
-        spaceAfter=6,
+        spaceAfter=8,
     )
     style_sig_line = ParagraphStyle(
         "distratoSigLine",
@@ -191,7 +191,7 @@ def build_motoboy_distrato_pdf(
         fontSize=8.5,
         alignment=TA_CENTER,
         leading=10.2,
-        spaceAfter=4,
+        spaceAfter=3,
     )
 
     story = []
@@ -331,7 +331,7 @@ def build_motoboy_distrato_pdf(
             style_center_small,
         )
     )
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
     _sig_line_chars = (
         "________________________________________________________"
