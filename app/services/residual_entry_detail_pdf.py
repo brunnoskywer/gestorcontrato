@@ -85,12 +85,8 @@ def build_residual_entry_detail_pdf(
     pdf.drawString(40, y, "Composição do valor")
     y -= 16
     pdf.setFont("Helvetica", 10)
-    line("Base (prestação + premiação conforme regra)", f"R$ {_fmt_br(snapshot.get('gross_amount'))}")
-    bonus_val = snapshot.get("bonus_value")
-    if snapshot.get("has_absences"):
-        show_bonus_note = bonus_val is None or float(bonus_val or 0) > 0
-        if show_bonus_note:
-            line("Observação", "Houve ausência(s) no mês — premiação zerada na base.")
+    # Exibe somente o valor base já ajustado por dias trabalhados (x/30),
+    # sem linhas intermediárias de desconto/subtotal.
     abs_n = snapshot.get("absence_count")
     worked_days_label = None
     if abs_n is not None:
@@ -101,11 +97,10 @@ def build_residual_entry_detail_pdf(
         worked_days = max(0, 30 - abs_count)
         worked_days_label = f"({worked_days}/30)"
     if worked_days_label:
-        disc_lbl = f"Desconto por ausência(s) {worked_days_label}"
+        base_lbl = f"Valor base {worked_days_label}"
     else:
-        disc_lbl = "Desconto por ausência(s)"
-    line(disc_lbl, f"- R$ {_fmt_br(snapshot.get('missing_total'))}")
-    line("Subtotal após faltas", f"R$ {_fmt_br(snapshot.get('after_missing'))}")
+        base_lbl = "Valor base"
+    line(base_lbl, f"R$ {_fmt_br(snapshot.get('after_missing'))}")
 
     y -= 6
     pdf.setFont("Helvetica-Bold", 10)
