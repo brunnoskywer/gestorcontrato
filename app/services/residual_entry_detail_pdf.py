@@ -30,6 +30,16 @@ def _parse_br_date(value: Any) -> datetime:
         return datetime.min
 
 
+def _fmt_contract_start_date(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return "-"
+    try:
+        return datetime.fromisoformat(raw).strftime("%d/%m/%Y")
+    except ValueError:
+        return raw[:10]
+
+
 def build_residual_entry_detail_pdf(
     snapshot: dict[str, Any], detail_mode: str = "synthetic"
 ) -> bytes:
@@ -47,6 +57,9 @@ def build_residual_entry_detail_pdf(
     pdf.drawString(40, y, f"Referência: {period}")
     y -= 14
     pdf.drawString(40, y, f"Contrato motoboy: #{snapshot.get('contract_id', '-')}")
+    y -= 14
+    contract_start = _fmt_contract_start_date(snapshot.get("contract_start_date"))
+    pdf.drawString(40, y, f"Início do contrato: {contract_start}")
     y -= 14
     pdf.drawString(40, y, f"Motoboy: {snapshot.get('motoboy_name', '-')}")
     y -= 14

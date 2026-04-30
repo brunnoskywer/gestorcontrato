@@ -414,6 +414,14 @@ def register_routes(bp: Blueprint) -> None:
         if not snap:
             flash("Não foi possível ler o detalhamento deste lançamento.", "danger")
             return _manual_entry_redirect()
+        # Compatibilidade com snapshots antigos: completa data de início do contrato
+        # para exibir no PDF analítico e sintético.
+        if not snap.get("contract_start_date"):
+            contract_id = snap.get("contract_id")
+            if contract_id:
+                contract_row = Contract.query.get(contract_id)
+                if contract_row and contract_row.start_date:
+                    snap["contract_start_date"] = contract_row.start_date.isoformat()
         detail_mode = (request.args.get("detail_mode") or "synthetic").strip().lower()
         if detail_mode not in ("synthetic", "analytic"):
             detail_mode = "synthetic"
@@ -1241,6 +1249,7 @@ def register_routes(bp: Blueprint) -> None:
             snapshot = {
                 "v": 1,
                 "contract_id": c.id,
+                "contract_start_date": c.start_date.isoformat() if c.start_date else None,
                 "motoboy_name": (c.supplier.name if c.supplier else "") or "-",
                 "client_name": client_display_label(c.other_supplier) if c.other_supplier else "-",
                 "period_label": f"{_meses[month]} de {year}",
