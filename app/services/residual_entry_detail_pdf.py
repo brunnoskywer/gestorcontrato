@@ -90,12 +90,20 @@ def build_residual_entry_detail_pdf(
     if snapshot.get("has_absences"):
         show_bonus_note = bonus_val is None or float(bonus_val or 0) > 0
         if show_bonus_note:
-            line("Observação", "Houve falta(s) no mês — premiação zerada na base.")
+            line("Observação", "Houve ausência(s) no mês — premiação zerada na base.")
     abs_n = snapshot.get("absence_count")
-    if abs_n is not None and abs_n > 0:
-        disc_lbl = f"Desconto por valor de falta(s) ({abs_n})"
+    worked_days_label = None
+    if abs_n is not None:
+        try:
+            abs_count = max(0, int(abs_n))
+        except (TypeError, ValueError):
+            abs_count = 0
+        worked_days = max(0, 30 - abs_count)
+        worked_days_label = f"({worked_days}/30)"
+    if worked_days_label:
+        disc_lbl = f"Desconto por ausência(s) {worked_days_label}"
     else:
-        disc_lbl = "Desconto por valor de falta(s)"
+        disc_lbl = "Desconto por ausência(s)"
     line(disc_lbl, f"- R$ {_fmt_br(snapshot.get('missing_total'))}")
     line("Subtotal após faltas", f"R$ {_fmt_br(snapshot.get('after_missing'))}")
 
