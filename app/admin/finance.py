@@ -965,6 +965,7 @@ def register_routes(bp: Blueprint) -> None:
             month_end = date(year + 1, 1, 1) - timedelta(days=1)
         else:
             month_end = date(year, month + 1, 1) - timedelta(days=1)
+        month_days = (month_end - month_start).days + 1
 
         contracts = (
             Contract.query.filter(Contract.contract_type == CONTRACT_TYPE_MOTOBOY)
