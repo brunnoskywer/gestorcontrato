@@ -141,7 +141,7 @@
   </thead>
   <tbody>
     {% for e in entries %}
-    <tr data-id="{{ e.id }}" data-settled="{{ '1' if e.settled_at else '0' }}"{% if e.entry_type == 'payable' and e.processing_snapshot and e.batch and e.batch.batch_type == 'residual' %} data-residual-detail="1"{% endif %}>
+    <tr data-id="{{ e.id }}" data-settled="{{ '1' if e.settled_at else '0' }}"{% if e.entry_type == 'payable' and e.batch and e.batch.batch_type in ['residual', 'motoboy_distrato', 'residual_distrato'] and (e.processing_snapshot or e.batch.batch_type == 'motoboy_distrato') %} data-residual-detail="1"{% endif %}>
       <td class="table-status-stripe-cell p-0 align-middle" aria-hidden="true">
         <span class="status-stripe {{ e|finance_entry_stripe_class }}" title="{% if e.settled_at %}Quitado{% else %}Pendente{% endif %}"></span>
       </td>

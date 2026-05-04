@@ -1125,7 +1125,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
           var ids = getSelectedIds();
           if (ids.length === 0) {
             showMessageModal(
-              'Selecione um lançamento gerado pelo processamento residual para abrir o PDF.',
+              'Selecione um lançamento gerado pelo processamento residual/distrato para abrir o PDF.',
               'Atenção'
             );
             return;
@@ -1140,7 +1140,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
           var row = getFirstSelectedRow();
           if (!row || row.getAttribute('data-residual-detail') !== '1') {
             showMessageModal(
-              'O PDF de detalhamento residual só está disponível para lançamentos gerados pelo processamento residual.',
+              'O PDF de detalhamento está disponível apenas para lançamentos gerados por processamento residual/distrato.',
               'Atenção'
             );
             return;

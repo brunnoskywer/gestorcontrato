@@ -1239,6 +1239,7 @@ def register_routes(bp: Blueprint) -> None:
 
             base_total = base_service + (0 if has_absences else base_bonus)
             # Pro-rata pelos dias efetivos no mês (respeita início/fim de contrato e dias reais do mês).
+            month_days = (month_end - month_start).days + 1
             gross_amount = base_total * (effective_days / month_days)
             if gross_amount <= 0:
                 skipped_no_base += 1
