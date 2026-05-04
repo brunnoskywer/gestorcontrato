@@ -40,7 +40,10 @@ from app.models import (
 from io import BytesIO
 
 from app.models.supplier import client_display_label
-from app.services.motoboy_distrato import contract_has_distrato_in_month
+from app.services.motoboy_distrato import (
+    compute_motoboy_distrato_breakdown,
+    contract_has_distrato_in_month,
+)
 from app.services.motoboy_contract_finance import (
     motoboy_contract_in_processing_scope,
     motoboy_supplier_accepts_manual_financial_entries,
@@ -396,14 +399,15 @@ def register_routes(bp: Blueprint) -> None:
     def finance_entry_residual_detail_pdf(entry_id: int):
         require_admin()
         entry = FinancialEntry.query.options(joinedload(FinancialEntry.batch)).get_or_404(entry_id)
-        if entry.entry_type != ENTRY_PAYABLE or not entry.processing_snapshot:
-            flash(
-                "Detalhamento disponível apenas para lançamentos residuais com registro de cálculo.",
-                "warning",
-            )
+        if entry.entry_type != ENTRY_PAYABLE:
+            flash("Detalhamento disponível apenas para lançamentos a pagar.", "warning")
             return _manual_entry_redirect()
-        if entry.batch is None or entry.batch.batch_type != BATCH_TYPE_RESIDUAL:
-            flash("Detalhamento disponível apenas para processamento residual.", "warning")
+        if entry.batch is None or entry.batch.batch_type not in (
+            BATCH_TYPE_RESIDUAL,
+            BATCH_TYPE_MOTOBOY_DISTRATO,
+            BATCH_TYPE_RESIDUAL_DISTRATO,
+        ):
+            flash("Detalhamento disponível apenas para processamento residual/distrato.", "warning")
             return _manual_entry_redirect()
         from app.services.residual_entry_detail_pdf import (
             build_residual_entry_detail_pdf,
@@ -411,6 +415,77 @@ def register_routes(bp: Blueprint) -> None:
         )
 
         snap = parse_residual_snapshot_json(entry.processing_snapshot)
+        if not snap and entry.batch.batch_type == BATCH_TYPE_MOTOBOY_DISTRATO:
+            contract_id = None
+            desc = (entry.description or "").strip()
+            if "#" in desc:
+                try:
+                    contract_id = int(desc.split("#", 1)[1].split()[0])
+                except (TypeError, ValueError):
+                    contract_id = None
+            contract = None
+            if contract_id:
+                contract = Contract.query.filter_by(
+                    id=contract_id, contract_type=CONTRACT_TYPE_MOTOBOY
+                ).first()
+            if contract is None and entry.supplier_id and entry.batch:
+                contract = (
+                    Contract.query.filter_by(
+                        contract_type=CONTRACT_TYPE_MOTOBOY,
+                        supplier_id=entry.supplier_id,
+                    )
+                    .filter(Contract.end_date.isnot(None))
+                    .filter(func.extract("year", Contract.end_date) == entry.batch.year)
+                    .filter(func.extract("month", Contract.end_date) == entry.batch.month)
+                    .order_by(Contract.end_date.desc(), Contract.id.desc())
+                    .first()
+                )
+            if contract is not None:
+                breakdown, _ = compute_motoboy_distrato_breakdown(contract)
+                if breakdown:
+                    _meses = (
+                        "",
+                        "Janeiro",
+                        "Fevereiro",
+                        "Março",
+                        "Abril",
+                        "Maio",
+                        "Junho",
+                        "Julho",
+                        "Agosto",
+                        "Setembro",
+                        "Outubro",
+                        "Novembro",
+                        "Dezembro",
+                    )
+                    year = breakdown["year"]
+                    month = breakdown["month"]
+                    snap = {
+                        "v": 2,
+                        "contract_id": contract.id,
+                        "contract_start_date": contract.start_date.isoformat() if contract.start_date else None,
+                        "contract_end_date": contract.end_date.isoformat() if contract.end_date else None,
+                        "period_label": f"{_meses[month]} de {year}",
+                        "period_year": year,
+                        "period_month": month,
+                        "month_days": cal.monthrange(year, month)[1],
+                        "effective_start_date": breakdown["effective_start"].isoformat(),
+                        "effective_end_date": breakdown["effective_end"].isoformat(),
+                        "effective_days": breakdown["effective_days"],
+                        "motoboy_name": (contract.supplier.name if contract.supplier else "") or "-",
+                        "client_name": client_display_label(contract.other_supplier) if contract.other_supplier else "-",
+                        "gross_amount": breakdown["gross_amount"],
+                        "has_absences": breakdown["has_absences"],
+                        "bonus_value": breakdown["base_bonus"],
+                        "absence_count": breakdown["absence_count"],
+                        "missing_total": breakdown["missing_total"],
+                        "after_missing": breakdown["after_missing"],
+                        "paid_total": breakdown["paid_total"],
+                        "paid_by_nature": breakdown["paid_by_nature"],
+                        "paid_excluded_residual_nature": breakdown["paid_excluded_residual_nature"],
+                        "paid_entries": breakdown["paid_entries"],
+                        "net_amount": breakdown["net_amount"],
+                    }
         if not snap:
             flash("Não foi possível ler o detalhamento deste lançamento.", "danger")
             return _manual_entry_redirect()
@@ -422,6 +497,8 @@ def register_routes(bp: Blueprint) -> None:
                 contract_row = Contract.query.get(contract_id)
                 if contract_row and contract_row.start_date:
                     snap["contract_start_date"] = contract_row.start_date.isoformat()
+                if contract_row and contract_row.end_date and not snap.get("contract_end_date"):
+                    snap["contract_end_date"] = contract_row.end_date.isoformat()
         detail_mode = (request.args.get("detail_mode") or "synthetic").strip().lower()
         if detail_mode not in ("synthetic", "analytic"):
             detail_mode = "synthetic"
@@ -442,10 +519,16 @@ def register_routes(bp: Blueprint) -> None:
     def finance_entry_residual_detail_form(entry_id: int):
         require_admin()
         entry = FinancialEntry.query.options(joinedload(FinancialEntry.batch)).get_or_404(entry_id)
-        if entry.entry_type != ENTRY_PAYABLE or not entry.processing_snapshot:
-            return '<p class="text-danger small mb-0">Detalhamento disponível apenas para lançamentos residuais.</p>'
-        if entry.batch is None or entry.batch.batch_type != BATCH_TYPE_RESIDUAL:
-            return '<p class="text-danger small mb-0">Detalhamento disponível apenas para processamento residual.</p>'
+        if entry.batch is None or entry.batch.batch_type not in (
+            BATCH_TYPE_RESIDUAL,
+            BATCH_TYPE_MOTOBOY_DISTRATO,
+            BATCH_TYPE_RESIDUAL_DISTRATO,
+        ):
+            return '<p class="text-danger small mb-0">Detalhamento disponível apenas para processamento residual/distrato.</p>'
+        if entry.entry_type != ENTRY_PAYABLE:
+            return '<p class="text-danger small mb-0">Detalhamento disponível apenas para lançamentos a pagar.</p>'
+        if not entry.processing_snapshot and entry.batch.batch_type != BATCH_TYPE_MOTOBOY_DISTRATO:
+            return '<p class="text-danger small mb-0">Detalhamento indisponível para este lançamento.</p>'
         return render_template(
             "admin/financeiro/_residual_detail_pdf_form_fragment.html",
             action_url=url_for("admin.finance_entry_residual_detail_pdf", entry_id=entry_id),
@@ -579,10 +662,8 @@ def register_routes(bp: Blueprint) -> None:
             return redirect(next_url)
 
         month_start = date(year, month, 1)
-        if month == 12:
-            month_end = date(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            month_end = date(year, month + 1, 1) - timedelta(days=1)
+        month_days = cal.monthrange(year, month)[1]
+        month_end = date(year, month, month_days)
 
         existing = FinancialBatch.query.filter_by(
             batch_type=BATCH_TYPE_REVENUE,
@@ -1156,7 +1237,8 @@ def register_routes(bp: Blueprint) -> None:
             has_absences = len(absences) > 0
 
             base_total = base_service + (0 if has_absences else base_bonus)
-            gross_amount = base_total
+            # Pro-rata pelos dias efetivos no mês (respeita início/fim de contrato e dias reais do mês).
+            gross_amount = base_total * (effective_days / month_days)
             if gross_amount <= 0:
                 skipped_no_base += 1
                 continue
@@ -1247,12 +1329,19 @@ def register_routes(bp: Blueprint) -> None:
             )
             after_missing = gross_amount - missing_total
             snapshot = {
-                "v": 1,
+                "v": 2,
                 "contract_id": c.id,
                 "contract_start_date": c.start_date.isoformat() if c.start_date else None,
+                "contract_end_date": c.end_date.isoformat() if c.end_date else None,
                 "motoboy_name": (c.supplier.name if c.supplier else "") or "-",
                 "client_name": client_display_label(c.other_supplier) if c.other_supplier else "-",
                 "period_label": f"{_meses[month]} de {year}",
+                "period_year": year,
+                "period_month": month,
+                "month_days": cal.monthrange(year, month)[1],
+                "effective_start_date": eff_start.isoformat(),
+                "effective_end_date": eff_end.isoformat(),
+                "effective_days": effective_days,
                 "gross_amount": gross_amount,
                 "has_absences": has_absences,
                 "bonus_value": base_bonus,

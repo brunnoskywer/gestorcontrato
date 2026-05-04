@@ -1,5 +1,6 @@
 """CRUD for Motoboy contracts: uses Contract with contract_type=motoboy."""
 import calendar
+import json
 from datetime import date
 from typing import Optional, Tuple
 
@@ -43,10 +44,13 @@ from app.services.contract_attachment_storage import (
     stored_file_is_present,
 )
 from app.services.motoboy_contract_finance import motoboy_contract_in_processing_scope
-from app.services.motoboy_distrato import compute_motoboy_distrato_net
+from app.services.motoboy_distrato import (
+    compute_motoboy_distrato_breakdown,
+)
 from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.services.motoboy_distrato_pdf import build_motoboy_distrato_pdf
 from app.utils import parse_decimal_form
+from app.models.supplier import client_display_label
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
@@ -950,15 +954,16 @@ def register_routes(bp: Blueprint) -> None:
             flash("Motoboy encerrado no cadastro.", "danger")
             return redirect(next_url)
 
-        net, err = compute_motoboy_distrato_net(contract)
+        breakdown, err = compute_motoboy_distrato_breakdown(contract)
         batch_type = BATCH_TYPE_MOTOBOY_DISTRATO
 
         if err:
             flash(err, "danger")
             return redirect(next_url)
-        if net is None:
+        if not breakdown:
             flash("Não foi possível calcular o valor do distrato.", "danger")
             return redirect(next_url)
+        net = float(breakdown.get("net_amount") or 0)
 
         year, month = contract.end_date.year, contract.end_date.month
         desc = f"Distrato contrato motoboy #{contract.id} - {year}-{month:02d}"
@@ -990,6 +995,49 @@ def register_routes(bp: Blueprint) -> None:
             db.session.add(batch)
             db.session.flush()
 
+        _meses = (
+            "",
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro",
+        )
+        month_days = calendar.monthrange(year, month)[1]
+        snapshot = {
+            "v": 2,
+            "contract_id": contract.id,
+            "contract_start_date": contract.start_date.isoformat() if contract.start_date else None,
+            "contract_end_date": contract.end_date.isoformat() if contract.end_date else None,
+            "period_label": f"{_meses[month]} de {year}",
+            "period_year": year,
+            "period_month": month,
+            "month_days": month_days,
+            "effective_start_date": breakdown["effective_start"].isoformat(),
+            "effective_end_date": breakdown["effective_end"].isoformat(),
+            "effective_days": breakdown["effective_days"],
+            "motoboy_name": (contract.supplier.name if contract.supplier else "") or "-",
+            "client_name": client_display_label(contract.other_supplier) if contract.other_supplier else "-",
+            "gross_amount": breakdown["gross_amount"],
+            "has_absences": breakdown["has_absences"],
+            "bonus_value": breakdown["base_bonus"],
+            "absence_count": breakdown["absence_count"],
+            "missing_total": breakdown["missing_total"],
+            "after_missing": breakdown["after_missing"],
+            "paid_total": breakdown["paid_total"],
+            "paid_by_nature": breakdown["paid_by_nature"],
+            "paid_excluded_residual_nature": breakdown["paid_excluded_residual_nature"],
+            "paid_entries": breakdown["paid_entries"],
+            "net_amount": net,
+        }
+
         entry = FinancialEntry(
             company_id=company_id,
             account_id=None,
@@ -1002,6 +1050,7 @@ def register_routes(bp: Blueprint) -> None:
             settled_at=None,
             reference=None,
             financial_batch_id=batch.id,
+            processing_snapshot=json.dumps(snapshot, ensure_ascii=False),
         )
         db.session.add(entry)
         db.session.commit()

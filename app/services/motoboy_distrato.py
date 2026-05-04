@@ -28,12 +28,11 @@ def contract_has_distrato_in_month(c: "Contract", year: int, month: int) -> bool
     return month_start <= c.end_date <= month_end
 
 
-def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Optional[str]]:
+def compute_motoboy_distrato_breakdown(
+    c: "Contract",
+) -> Tuple[Optional[dict], Optional[str]]:
     """
-    Proporcional do início do mês (ou do início do contrato, o que for mais tardio) até a data de
-    distrato: base mensal = prestação + premiação (premiação zerada se houver falta no mês),
-    proporcional em até 30 dias; desconta valor de faltas no período e contas a pagar já quitadas
-    com vencimento entre o dia 1 do mês e a data de distrato (inclusive).
+    Retorna o detalhamento completo do cálculo de distrato.
     """
     if not c.end_date:
         return None, "Cadastre a data de distrato no contrato antes de gerar o lançamento."
@@ -66,10 +65,10 @@ def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Option
         .all()
     )
     has_absences = len(absences) > 0
-    base_for_30 = base_service + (0 if has_absences else base_bonus)
-    eff_days_30 = min(max(effective_days, 0), 30)
-    proportion = eff_days_30 / 30.0 if eff_days_30 > 0 else 0.0
-    gross_amount = base_for_30 * proportion
+    base_total = base_service + (0 if has_absences else base_bonus)
+    month_days = (month_end - month_start).days + 1
+    proportion = (effective_days / month_days) if month_days > 0 else 0.0
+    gross_amount = base_total * proportion
     if gross_amount <= 0:
         return None, "Valor bruto proporcional é zero."
 
@@ -91,14 +90,34 @@ def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Option
         .filter(FinancialEntry.due_date <= eff_end)
     )
     paid_total = 0.0
+    paid_by_nature: dict[str, float] = {}
+    paid_entries_detail: list[dict] = []
+    paid_excluded: list[dict] = []
     for e in paid_qs.all():
         nat = e.financial_nature
-        if nat is not None and getattr(nat, "does_not_consider_residual", False):
-            continue
         try:
-            paid_total += float(e.amount)
+            amt = float(e.amount)
         except (TypeError, ValueError):
             continue
+        row = {
+            "date": (
+                e.settled_at.strftime("%d/%m/%Y")
+                if e.settled_at
+                else (e.due_date.strftime("%d/%m/%Y") if e.due_date else "-")
+            ),
+            "nature": (nat.name if nat else "-"),
+            "amount": amt,
+            "excluded_residual": False,
+        }
+        if nat is not None and getattr(nat, "does_not_consider_residual", False):
+            row["excluded_residual"] = True
+            paid_excluded.append({"name": nat.name, "amount": amt})
+            paid_entries_detail.append(row)
+            continue
+        paid_total += amt
+        if nat:
+            paid_by_nature[nat.name] = paid_by_nature.get(nat.name, 0.0) + amt
+        paid_entries_detail.append(row)
 
     net_amount = gross_amount - missing_total - paid_total
     if net_amount <= 0:
@@ -106,4 +125,36 @@ def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Option
             "Valor líquido zero ou negativo após descontar faltas e pagamentos já quitados "
             "no período (do dia 1 do mês até a data de distrato)."
         )
-    return net_amount, None
+    return (
+        {
+            "year": year,
+            "month": month,
+            "month_start": month_start,
+            "month_end": month_end,
+            "effective_start": eff_start,
+            "effective_end": eff_end,
+            "effective_days": effective_days,
+            "absence_count": sum(1 for a in absences if eff_start <= a.absence_date <= eff_end),
+            "has_absences": has_absences,
+            "base_bonus": base_bonus,
+            "gross_amount": gross_amount,
+            "missing_total": missing_total,
+            "after_missing": gross_amount - missing_total,
+            "paid_total": paid_total,
+            "paid_by_nature": [
+                {"name": nm, "amount": val}
+                for nm, val in sorted(paid_by_nature.items(), key=lambda x: x[0])
+            ],
+            "paid_entries": paid_entries_detail,
+            "paid_excluded_residual_nature": paid_excluded,
+            "net_amount": net_amount,
+        },
+        None,
+    )
+
+
+def compute_motoboy_distrato_net(c: "Contract") -> Tuple[Optional[float], Optional[str]]:
+    breakdown, err = compute_motoboy_distrato_breakdown(c)
+    if err or not breakdown:
+        return None, err
+    return float(breakdown.get("net_amount") or 0), None

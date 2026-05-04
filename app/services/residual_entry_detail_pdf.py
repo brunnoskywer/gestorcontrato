@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import json
+import calendar
 from io import BytesIO
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 try:
@@ -38,6 +39,65 @@ def _fmt_contract_start_date(value: Any) -> str:
         return datetime.fromisoformat(raw).strftime("%d/%m/%Y")
     except ValueError:
         return raw[:10]
+
+
+def _parse_iso_date(value: Any) -> date | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw[:10])
+    except ValueError:
+        return None
+
+
+def _resolve_worked_days_label(snapshot: dict[str, Any]) -> str | None:
+    abs_raw = snapshot.get("absence_count")
+    try:
+        abs_count = max(0, int(abs_raw or 0))
+    except (TypeError, ValueError):
+        abs_count = 0
+
+    total_days = None
+    try:
+        eff_days = int(snapshot.get("effective_days") or 0)
+        if eff_days > 0:
+            total_days = eff_days
+    except (TypeError, ValueError):
+        total_days = None
+
+    if total_days is None:
+        year = snapshot.get("period_year")
+        month = snapshot.get("period_month")
+        try:
+            year = int(year) if year is not None else None
+            month = int(month) if month is not None else None
+        except (TypeError, ValueError):
+            year = month = None
+        if year and month and 1 <= month <= 12:
+            month_days = calendar.monthrange(year, month)[1]
+            month_start = date(year, month, 1)
+            month_end = date(year, month, month_days)
+            c_start = _parse_iso_date(snapshot.get("contract_start_date"))
+            c_end = _parse_iso_date(snapshot.get("contract_end_date"))
+            eff_start = max(c_start or month_start, month_start)
+            eff_end = min(c_end or month_end, month_end)
+            if eff_start <= eff_end:
+                total_days = (eff_end - eff_start).days + 1
+            else:
+                total_days = month_days
+        else:
+            try:
+                m_days = int(snapshot.get("month_days") or 0)
+                total_days = m_days if m_days > 0 else None
+            except (TypeError, ValueError):
+                total_days = None
+
+    if total_days is None or total_days <= 0:
+        total_days = 30
+
+    worked_days = max(0, total_days - abs_count)
+    return f"({worked_days}/{total_days})"
 
 
 def build_residual_entry_detail_pdf(
@@ -87,15 +147,7 @@ def build_residual_entry_detail_pdf(
     pdf.setFont("Helvetica", 10)
     # Exibe somente o valor base já ajustado por dias trabalhados (x/30),
     # sem linhas intermediárias de desconto/subtotal.
-    abs_n = snapshot.get("absence_count")
-    worked_days_label = None
-    if abs_n is not None:
-        try:
-            abs_count = max(0, int(abs_n))
-        except (TypeError, ValueError):
-            abs_count = 0
-        worked_days = max(0, 30 - abs_count)
-        worked_days_label = f"({worked_days}/30)"
+    worked_days_label = _resolve_worked_days_label(snapshot)
     if worked_days_label:
         base_lbl = f"Valor base {worked_days_label}"
     else:
