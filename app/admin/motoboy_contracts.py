@@ -51,6 +51,7 @@ from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.services.motoboy_distrato_pdf import build_motoboy_distrato_pdf
 from app.utils import parse_decimal_form
 from app.models.supplier import client_display_label
+from app.search_text import folded_icontains
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
@@ -419,13 +420,13 @@ def register_routes(bp: Blueprint) -> None:
             .outerjoin(SupplierClient, Contract.other_supplier_id == SupplierClient.id)
         )
         if motoboy_name:
-            query = query.filter(SupplierMotoboy.name.ilike(f"%{motoboy_name}%"))
+            query = query.filter(folded_icontains(SupplierMotoboy.name, motoboy_name))
         if client_name:
             query = query.filter(
                 or_(
-                    SupplierClient.legal_name.ilike(f"%{client_name}%"),
-                    SupplierClient.name.ilike(f"%{client_name}%"),
-                    SupplierClient.trade_name.ilike(f"%{client_name}%"),
+                    folded_icontains(SupplierClient.legal_name, client_name),
+                    folded_icontains(SupplierClient.name, client_name),
+                    folded_icontains(SupplierClient.trade_name, client_name),
                 )
             )
         pagination = query.order_by(Contract.start_date.desc()).paginate(

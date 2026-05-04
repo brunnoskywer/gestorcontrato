@@ -16,6 +16,7 @@ from app.models import (
     MOTOBOY_STATUS_TERMINATED,
     MOTOBOY_TERMINATED_STATUSES,
 )
+from app.search_text import folded_icontains
 
 _ALLOWED_MOTOBOY_STATUS = frozenset(
     {MOTOBOY_STATUS_ACTIVE, MOTOBOY_STATUS_PENDING, MOTOBOY_STATUS_TERMINATED}
@@ -78,9 +79,9 @@ def register_routes(bp: Blueprint) -> None:
 
         query = Supplier.query.filter_by(type=SUPPLIER_MOTOBOY)
         if name:
-            query = query.filter(Supplier.name.ilike(f"%{name}%"))
+            query = query.filter(folded_icontains(Supplier.name, name))
         if cpf:
-            query = query.filter(Supplier.document.ilike(f"%{cpf}%"))
+            query = query.filter(folded_icontains(Supplier.document, cpf))
 
         pagination = query.order_by(Supplier.name).paginate(
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
@@ -104,7 +105,7 @@ def register_routes(bp: Blueprint) -> None:
         query = (
             Supplier.query.filter_by(type=SUPPLIER_MOTOBOY)
             .filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
-            .filter(Supplier.name.ilike(f"%{term}%"))
+            .filter(folded_icontains(Supplier.name, term))
             .order_by(Supplier.name)
         )
         results = query.limit(20).all()

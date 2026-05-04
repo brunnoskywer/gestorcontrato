@@ -10,6 +10,7 @@ from app.constants.brazil_ufs import is_valid_uf
 from app.extensions import db
 from app.models import Company, Supplier, SUPPLIER_CLIENT
 from app.models.supplier import client_display_label
+from app.search_text import folded_icontains
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -49,13 +50,13 @@ def register_routes(bp: Blueprint) -> None:
         if name:
             query = query.filter(
                 or_(
-                    Supplier.legal_name.ilike(f"%{name}%"),
-                    Supplier.name.ilike(f"%{name}%"),
-                    Supplier.trade_name.ilike(f"%{name}%"),
+                    folded_icontains(Supplier.legal_name, name),
+                    folded_icontains(Supplier.name, name),
+                    folded_icontains(Supplier.trade_name, name),
                 )
             )
         if cnpj:
-            query = query.filter(Supplier.document.ilike(f"%{cnpj}%"))
+            query = query.filter(folded_icontains(Supplier.document, cnpj))
 
         pagination = query.order_by(
             func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
@@ -82,9 +83,9 @@ def register_routes(bp: Blueprint) -> None:
             Supplier.query.filter_by(type=SUPPLIER_CLIENT, is_active=True)
             .filter(
                 or_(
-                    Supplier.legal_name.ilike(f"%{term}%"),
-                    Supplier.name.ilike(f"%{term}%"),
-                    Supplier.trade_name.ilike(f"%{term}%"),
+                    folded_icontains(Supplier.legal_name, term),
+                    folded_icontains(Supplier.name, term),
+                    folded_icontains(Supplier.trade_name, term),
                 )
             )
             .order_by(func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name))

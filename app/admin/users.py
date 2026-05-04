@@ -7,6 +7,7 @@ from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
 from app.models import User
+from app.search_text import folded_icontains
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -40,9 +41,9 @@ def register_routes(bp: Blueprint) -> None:
 
         query = User.query
         if email:
-            query = query.filter(User.email.ilike(f"%{email}%"))
+            query = query.filter(folded_icontains(User.email, email))
         if name:
-            query = query.filter(User.name.ilike(f"%{name}%"))
+            query = query.filter(folded_icontains(User.name, name))
 
         pagination = query.order_by(User.email).paginate(
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False

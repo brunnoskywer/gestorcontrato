@@ -10,6 +10,7 @@ from app.admin.auth_helpers import require_admin, handle_delete_constraint_error
 from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
 from app.models import Contract, CONTRACT_TYPE_CLIENT, FinancialNature, Supplier, SUPPLIER_CLIENT
+from app.search_text import folded_icontains
 from app.utils import parse_decimal_form
 
 
@@ -67,9 +68,9 @@ def register_routes(bp: Blueprint) -> None:
         if client_name:
             query = query.filter(
                 or_(
-                    Supplier.legal_name.ilike(f"%{client_name}%"),
-                    Supplier.name.ilike(f"%{client_name}%"),
-                    Supplier.trade_name.ilike(f"%{client_name}%"),
+                    folded_icontains(Supplier.legal_name, client_name),
+                    folded_icontains(Supplier.name, client_name),
+                    folded_icontains(Supplier.trade_name, client_name),
                 )
             )
         pagination = query.order_by(Contract.start_date.desc()).paginate(

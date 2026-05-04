@@ -8,6 +8,7 @@ from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.constants.brazil_ufs import is_valid_uf
 from app.extensions import db
 from app.models import Company
+from app.search_text import folded_icontains
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -43,9 +44,9 @@ def register_routes(bp: Blueprint) -> None:
 
         query = Company.query
         if name:
-            query = query.filter(Company.legal_name.ilike(f"%{name}%"))
+            query = query.filter(folded_icontains(Company.legal_name, name))
         if cnpj:
-            query = query.filter(Company.cnpj.ilike(f"%{cnpj}%"))
+            query = query.filter(folded_icontains(Company.cnpj, cnpj))
 
         pagination = query.order_by(Company.legal_name).paginate(
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False

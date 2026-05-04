@@ -14,6 +14,7 @@ from app.models import (
     SUPPLIER_MOTOBOY,
     MOTOBOY_TERMINATED_STATUSES,
 )
+from app.search_text import folded_icontains
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -26,7 +27,7 @@ def register_routes(bp: Blueprint) -> None:
 
         query = Supplier.query.filter(Supplier.type == SUPPLIER_SUPPLIER)
         if name:
-            query = query.filter(Supplier.name.ilike(f"%{name}%"))
+            query = query.filter(folded_icontains(Supplier.name, name))
 
         pagination = query.order_by(Supplier.name).paginate(
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
@@ -168,7 +169,7 @@ def register_routes(bp: Blueprint) -> None:
             if supplier_type == SUPPLIER_MOTOBOY:
                 query = query.filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
         if term:
-            query = query.filter(Supplier.name.ilike(f"%{term}%"))
+            query = query.filter(folded_icontains(Supplier.name, term))
 
         items = query.order_by(Supplier.name).limit(20).all()
         return jsonify(

@@ -40,6 +40,7 @@ from app.models import (
 from io import BytesIO
 
 from app.models.supplier import client_display_label
+from app.search_text import folded_icontains
 from app.services.motoboy_distrato import (
     compute_motoboy_distrato_breakdown,
     contract_has_distrato_in_month,
@@ -262,7 +263,7 @@ def register_routes(bp: Blueprint) -> None:
         if supplier_id:
             query = query.filter(FinancialEntry.supplier_id == supplier_id)
         elif supplier_name:
-            query = query.filter(Supplier.name.ilike(f"%{supplier_name}%"))
+            query = query.filter(folded_icontains(Supplier.name, supplier_name))
 
         supplier_filter_display = supplier_name
         if supplier_id:
