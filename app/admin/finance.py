@@ -1920,6 +1920,7 @@ def register_routes(bp: Blueprint) -> None:
         pdf.setFont("Helvetica", 10)
         left_x = 68
         right_x = 540
+        table_row_height = 12
 
         def new_page():
             nonlocal y
@@ -1953,12 +1954,13 @@ def register_routes(bp: Blueprint) -> None:
                 # Cabeçalho da sub-tabela
                 pdf.setFont("Helvetica-Bold", 9)
                 pdf.setStrokeGray(0.45)
+                pdf.setLineWidth(0.6)
                 pdf.drawString(70, y, "Motoboy")
                 pdf.drawString(260, y, "PIX")
                 pdf.drawRightString(540, y, "Valor a pagar")
                 # linha horizontal abaixo do cabeçalho
                 pdf.line(left_x, y - 2, right_x, y - 2)
-                y -= 12
+                y -= table_row_height
 
                 pdf.setFont("Helvetica", 9)
                 subtotal = 0.0
@@ -1974,17 +1976,18 @@ def register_routes(bp: Blueprint) -> None:
                         y -= 14
                         pdf.setFont("Helvetica-Bold", 9)
                         pdf.setStrokeGray(0.45)
+                        pdf.setLineWidth(0.6)
                         pdf.drawString(70, y, "Motoboy")
                         pdf.drawString(260, y, "PIX")
                         pdf.drawRightString(540, y, "Valor a pagar")
                         pdf.line(left_x, y - 2, right_x, y - 2)
-                        y -= 12
+                        y -= table_row_height
                         pdf.setFont("Helvetica", 9)
 
                     # Fundo listrado alternado (um pouco mais escuro dentro da área da tabela)
                     if row_index % 2 == 0:
                         pdf.setFillGray(0.92)
-                        pdf.rect(left_x, y - 1, right_x - left_x, 11, fill=1, stroke=0)
+                        pdf.rect(left_x, y - 1, right_x - left_x, table_row_height - 1, fill=1, stroke=0)
                         pdf.setFillGray(0.0)
 
                     pdf.drawString(70, y, (item["motoboy"] or "")[:30])
@@ -2001,16 +2004,19 @@ def register_routes(bp: Blueprint) -> None:
                     )
                     # linha horizontal separando as linhas da tabela
                     pdf.setStrokeGray(0.82)
+                    pdf.setLineWidth(0.45)
                     pdf.line(left_x, y - 2, right_x, y - 2)
-                    y -= 12
+                    y -= table_row_height
                     row_index += 1
 
                 # Subtotal por cliente
                 if y < 50:
                     new_page()
                 pdf.setFont("Helvetica-Bold", 9)
+                # Linha inteira para evitar "traços soltos" visuais.
                 pdf.setStrokeGray(0.45)
-                pdf.line(400, y + 6, right_x, y + 6)
+                pdf.setLineWidth(0.8)
+                pdf.line(left_x, y + 6, right_x, y + 6)
                 pdf.drawRightString(
                     540,
                     y,
@@ -2028,7 +2034,9 @@ def register_routes(bp: Blueprint) -> None:
             new_page()
         pdf.setFont("Helvetica-Bold", 11)
         pdf.setStrokeGray(0.25)
-        pdf.line(360, y + 8, right_x, y + 8)
+        pdf.setLineWidth(1.0)
+        # Linha inteira para fechamento visual consistente.
+        pdf.line(left_x, y + 8, right_x, y + 8)
         pdf.drawRightString(
             540,
             y,
