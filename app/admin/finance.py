@@ -1918,9 +1918,10 @@ def register_routes(bp: Blueprint) -> None:
 
         y = height - 120
         pdf.setFont("Helvetica", 10)
-        left_x = 68
+        left_x = 40
         right_x = 540
-        table_row_height = 12
+        table_row_height = 14
+        table_pad = 3
 
         def new_page():
             nonlocal y
@@ -1928,66 +1929,70 @@ def register_routes(bp: Blueprint) -> None:
             pdf.setFont("Helvetica", 10)
             y = height - 40
 
+        def draw_company_heading(name: str) -> None:
+            nonlocal y
+            pdf.setFont("Helvetica-Bold", 11)
+            pdf.drawString(left_x, y, f"Empresa: {name}")
+            y -= 11
+            pdf.setStrokeGray(0.78)
+            pdf.setLineWidth(0.5)
+            pdf.line(left_x, y, right_x, y)
+            y -= 10
+
+        def draw_table_header() -> None:
+            nonlocal y
+            pdf.setFont("Helvetica-Bold", 9)
+            pdf.setStrokeGray(0.5)
+            pdf.setLineWidth(0.55)
+            pdf.drawString(70, y, "Motoboy")
+            pdf.drawString(260, y, "PIX")
+            pdf.drawRightString(right_x, y, "Valor a pagar")
+            y -= table_pad
+            pdf.line(left_x, y, right_x, y)
+            y -= table_row_height - table_pad
+
         total_geral = 0.0
 
         # Agrupado por Empresa, Cliente, com motoboys listados abaixo
         for company_name in sorted(grouped.keys()):
             if y < 80:
                 new_page()
-            pdf.setFont("Helvetica-Bold", 11)
-            pdf.setStrokeGray(0.55)
-            pdf.line(40, y + 4, right_x, y + 4)
-            pdf.drawString(40, y, f"Empresa: {company_name}")
-            y -= 18
+            draw_company_heading(company_name)
 
             for client_name in sorted(grouped[company_name].keys()):
-                if y < 70:
+                if y < 72:
                     new_page()
-                    pdf.setFont("Helvetica-Bold", 11)
-                    pdf.drawString(40, y, f"Empresa: {company_name}")
-                    y -= 18
+                    draw_company_heading(company_name)
 
                 pdf.setFont("Helvetica-Bold", 10)
-                pdf.drawString(60, y, f"Cliente: {client_name}")
-                y -= 14
-
-                # Cabeçalho da sub-tabela
-                pdf.setFont("Helvetica-Bold", 9)
-                pdf.setStrokeGray(0.45)
-                pdf.setLineWidth(0.6)
-                pdf.drawString(70, y, "Motoboy")
-                pdf.drawString(260, y, "PIX")
-                pdf.drawRightString(540, y, "Valor a pagar")
-                # linha horizontal abaixo do cabeçalho
-                pdf.line(left_x, y - 2, right_x, y - 2)
-                y -= table_row_height
+                pdf.drawString(56, y, f"Cliente: {client_name}")
+                y -= 12
+                draw_table_header()
 
                 pdf.setFont("Helvetica", 9)
                 subtotal = 0.0
                 row_index = 0
-                for item in grouped[company_name][client_name]:
-                    if y < 60:
+                items = grouped[company_name][client_name]
+                for item in items:
+                    if y < 58:
                         new_page()
-                        pdf.setFont("Helvetica-Bold", 11)
-                        pdf.drawString(40, y, f"Empresa: {company_name}")
-                        y -= 18
+                        draw_company_heading(company_name)
                         pdf.setFont("Helvetica-Bold", 10)
-                        pdf.drawString(60, y, f"Cliente: {client_name}")
-                        y -= 14
-                        pdf.setFont("Helvetica-Bold", 9)
-                        pdf.setStrokeGray(0.45)
-                        pdf.setLineWidth(0.6)
-                        pdf.drawString(70, y, "Motoboy")
-                        pdf.drawString(260, y, "PIX")
-                        pdf.drawRightString(540, y, "Valor a pagar")
-                        pdf.line(left_x, y - 2, right_x, y - 2)
-                        y -= table_row_height
+                        pdf.drawString(56, y, f"Cliente: {client_name}")
+                        y -= 12
+                        draw_table_header()
                         pdf.setFont("Helvetica", 9)
 
-                    # Fundo listrado alternado (um pouco mais escuro dentro da área da tabela)
                     if row_index % 2 == 0:
-                        pdf.setFillGray(0.92)
-                        pdf.rect(left_x, y - 1, right_x - left_x, table_row_height - 1, fill=1, stroke=0)
+                        pdf.setFillGray(0.93)
+                        pdf.rect(
+                            left_x,
+                            y - 4,
+                            right_x - left_x,
+                            table_row_height + 2,
+                            fill=1,
+                            stroke=0,
+                        )
                         pdf.setFillGray(0.0)
 
                     pdf.drawString(70, y, (item["motoboy"] or "")[:30])
@@ -1996,56 +2001,52 @@ def register_routes(bp: Blueprint) -> None:
                     subtotal += val
                     total_geral += val
                     pdf.drawRightString(
-                        540,
+                        right_x,
                         y,
                         f"{val:,.2f}".replace(",", "X")
                         .replace(".", ",")
                         .replace("X", "."),
                     )
-                    # linha horizontal separando as linhas da tabela
-                    pdf.setStrokeGray(0.82)
-                    pdf.setLineWidth(0.45)
-                    pdf.line(left_x, y - 2, right_x, y - 2)
                     y -= table_row_height
                     row_index += 1
 
-                # Subtotal por cliente
-                if y < 50:
+                if y < 48:
                     new_page()
+                y -= 4
+                pdf.setStrokeGray(0.55)
+                pdf.setLineWidth(0.65)
+                pdf.line(left_x, y, right_x, y)
+                y -= 2
                 pdf.setFont("Helvetica-Bold", 9)
-                # Linha inteira para evitar "traços soltos" visuais.
-                pdf.setStrokeGray(0.45)
-                pdf.setLineWidth(0.8)
-                pdf.line(left_x, y + 6, right_x, y + 6)
                 pdf.drawRightString(
-                    540,
+                    right_x,
                     y,
                     f"Subtotal cliente: {subtotal:,.2f}"
                     .replace(",", "X")
                     .replace(".", ",")
                     .replace("X", "."),
                 )
-                y -= 18
+                y -= 16
 
-            y -= 6
+            y -= 4
 
         # Total geral
-        if y < 40:
+        if y < 44:
             new_page()
+        y -= 4
+        pdf.setStrokeGray(0.35)
+        pdf.setLineWidth(0.85)
+        pdf.line(left_x, y, right_x, y)
+        y -= 2
         pdf.setFont("Helvetica-Bold", 11)
-        pdf.setStrokeGray(0.25)
-        pdf.setLineWidth(1.0)
-        # Linha inteira para fechamento visual consistente.
-        pdf.line(left_x, y + 8, right_x, y + 8)
         pdf.drawRightString(
-            540,
+            right_x,
             y,
             f"Total geral: {total_geral:,.2f}".replace(",", "X")
             .replace(".", ",")
             .replace("X", "."),
         )
 
-        pdf.showPage()
         pdf.save()
         buf.seek(0)
 
