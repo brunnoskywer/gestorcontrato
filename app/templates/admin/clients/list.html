@@ -26,6 +26,14 @@
         <label class="form-label mb-1">CNPJ</label>
         <input type="text" name="cnpj" class="form-control form-control-sm w-100" value="{{ filters.cnpj }}" placeholder="Pesquisar por CNPJ" />
       </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Cadastro de</label>
+        <input type="date" name="created_from" class="form-control form-control-sm" value="{{ filters.created_from }}" title="Data de criação do registro" />
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Cadastro até</label>
+        <input type="date" name="created_to" class="form-control form-control-sm" value="{{ filters.created_to }}" title="Data de criação do registro (inclusive)" />
+      </div>
       <div class="admin-filter-flex__actions">
         <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
         <a href="{{ url_for('admin.clients_list') }}" class="btn btn-danger btn-sm">Limpar</a>
@@ -44,6 +52,7 @@
       <th>Razão social</th>
       <th>CNPJ</th>
       <th>Empresa emissão NF</th>
+      <th>Cadastro</th>
     </tr>
   </thead>
   <tbody>
@@ -54,9 +63,10 @@
       <td data-label="Razão social">{{ client.legal_name or '-' }}</td>
       <td data-label="CNPJ">{{ client.document or '-' }}</td>
       <td data-label="Empresa emissão NF">{{ client.billing_company.legal_name if client.billing_company else '-' }}</td>
+      <td data-label="Cadastro">{% if client.created_at %}{{ client.created_at.strftime('%d/%m/%Y %H:%M') }}{% else %}-{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>
+    <tr><td colspan="6" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>
     {% endfor %}
   </tbody>
 </table>

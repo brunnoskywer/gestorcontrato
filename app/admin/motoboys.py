@@ -17,6 +17,7 @@ from app.models import (
     MOTOBOY_TERMINATED_STATUSES,
 )
 from app.search_text import folded_icontains
+from app.utils import apply_created_at_range
 
 _ALLOWED_MOTOBOY_STATUS = frozenset(
     {MOTOBOY_STATUS_ACTIVE, MOTOBOY_STATUS_PENDING, MOTOBOY_STATUS_TERMINATED}
@@ -76,12 +77,15 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         name = request.args.get("name", "").strip()
         cpf = request.args.get("cpf", "").strip()
+        created_from = request.args.get("created_from", "").strip()
+        created_to = request.args.get("created_to", "").strip()
 
         query = Supplier.query.filter_by(type=SUPPLIER_MOTOBOY)
         if name:
             query = query.filter(folded_icontains(Supplier.name, name))
         if cpf:
             query = query.filter(folded_icontains(Supplier.document, cpf))
+        query = apply_created_at_range(query, Supplier.created_at, created_from, created_to)
 
         pagination = query.order_by(Supplier.name).paginate(
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
@@ -90,7 +94,12 @@ def register_routes(bp: Blueprint) -> None:
             "admin/motoboys/list.html",
             motoboys=pagination.items,
             pagination=pagination,
-            filters={"name": name, "cpf": cpf},
+            filters={
+                "name": name,
+                "cpf": cpf,
+                "created_from": created_from,
+                "created_to": created_to,
+            },
         )
 
     @bp.get("/motoboys/search")

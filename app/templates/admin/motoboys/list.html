@@ -30,6 +30,14 @@
         <label class="form-label mb-1">CPF</label>
         <input type="text" name="cpf" class="form-control form-control-sm w-100" value="{{ filters.cpf }}" placeholder="Pesquisar por CPF" />
       </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Cadastro de</label>
+        <input type="date" name="created_from" class="form-control form-control-sm" value="{{ filters.created_from }}" title="Data de criação do registro" />
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Cadastro até</label>
+        <input type="date" name="created_to" class="form-control form-control-sm" value="{{ filters.created_to }}" title="Data de criação do registro (inclusive)" />
+      </div>
       <div class="admin-filter-flex__actions">
         <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
         <a href="{{ url_for('admin.motoboys_list') }}" class="btn btn-danger btn-sm">Limpar</a>
@@ -54,6 +62,7 @@
       <th>CNPJ</th>
       <th>Placa moto</th>
       <th>Conta bancária / PIX</th>
+      <th>Cadastro</th>
     </tr>
   </thead>
   <tbody>
@@ -70,9 +79,10 @@
       <td data-label="CNPJ">{{ motoboy.document_secondary or '-' }}</td>
       <td data-label="Placa moto">{{ motoboy.bike_plate or '-' }}</td>
       <td data-label="Conta bancária / PIX">{{ motoboy.bank_account_pix or '-' }}</td>
+      <td data-label="Cadastro">{% if motoboy.created_at %}{{ motoboy.created_at.strftime('%d/%m/%Y %H:%M') }}{% else %}-{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="9" class="text-center text-muted">Nenhum motoboy cadastrado.</td></tr>
+    <tr><td colspan="10" class="text-center text-muted">Nenhum motoboy cadastrado.</td></tr>
     {% endfor %}
   </tbody>
 </table>

@@ -11,7 +11,7 @@ from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
 from app.models import Contract, CONTRACT_TYPE_CLIENT, FinancialNature, Supplier, SUPPLIER_CLIENT
 from app.search_text import folded_icontains
-from app.utils import parse_decimal_form
+from app.utils import apply_created_at_range, parse_decimal_form
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -63,6 +63,8 @@ def register_routes(bp: Blueprint) -> None:
     def client_contracts_list():
         require_admin()
         client_name = request.args.get("client_name", "").strip()
+        created_from = request.args.get("created_from", "").strip()
+        created_to = request.args.get("created_to", "").strip()
 
         query = Contract.query.filter_by(contract_type=CONTRACT_TYPE_CLIENT).join(Supplier, Contract.supplier_id == Supplier.id)
         if client_name:
@@ -73,6 +75,7 @@ def register_routes(bp: Blueprint) -> None:
                     folded_icontains(Supplier.trade_name, client_name),
                 )
             )
+        query = apply_created_at_range(query, Contract.created_at, created_from, created_to)
         pagination = query.order_by(Contract.start_date.desc()).paginate(
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
         )
@@ -80,7 +83,11 @@ def register_routes(bp: Blueprint) -> None:
             "admin/client_contracts/list.html",
             contracts=pagination.items,
             pagination=pagination,
-            filters={"client_name": client_name},
+            filters={
+                "client_name": client_name,
+                "created_from": created_from,
+                "created_to": created_to,
+            },
         )
 
     @bp.route("/client-contracts/create", methods=["GET", "POST"])

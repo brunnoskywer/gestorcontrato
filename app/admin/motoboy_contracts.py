@@ -49,7 +49,7 @@ from app.services.motoboy_distrato import (
 )
 from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.services.motoboy_distrato_pdf import build_motoboy_distrato_pdf
-from app.utils import parse_decimal_form
+from app.utils import apply_created_at_range, parse_decimal_form
 from app.models.supplier import client_display_label
 from app.search_text import folded_icontains
 from sqlalchemy import func, or_
@@ -411,6 +411,8 @@ def register_routes(bp: Blueprint) -> None:
         require_supervisor_or_admin()
         motoboy_name = request.args.get("motoboy_name", "").strip()
         client_name = request.args.get("client_name", "").strip()
+        created_from = request.args.get("created_from", "").strip()
+        created_to = request.args.get("created_to", "").strip()
 
         SupplierMotoboy = aliased(Supplier)
         SupplierClient = aliased(Supplier)
@@ -429,6 +431,7 @@ def register_routes(bp: Blueprint) -> None:
                     folded_icontains(SupplierClient.trade_name, client_name),
                 )
             )
+        query = apply_created_at_range(query, Contract.created_at, created_from, created_to)
         pagination = query.order_by(Contract.start_date.desc()).paginate(
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
         )
@@ -437,7 +440,12 @@ def register_routes(bp: Blueprint) -> None:
             "admin/motoboy_contracts/list.html",
             contracts=pagination.items,
             pagination=pagination,
-            filters={"motoboy_name": motoboy_name, "client_name": client_name},
+            filters={
+                "motoboy_name": motoboy_name,
+                "client_name": client_name,
+                "created_from": created_from,
+                "created_to": created_to,
+            },
         )
 
     @bp.route("/motoboy-contracts/create", methods=["GET", "POST"])

@@ -11,6 +11,7 @@ from app.extensions import db
 from app.models import Company, Supplier, SUPPLIER_CLIENT
 from app.models.supplier import client_display_label
 from app.search_text import folded_icontains
+from app.utils import apply_created_at_range
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -45,6 +46,8 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         name = request.args.get("name", "").strip()
         cnpj = request.args.get("cnpj", "").strip()
+        created_from = request.args.get("created_from", "").strip()
+        created_to = request.args.get("created_to", "").strip()
 
         query = Supplier.query.filter_by(type=SUPPLIER_CLIENT)
         if name:
@@ -57,6 +60,7 @@ def register_routes(bp: Blueprint) -> None:
             )
         if cnpj:
             query = query.filter(folded_icontains(Supplier.document, cnpj))
+        query = apply_created_at_range(query, Supplier.created_at, created_from, created_to)
 
         pagination = query.order_by(
             func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name)
@@ -67,7 +71,12 @@ def register_routes(bp: Blueprint) -> None:
             clients=pagination.items,
             pagination=pagination,
             companies=companies,
-            filters={"name": name, "cnpj": cnpj},
+            filters={
+                "name": name,
+                "cnpj": cnpj,
+                "created_from": created_from,
+                "created_to": created_to,
+            },
         )
 
     @bp.get("/clients/search")

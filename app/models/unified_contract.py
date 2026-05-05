@@ -1,5 +1,5 @@
 """Unified contract: client contracts and motoboy contracts in one table."""
-from datetime import date
+from datetime import date, datetime
 
 from app.extensions import db
 
@@ -19,6 +19,7 @@ class Contract(db.Model):
 
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     location = db.Column(db.String(255), nullable=True)
 
     # Motoboy contract fields
