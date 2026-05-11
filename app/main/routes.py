@@ -326,6 +326,30 @@ def dre():
     )
     pay_por_natureza = sorted(pay_por_natureza, key=lambda x: (x.name or "").lower())
 
+    tr = float(total_receitas)
+    rec_por_natureza_display = [
+        {
+            "financial_nature_id": r.financial_nature_id,
+            "name": r.name,
+            "total": float(r.total or 0),
+            "pct_of_receitas": round((float(r.total or 0) / tr) * 100, 1) if tr > 0 else None,
+        }
+        for r in rec_por_natureza
+    ]
+
+    td = float(total_despesas)
+    pay_por_natureza_display = [
+        {
+            "financial_nature_id": p.financial_nature_id,
+            "name": p.name,
+            "total": float(p.total or 0),
+            "pct_of_despesas": round((float(p.total or 0) / td) * 100, 1) if td > 0 else None,
+        }
+        for p in pay_por_natureza
+    ]
+
+    margem_sobre_receitas = round((resultado / tr) * 100, 2) if tr > 0 else None
+
     # Gráficos: composição por natureza (quitados no período)
     chart_rec_labels = [r.name or "Sem natureza" for r in rec_por_natureza]
     chart_rec_values = [float(r.total or 0) for r in rec_por_natureza]
@@ -390,8 +414,9 @@ def dre():
         total_receitas=float(total_receitas),
         total_despesas=float(total_despesas),
         resultado=resultado,
-        rec_por_natureza=rec_por_natureza,
-        pay_por_natureza=pay_por_natureza,
+        rec_por_natureza=rec_por_natureza_display,
+        pay_por_natureza=pay_por_natureza_display,
+        margem_sobre_receitas=margem_sobre_receitas,
         chart_rec_labels=chart_rec_labels,
         chart_rec_values=chart_rec_values,
         chart_pay_labels=chart_pay_labels,
