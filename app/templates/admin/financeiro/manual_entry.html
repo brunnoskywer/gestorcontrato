@@ -58,6 +58,15 @@
         </select>
       </div>
       <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Natureza financeira</label>
+        <select name="nature_id" class="form-select form-select-sm w-100">
+          <option value="">Todas</option>
+          {% for n in natures %}
+          <option value="{{ n.id }}" {% if filters.nature_id == n.id %}selected{% endif %}>{{ n.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="admin-filter-flex__field">
         <label class="form-label mb-1">Status</label>
         <select name="status" class="form-select form-select-sm w-100">
           <option value="">Todos</option>

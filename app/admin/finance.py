@@ -210,6 +210,7 @@ def register_routes(bp: Blueprint) -> None:
         date_to_str = request.args.get("date_to", "").strip()
         company_id = request.args.get("company_id", type=int)
         entry_type = request.args.get("entry_type", "").strip()
+        nature_id = request.args.get("nature_id", type=int)
         supplier_type = request.args.get("supplier_type", "").strip()
         supplier_id = request.args.get("supplier_id", type=int)
         supplier_name = request.args.get("supplier_name", "").strip()
@@ -258,6 +259,8 @@ def register_routes(bp: Blueprint) -> None:
             query = query.filter(FinancialEntry.company_id == company_id)
         if entry_type in (ENTRY_PAYABLE, ENTRY_RECEIVABLE):
             query = query.filter(FinancialEntry.entry_type == entry_type)
+        if nature_id:
+            query = query.filter(FinancialEntry.financial_nature_id == nature_id)
         if supplier_type in (SUPPLIER_CLIENT, SUPPLIER_SUPPLIER, SUPPLIER_MOTOBOY):
             query = query.filter(Supplier.type == supplier_type)
         if supplier_id:
@@ -294,6 +297,7 @@ def register_routes(bp: Blueprint) -> None:
                 "date_to": date_to_str,
                 "company_id": company_id,
                 "entry_type": entry_type,
+                "nature_id": nature_id,
                 "supplier_type": supplier_type,
                 "supplier_id": supplier_id,
                 "supplier_name": supplier_name,
