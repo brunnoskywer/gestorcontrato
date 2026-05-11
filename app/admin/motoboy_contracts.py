@@ -22,6 +22,7 @@ from app.models import (
     Contract,
     ContractAbsence,
     ContractAttachment,
+    CONTRACT_ATTACHMENT_CONTRATO,
     CONTRACT_ATTACHMENT_KIND_LABELS_PT,
     CONTRACT_ATTACHMENT_KIND_ORDER,
     CONTRACT_TYPE_MOTOBOY,
@@ -436,10 +437,24 @@ def register_routes(bp: Blueprint) -> None:
             page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
         )
 
+        page_ids = [c.id for c in pagination.items]
+        contracts_with_contrato_attachment: frozenset[int] = frozenset()
+        if page_ids:
+            contracts_with_contrato_attachment = frozenset(
+                row[0]
+                for row in ContractAttachment.query.filter(
+                    ContractAttachment.contract_id.in_(page_ids),
+                    ContractAttachment.kind == CONTRACT_ATTACHMENT_CONTRATO,
+                )
+                .with_entities(ContractAttachment.contract_id)
+                .all()
+            )
+
         return render_template(
             "admin/motoboy_contracts/list.html",
             contracts=pagination.items,
             pagination=pagination,
+            contracts_with_contrato_attachment=contracts_with_contrato_attachment,
             filters={
                 "motoboy_name": motoboy_name,
                 "client_name": client_name,
