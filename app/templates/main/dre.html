@@ -2,6 +2,13 @@
 {% block title %}DRE Gerencial{% endblock %}
 
 {% block content %}
+<div
+  id="dre-page"
+  data-detail-url="{{ url_for('main.dre_detail') }}"
+  data-date-from="{{ date_from }}"
+  data-date-to="{{ date_to }}"
+  data-company-id="{{ company_id or '' }}"
+>
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
   <h1 class="h3 mb-0 fw-bold">DRE Gerencial</h1>
   <form method="get" action="{{ url_for('main.dre') }}" class="d-flex flex-wrap align-items-center gap-2">
@@ -33,7 +40,9 @@
               Receitas
             </button>
           </td>
-          <td class="py-2 pe-3 text-end fw-semibold text-success">R$ {{ total_receitas|format_currency }}</td>
+          <td class="py-2 pe-3 text-end fw-semibold text-success">
+            <span class="tabular-nums">R$ {{ total_receitas|format_currency }}</span>
+          </td>
         </tr>
         {% if rec_por_natureza %}
           {% for r in rec_por_natureza %}
@@ -49,17 +58,19 @@
               </button>
             </td>
             <td class="py-2 pe-3 text-end text-success small">
-              R$ {{ r.total|format_currency }}
-              {% if r.pct_of_receitas is not none %}
-              <span class="text-muted">({{ '%.1f'|format(r.pct_of_receitas)|replace('.', ',') }}%)</span>
-              {% endif %}
+              <div class="d-inline-flex justify-content-end align-items-baseline gap-2 w-100 dre-value-line">
+                {% if r.pct_of_receitas is not none %}
+                <span class="text-muted dre-pct">({{ '%.1f'|format(r.pct_of_receitas)|replace('.', ',') }}%)</span>
+                {% endif %}
+                <span class="tabular-nums">R$ {{ r.total|format_currency }}</span>
+              </div>
             </td>
           </tr>
           {% endfor %}
         {% else %}
           <tr class="border-bottom">
             <td class="py-2 ps-5 text-muted small">Sem receitas quitadas no período</td>
-            <td class="py-2 pe-3 text-end text-muted small">R$ 0,00</td>
+            <td class="py-2 pe-3 text-end text-muted small"><span class="tabular-nums">R$ 0,00</span></td>
           </tr>
         {% endif %}
         <tr class="border-bottom">
@@ -69,7 +80,9 @@
               Despesas
             </button>
           </td>
-          <td class="py-2 pe-3 text-end text-danger">R$ {{ total_despesas|format_currency }}</td>
+          <td class="py-2 pe-3 text-end text-danger">
+            <span class="tabular-nums">R$ {{ total_despesas|format_currency }}</span>
+          </td>
         </tr>
         {% if pay_por_natureza %}
           {% for p in pay_por_natureza %}
@@ -85,26 +98,30 @@
               </button>
             </td>
             <td class="py-2 pe-3 text-end text-danger small">
-              R$ {{ p.total|format_currency }}
-              {% if p.pct_of_despesas is not none %}
-              <span class="text-muted">({{ '%.1f'|format(p.pct_of_despesas)|replace('.', ',') }}%)</span>
-              {% endif %}
+              <div class="d-inline-flex justify-content-end align-items-baseline gap-2 w-100 dre-value-line">
+                {% if p.pct_of_despesas is not none %}
+                <span class="text-muted dre-pct">({{ '%.1f'|format(p.pct_of_despesas)|replace('.', ',') }}%)</span>
+                {% endif %}
+                <span class="tabular-nums">R$ {{ p.total|format_currency }}</span>
+              </div>
             </td>
           </tr>
           {% endfor %}
         {% else %}
           <tr class="border-bottom">
             <td class="py-2 ps-5 text-muted small">Sem despesas quitadas no período</td>
-            <td class="py-2 pe-3 text-end text-muted small">R$ 0,00</td>
+            <td class="py-2 pe-3 text-end text-muted small"><span class="tabular-nums">R$ 0,00</span></td>
           </tr>
         {% endif %}
         <tr class="dre-result-row">
           <td class="py-3 ps-3 fw-bold">Resultado do período</td>
           <td class="py-3 pe-3 text-end fw-bold {{ 'text-success' if resultado >= 0 else 'text-danger' }}">
-            R$ {{ resultado|format_currency }}
-            {% if margem_sobre_receitas is not none %}
-            <span class="text-muted fw-normal small">({{ '%.2f'|format(margem_sobre_receitas)|replace('.', ',') }}% s/ receitas)</span>
-            {% endif %}
+            <div class="d-inline-flex justify-content-end align-items-baseline gap-2 w-100 dre-value-line">
+              {% if margem_sobre_receitas is not none %}
+              <span class="text-muted fw-normal small dre-pct">({{ '%.2f'|format(margem_sobre_receitas)|replace('.', ',') }}% s/ receitas)</span>
+              {% endif %}
+              <span class="tabular-nums">R$ {{ resultado|format_currency }}</span>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -162,136 +179,15 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
-<script>
-(function () {
-  if (typeof Chart === 'undefined') return;
-
-  var recLabels = {{ chart_rec_labels | tojson }};
-  var recValues = {{ chart_rec_values | tojson }};
-  var payLabels = {{ chart_pay_labels | tojson }};
-  var payValues = {{ chart_pay_values | tojson }};
-  var dayLabels = {{ chart_day_labels | tojson }};
-  var dayRec = {{ chart_day_rec | tojson }};
-  var dayPay = {{ chart_day_pay | tojson }};
-  var dayBalance = {{ chart_day_balance | tojson }};
-
-  var palette = ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#20c997', '#dc3545', '#ffc107', '#6610f2', '#0dcaf0', '#adb5bd'];
-
-  var recCtx = document.getElementById('dreReceitasNaturezaChart');
-  if (recCtx) {
-    new Chart(recCtx, {
-      type: 'doughnut',
-      data: {
-        labels: recLabels.length ? recLabels : ['Sem dados'],
-        datasets: [{
-          data: recValues.length ? recValues : [1],
-          backgroundColor: recLabels.length ? palette : ['#dee2e6']
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-      }
-    });
-  }
-
-  var payCtx = document.getElementById('dreDespesasNaturezaChart');
-  if (payCtx) {
-    new Chart(payCtx, {
-      type: 'doughnut',
-      data: {
-        labels: payLabels.length ? payLabels : ['Sem dados'],
-        datasets: [{
-          data: payValues.length ? payValues : [1],
-          backgroundColor: payLabels.length ? palette : ['#dee2e6']
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-      }
-    });
-  }
-
-  var lineCtx = document.getElementById('dreEvolucaoPeriodoChart');
-  if (lineCtx) {
-    new Chart(lineCtx, {
-      type: 'line',
-      data: {
-        labels: dayLabels,
-        datasets: [
-          { label: 'Receitas', data: dayRec, borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.15)', tension: 0.2, fill: false },
-          { label: 'Despesas', data: dayPay, borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.15)', tension: 0.2, fill: false },
-          { label: 'Resultado acumulado', data: dayBalance, borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.15)', tension: 0.2, fill: true }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'top' } },
-        scales: { y: { beginAtZero: false } }
-      }
-    });
-  }
-})();
-</script>
-<script>
-(function () {
-  function initDreDetailModal() {
-    var modalEl = document.getElementById('dreDetailModal');
-    if (!modalEl || typeof bootstrap === 'undefined') return;
-    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    var bodyEl = document.getElementById('dreDetailModalBody');
-    var titleEl = document.getElementById('dreDetailModalLabel');
-    var dateFrom = {{ date_from | tojson }};
-    var dateTo = {{ date_to | tojson }};
-    var companyId = {{ company_id | tojson }};
-
-    modalEl.addEventListener('click', function (e) {
-      var pageLink = e.target.closest('a.dre-detail-pagination');
-      if (!pageLink || !pageLink.href) return;
-      e.preventDefault();
-      bodyEl.innerHTML = '<p class="text-muted mb-0">Carregando...</p>';
-      fetch(pageLink.href, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
-      })
-        .then(function (r) { return r.text(); })
-        .then(function (html) { bodyEl.innerHTML = html; })
-        .catch(function () {
-          bodyEl.innerHTML = '<p class="text-danger mb-0">Erro ao carregar detalhamento.</p>';
-        });
-    });
-
-    document.querySelectorAll('.dre-detail-trigger').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var kind = btn.getAttribute('data-kind') || 'receitas';
-        var natureId = btn.getAttribute('data-nature-id') || '';
-        titleEl.textContent = kind === 'despesas' ? 'Detalhamento de Despesas' : 'Detalhamento de Receitas';
-        bodyEl.innerHTML = '<p class="text-muted mb-0">Carregando...</p>';
-        modal.show();
-
-        var url = new URL({{ url_for('main.dre_detail') | tojson }}, window.location.origin);
-        url.searchParams.set('kind', kind);
-        url.searchParams.set('date_from', dateFrom);
-        url.searchParams.set('date_to', dateTo);
-        if (natureId) url.searchParams.set('nature_id', natureId);
-        if (companyId) url.searchParams.set('company_id', String(companyId));
-
-        fetch(url.toString(), {
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
-        })
-          .then(function (r) { return r.text(); })
-          .then(function (html) { bodyEl.innerHTML = html; })
-          .catch(function () {
-            bodyEl.innerHTML = '<p class="text-danger mb-0">Erro ao carregar detalhamento.</p>';
-          });
-      });
-    });
-  }
-  initDreDetailModal();
-})();
-</script>
+<script type="application/json" id="dre-chart-data">{{ {
+  'recLabels': chart_rec_labels,
+  'recValues': chart_rec_values,
+  'payLabels': chart_pay_labels,
+  'payValues': chart_pay_values,
+  'dayLabels': chart_day_labels,
+  'dayRec': chart_day_rec,
+  'dayPay': chart_day_pay,
+  'dayBalance': chart_day_balance,
+} | tojson }}</script>
+</div>
 {% endblock %}

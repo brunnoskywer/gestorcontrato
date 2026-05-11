@@ -104,6 +104,13 @@ body {
   color: var(--bs-emphasis-color) !important;
 }
 
+.dre-table .dre-value-line {
+  min-width: 11rem;
+}
+.dre-table .dre-pct {
+  white-space: nowrap;
+}
+
 /* Toolbar icon buttons: clearer contrast on dark pages */
 [data-bs-theme="dark"] .admin-toolbar .btn {
   background-color: var(--bs-secondary-bg);
