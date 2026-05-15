@@ -2,24 +2,8 @@
 {% block title %}Estoque de fardamentos{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Estoque de fardamentos</h1>
-  <div class="d-flex flex-wrap gap-2">
-    <a href="{{ url_for('admin.uniform_movements_list') }}" class="btn btn-primary btn-sm" data-turbo-frame="main-content">Registrar movimentação</a>
-    <a href="{{ url_for('admin.uniforms_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Cadastro</a>
-    <a href="{{ url_for('admin.uniform_movements_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Movimentações</a>
-  </div>
-</div>
-
-<div class="row g-3 mb-3">
-  <div class="col-sm-6 col-lg-4">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Total em estoque</p>
-        <p class="h3 mb-0 fw-bold text-primary">{{ grand_total }}</p>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="card mb-3">

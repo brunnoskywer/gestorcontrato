@@ -473,6 +473,9 @@
         initWhatsappDataRequest(bodyEl);
         injectListReturnNextOnPostForms(bodyEl);
         initSearchInputs(bodyEl);
+        if (typeof window.initUniformMovementForm === 'function') {
+          window.initUniformMovementForm(bodyEl);
+        }
       })
       .catch(function () {
         bodyEl.innerHTML = '<p class="text-danger text-center py-3">Erro ao carregar o formulário.</p>';

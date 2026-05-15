@@ -10,12 +10,8 @@
 {% set edit_url_template = _edit_base.replace('999999', '{id}') %}
 {% set delete_bulk_url = url_for('admin.uniforms_bulk_delete') %}
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Cadastro de fardamentos</h1>
-  <div class="d-flex flex-wrap gap-2">
-    <a href="{{ url_for('admin.uniforms_stock_list') }}" class="btn btn-outline-primary btn-sm" data-turbo-frame="main-content">Ver estoque</a>
-    <a href="{{ url_for('admin.uniform_movements_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Movimentações</a>
-  </div>
 </div>
 
 <div class="card mb-3">

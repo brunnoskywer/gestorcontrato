@@ -7,12 +7,8 @@
 {% set insert_url = url_for('admin.uniform_movements_form_new') %}
 {% set insert_title = 'Nova movimentação' %}
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Movimentações de fardamentos</h1>
-  <div class="d-flex flex-wrap gap-2">
-    <a href="{{ url_for('admin.uniforms_stock_list') }}" class="btn btn-outline-primary btn-sm" data-turbo-frame="main-content">Ver estoque</a>
-    <a href="{{ url_for('admin.uniforms_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Cadastro</a>
-  </div>
 </div>
 
 <div class="card mb-3">

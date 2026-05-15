@@ -3,26 +3,24 @@ from collections import defaultdict
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app.admin.auth_helpers import handle_delete_constraint_error, require_admin, resolve_next_url
 from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
 from app.extensions import db
+from app.filters import format_currency
 from app.models import (
     ENTRY_PAYABLE,
-    ENTRY_PURCHASE,
-    ENTRY_RETURN,
     ENTRY_SUBTYPE_LABELS,
-    EXIT_DISCARD,
-    EXIT_LOST,
-    EXIT_SHIPMENT,
     EXIT_SUBTYPE_LABELS,
     MOVEMENT_ENTRY,
     MOVEMENT_EXIT,
     MOVEMENT_SUBTYPE_LABELS,
-    SUPPLIER_MOTOBOY,
     UNIFORM_SIZES,
     FinancialEntry,
+    Supplier,
     Uniform,
     UniformMovement,
 )
@@ -30,12 +28,11 @@ from app.search_text import folded_icontains
 from app.services.uniform_stock import UniformStockError, create_uniform_movement
 
 
-def _payable_entries_for_select(limit: int = 300):
+def _payable_entry_search_label(entry: FinancialEntry) -> str:
+    supplier = entry.supplier.name if entry.supplier else "Sem fornecedor"
+    due = entry.due_date.strftime("%d/%m/%Y") if entry.due_date else "—"
     return (
-        FinancialEntry.query.filter_by(entry_type=ENTRY_PAYABLE)
-        .order_by(FinancialEntry.due_date.desc(), FinancialEntry.id.desc())
-        .limit(limit)
-        .all()
+        f"#{entry.id} — {supplier} — R$ {format_currency(entry.amount)} — venc. {due}"
     )
 
 
@@ -273,7 +270,6 @@ def register_routes(bp: Blueprint) -> None:
         return render_template(
             "admin/uniforms/_movement_form_fragment.html",
             uniforms=uniforms,
-            payable_entries=_payable_entries_for_select(),
             action_url=url_for("admin.uniform_movements_create"),
             entry_subtypes=ENTRY_SUBTYPE_LABELS,
             exit_subtypes=EXIT_SUBTYPE_LABELS,
@@ -316,6 +312,42 @@ def register_routes(bp: Blueprint) -> None:
             flash("Erro ao registrar movimentação.", "danger")
 
         return redirect(resolve_next_url("admin.uniform_movements_list"))
+
+    @bp.get("/fardamentos/payables-search")
+    @login_required
+    def payables_search():
+        """Busca contas a pagar para vincular à entrada por compra."""
+        require_admin()
+        term = request.args.get("q", "").strip()
+        if len(term) < 3:
+            return jsonify([])
+
+        query = (
+            FinancialEntry.query.options(joinedload(FinancialEntry.supplier))
+            .filter_by(entry_type=ENTRY_PAYABLE)
+        )
+        if term.isdigit():
+            query = query.filter(FinancialEntry.id == int(term))
+        else:
+            query = query.outerjoin(Supplier, FinancialEntry.supplier_id == Supplier.id).filter(
+                or_(
+                    folded_icontains(FinancialEntry.description, term),
+                    folded_icontains(FinancialEntry.reference, term),
+                    folded_icontains(Supplier.name, term),
+                )
+            )
+
+        entries = query.order_by(FinancialEntry.due_date.desc(), FinancialEntry.id.desc()).limit(20).all()
+        return jsonify(
+            [
+                {
+                    "id": e.id,
+                    "label": _payable_entry_search_label(e),
+                    "secondary": e.description[:80] if e.description else "",
+                }
+                for e in entries
+            ]
+        )
 
     @bp.get("/fardamentos/uniforms-search")
     @login_required
