@@ -94,13 +94,11 @@ def register_routes(bp: Blueprint) -> None:
         require_admin()
         motoboy_name = request.args.get("motoboy_name", "").strip()
         all_rows = motoboy_uniform_balance_rows(motoboy_name=motoboy_name)
-        grand_total = sum(r["total"] for r in all_rows)
         pagination = SlicePagination(all_rows, admin_list_page(), ADMIN_LIST_PER_PAGE)
         return render_template(
             "admin/uniforms/motoboys_balance.html",
             motoboy_rows=pagination.items,
             pagination=pagination,
-            grand_total=grand_total,
             filters={"motoboy_name": motoboy_name},
         )
 
