@@ -47,12 +47,15 @@
         <th class="text-nowrap">Motoboy</th>
         <th class="text-center text-nowrap" style="width: 6rem;">Total</th>
         <th>Itens em posse</th>
+        <th class="text-center text-nowrap" style="width: 7rem;">Histórico</th>
       </tr>
     </thead>
     <tbody>
       {% for row in motoboy_rows %}
       <tr>
-        <td class="fw-semibold text-nowrap" data-label="Motoboy">{{ row.motoboy_name }}</td>
+        <td class="fw-semibold text-nowrap" data-label="Motoboy">
+          <a href="{{ url_for('admin.uniform_movements_list', motoboy_id=row.motoboy_id) }}" data-turbo-frame="main-content" title="Ver movimentações deste motoboy">{{ row.motoboy_name }}</a>
+        </td>
         <td class="text-center tabular-nums fw-bold" data-label="Total">{{ row.total }}</td>
         <td data-label="Itens em posse">
           <ul class="list-unstyled mb-0 small">
@@ -65,10 +68,13 @@
             {% endfor %}
           </ul>
         </td>
+        <td class="text-center" data-label="Histórico">
+          <a href="{{ url_for('admin.uniform_movements_list', motoboy_id=row.motoboy_id) }}" class="btn btn-outline-primary btn-sm" data-turbo-frame="main-content" title="Ver movimentações">Ver</a>
+        </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="3" class="text-center text-muted py-4">
+        <td colspan="4" class="text-center text-muted py-4">
           Nenhum motoboy com fardamento em posse no momento.
         </td>
       </tr>
@@ -79,7 +85,7 @@
       <tr>
         <td class="text-end">Total (página / filtro)</td>
         <td class="text-center tabular-nums">{{ motoboy_rows | sum(attribute='total') }}</td>
-        <td></td>
+        <td colspan="2"></td>
       </tr>
     </tfoot>
     {% endif %}

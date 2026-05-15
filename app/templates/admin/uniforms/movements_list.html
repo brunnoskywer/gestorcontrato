@@ -12,6 +12,13 @@
   <h1 class="h4 mb-0">Movimentações de fardamentos</h1>
 </div>
 
+{% if filter_motoboy %}
+<div class="alert alert-info py-2 d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <span class="small mb-0">Exibindo movimentações do motoboy <strong>{{ filter_motoboy.name }}</strong>.</span>
+  <a href="{{ url_for('admin.uniform_movements_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Ver todas</a>
+</div>
+{% endif %}
+
 <div class="card mb-3">
   <div class="card-body">
     <form class="admin-filter-flex" method="get" action="{{ url_for('admin.uniform_movements_list') }}">
@@ -21,6 +28,15 @@
           <option value="">Todos</option>
           {% for u in uniforms_for_filter %}
           <option value="{{ u.id }}" {% if filters.uniform_id == u.id %}selected{% endif %}>{{ u.display_label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
+        <label class="form-label mb-1">Motoboy</label>
+        <select name="motoboy_id" class="form-select form-select-sm w-100">
+          <option value="">Todos</option>
+          {% for m in motoboys_for_filter %}
+          <option value="{{ m.id }}" {% if filters.motoboy_id == m.id %}selected{% endif %}>{{ m.name }}</option>
           {% endfor %}
         </select>
       </div>

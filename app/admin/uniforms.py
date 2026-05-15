@@ -18,6 +18,7 @@ from app.models import (
     MOVEMENT_ENTRY,
     MOVEMENT_EXIT,
     MOVEMENT_SUBTYPE_LABELS,
+    SUPPLIER_MOTOBOY,
     UNIFORM_SIZES,
     FinancialEntry,
     Supplier,
@@ -246,34 +247,56 @@ def register_routes(bp: Blueprint) -> None:
     def uniform_movements_list():
         require_admin()
         uniform_id = request.args.get("uniform_id", type=int)
+        motoboy_id = request.args.get("motoboy_id", type=int)
         direction = request.args.get("direction", "").strip()
         subtype = request.args.get("subtype", "").strip()
 
         query = UniformMovement.query.join(Uniform)
         if uniform_id:
             query = query.filter(UniformMovement.uniform_id == uniform_id)
+        if motoboy_id:
+            query = query.filter(UniformMovement.motoboy_id == motoboy_id)
         if direction in (MOVEMENT_ENTRY, MOVEMENT_EXIT):
             query = query.filter(UniformMovement.direction == direction)
         if subtype:
             query = query.filter(UniformMovement.subtype == subtype)
 
-        pagination = query.order_by(UniformMovement.created_at.desc()).paginate(
-            page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
+        pagination = (
+            query.options(
+                joinedload(UniformMovement.uniform),
+                joinedload(UniformMovement.motoboy),
+                joinedload(UniformMovement.financial_entry),
+            )
+            .order_by(UniformMovement.created_at.desc())
+            .paginate(page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False)
         )
         uniforms_for_filter = (
             Uniform.query.filter_by(is_active=True)
             .order_by(Uniform.name, Uniform.size)
             .all()
         )
+        motoboys_for_filter = (
+            Supplier.query.filter_by(type=SUPPLIER_MOTOBOY)
+            .order_by(Supplier.name)
+            .all()
+        )
+        filter_motoboy = None
+        if motoboy_id:
+            filter_motoboy = Supplier.query.filter_by(
+                id=motoboy_id, type=SUPPLIER_MOTOBOY
+            ).first()
         subtype_choices = sorted(MOVEMENT_SUBTYPE_LABELS.items(), key=lambda x: x[1])
         return render_template(
             "admin/uniforms/movements_list.html",
             movements=pagination.items,
             pagination=pagination,
             uniforms_for_filter=uniforms_for_filter,
+            motoboys_for_filter=motoboys_for_filter,
+            filter_motoboy=filter_motoboy,
             subtype_choices=subtype_choices,
             filters={
                 "uniform_id": uniform_id or "",
+                "motoboy_id": motoboy_id or "",
                 "direction": direction,
                 "subtype": subtype,
             },
