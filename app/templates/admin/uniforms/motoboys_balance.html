@@ -48,7 +48,7 @@
         <td class="text-center tabular-nums fw-bold" data-label="Total">{{ row.total }}</td>
         <td data-label="Itens em posse">
           <ul class="list-unstyled mb-0 small">
-            {% for item in row.items %}
+            {% for item in row.uniform_items %}
             <li>
               <span class="text-body">{{ item.label }}</span>
               <span class="text-muted">×</span>

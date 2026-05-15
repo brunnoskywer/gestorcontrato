@@ -57,7 +57,7 @@ def _balance_query():
 def motoboy_uniform_balance_rows(*, motoboy_name: str = "") -> list[dict]:
     """
     Retorna lista de motoboys com fardamento em posse.
-    Cada item: {motoboy_id, motoboy_name, total, items: [{uniform_id, label, quantity}]}
+    Cada item: {motoboy_id, motoboy_name, total, uniform_items: [{uniform_id, label, quantity}]}
     """
     subq = _balance_query().subquery()
     query = (
@@ -89,10 +89,10 @@ def motoboy_uniform_balance_rows(*, motoboy_name: str = "") -> list[dict]:
                 "motoboy_id": mid,
                 "motoboy_name": row.motoboy_name,
                 "total": 0,
-                "items": [],
+                "uniform_items": [],
             }
         label = f"{row.uniform_name} — {row.uniform_size}"
-        grouped[mid]["items"].append(
+        grouped[mid]["uniform_items"].append(
             {
                 "uniform_id": row.uniform_id,
                 "label": label,
