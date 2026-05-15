@@ -104,3 +104,28 @@ def create_uniform_movement(
     movement.uniform = uniform
     db.session.add(movement)
     return movement
+
+
+def delete_uniform_movement(movement: UniformMovement) -> None:
+    """Exclui movimentação e reverte o saldo do fardamento."""
+    uniform = movement.uniform
+    if not uniform:
+        raise UniformStockError("Fardamento da movimentação não encontrado.")
+
+    qty = movement.quantity or 0
+    if qty <= 0:
+        raise UniformStockError("Movimentação com quantidade inválida.")
+
+    current = uniform.quantity or 0
+    if movement.direction == MOVEMENT_ENTRY:
+        if current < qty:
+            raise UniformStockError(
+                f"Não é possível excluir: o estoque atual ({current}) é menor que a quantidade da entrada ({qty})."
+            )
+        uniform.quantity = current - qty
+    elif movement.direction == MOVEMENT_EXIT:
+        uniform.quantity = current + qty
+    else:
+        raise UniformStockError("Movimentação com direção inválida.")
+
+    db.session.delete(movement)

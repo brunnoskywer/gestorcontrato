@@ -5,11 +5,10 @@
   function initUniformMovementForm(container) {
     if (!container || !container.querySelector) return;
     var form = container.querySelector("#uniform-movement-form");
-    if (!form || form.dataset.uniformMovementBound) return;
-    form.dataset.uniformMovementBound = "1";
+    if (!form || form.dataset.uniformMovementBound === "1") return;
 
-    var entrySubtypes = {};
-    var exitSubtypes = {};
+    var entrySubtypes;
+    var exitSubtypes;
     try {
       entrySubtypes = JSON.parse(form.getAttribute("data-entry-subtypes") || "{}");
       exitSubtypes = JSON.parse(form.getAttribute("data-exit-subtypes") || "{}");
@@ -23,6 +22,8 @@
     var motoboyLabel = form.querySelector("#uniform_movement_motoboy_label");
     var payableWrap = form.querySelector("#uniform_movement_payable_wrap");
     if (!directionEl || !subtypeEl) return;
+
+    form.dataset.uniformMovementBound = "1";
 
     function clearMotoboy() {
       var hid = form.querySelector("#uniform_movement_motoboy_id");
@@ -45,7 +46,6 @@
     }
 
     function fillSubtypes(map) {
-      var prev = subtypeEl.value;
       subtypeEl.innerHTML = '<option value="">Selecione</option>';
       Object.keys(map).forEach(function (key) {
         var opt = document.createElement("option");
@@ -54,9 +54,7 @@
         subtypeEl.appendChild(opt);
       });
       subtypeEl.disabled = false;
-      if (prev && map[prev]) {
-        subtypeEl.value = prev;
-      }
+      subtypeEl.removeAttribute("disabled");
     }
 
     function syncConditionalFields() {
@@ -91,7 +89,7 @@
         subtypeEl.innerHTML =
           '<option value="">Selecione o movimento primeiro</option>';
         subtypeEl.disabled = true;
-        subtypeEl.value = "";
+        subtypeEl.setAttribute("disabled", "disabled");
         syncConditionalFields();
         return;
       }
@@ -105,6 +103,12 @@
 
     directionEl.addEventListener("change", onDirectionChange);
     subtypeEl.addEventListener("change", syncConditionalFields);
+
+    form.addEventListener("submit", function () {
+      if (subtypeEl.disabled) {
+        subtypeEl.disabled = false;
+      }
+    });
   }
 
   window.initUniformMovementForm = initUniformMovementForm;

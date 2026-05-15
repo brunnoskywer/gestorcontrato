@@ -25,7 +25,11 @@ from app.models import (
     UniformMovement,
 )
 from app.search_text import folded_icontains
-from app.services.uniform_stock import UniformStockError, create_uniform_movement
+from app.services.uniform_stock import (
+    UniformStockError,
+    create_uniform_movement,
+    delete_uniform_movement,
+)
 
 
 def _payable_entry_search_label(entry: FinancialEntry) -> str:
@@ -312,6 +316,41 @@ def register_routes(bp: Blueprint) -> None:
             flash("Erro ao registrar movimentação.", "danger")
 
         return redirect(resolve_next_url("admin.uniform_movements_list"))
+
+    @bp.post("/fardamentos/movimentacoes/bulk-delete")
+    @login_required
+    def uniform_movements_bulk_delete():
+        require_admin()
+        next_url = resolve_next_url("admin.uniform_movements_list")
+        ids = request.form.getlist("ids", type=int)
+        if not ids:
+            flash("Nenhuma movimentação selecionada.", "warning")
+            return redirect(next_url)
+
+        deleted = 0
+        errors: list[str] = []
+        for movement in (
+            UniformMovement.query.filter(UniformMovement.id.in_(ids))
+            .order_by(UniformMovement.id)
+            .all()
+        ):
+            try:
+                delete_uniform_movement(movement)
+                deleted += 1
+            except UniformStockError as exc:
+                errors.append(f"#{movement.id}: {exc}")
+
+        if deleted:
+            db.session.commit()
+        else:
+            db.session.rollback()
+
+        if deleted:
+            flash(f"{deleted} movimentação(ões) excluída(s).", "info")
+        if errors:
+            flash(" ".join(errors[:3]) + (" …" if len(errors) > 3 else ""), "danger")
+
+        return redirect(next_url)
 
     @bp.get("/fardamentos/payables-search")
     @login_required

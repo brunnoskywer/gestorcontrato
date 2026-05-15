@@ -396,6 +396,8 @@
     if (!container || !container.querySelectorAll) return;
     container.querySelectorAll('script').forEach(function (oldScript) {
       if (oldScript.src) return;
+      var scriptType = (oldScript.getAttribute('type') || '').toLowerCase();
+      if (scriptType === 'application/json' || scriptType === 'application/ld+json') return;
       var script = document.createElement('script');
       script.textContent = oldScript.textContent;
       (oldScript.parentNode || document.body).appendChild(script);

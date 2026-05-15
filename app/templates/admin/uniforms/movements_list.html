@@ -6,6 +6,7 @@
 {% set table_id = 'list-table' %}
 {% set insert_url = url_for('admin.uniform_movements_form_new') %}
 {% set insert_title = 'Nova movimentação' %}
+{% set delete_bulk_url = url_for('admin.uniform_movements_bulk_delete') %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Movimentações de fardamentos</h1>
@@ -53,6 +54,7 @@
 <table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list" id="list-table">
   <thead>
     <tr>
+      <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
       <th>Data</th>
       <th>Fardamento</th>
       <th>Movimento</th>
@@ -65,7 +67,8 @@
   </thead>
   <tbody>
     {% for m in movements %}
-    <tr>
+    <tr data-id="{{ m.id }}">
+      <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ m.id }}" aria-label="Selecionar" /></td>
       <td data-label="Data" class="text-nowrap">{{ m.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
       <td data-label="Fardamento">{{ m.uniform.display_label }}</td>
       <td data-label="Movimento">
@@ -84,10 +87,11 @@
       <td data-label="Observação" class="small text-muted">{{ m.notes or '—' }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="text-center text-muted">Nenhuma movimentação registrada.</td></tr>
+    <tr><td colspan="9" class="text-center text-muted">Nenhuma movimentação registrada.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 </div>
 {{ render_admin_pagination(pagination, 'admin.uniform_movements_list') }}
+<script>(function(){ var t=document.getElementById('list-table'); if(!t) return; var h=t.querySelector('thead .select-all'); if(h) h.addEventListener('change',function(){ var c=this.checked; t.querySelectorAll('tbody .row-select').forEach(function(cb){ cb.checked=c; }); }); })();</script>
 {% endblock %}
