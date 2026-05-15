@@ -17,6 +17,7 @@ from .financial_natures import register_routes as register_financial_natures
 from .suppliers import register_routes as register_suppliers
 from .users import register_routes as register_users
 from .cep_lookup import register_routes as register_cep_lookup
+from .uniforms import register_routes as register_uniforms
 
 admin_bp = Blueprint("admin", __name__, template_folder="../templates/admin")
 
@@ -31,3 +32,4 @@ register_financial_natures(admin_bp)
 register_suppliers(admin_bp)
 register_users(admin_bp)
 register_cep_lookup(admin_bp)
+register_uniforms(admin_bp)

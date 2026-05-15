@@ -1,0 +1,136 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal" id="uniform-movement-form">
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Fardamento *</label>
+      <select name="uniform_id" class="form-select form-select-md" required>
+        <option value="">Selecione</option>
+        {% for u in uniforms %}
+        <option value="{{ u.id }}">{{ u.display_label }} (estoque: {{ u.quantity or 0 }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Movimento *</label>
+      <select name="direction" id="uniform_movement_direction" class="form-select form-select-md" required>
+        <option value="">Selecione</option>
+        <option value="entry">Entrada</option>
+        <option value="exit">Saída</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Tipo *</label>
+      <select name="subtype" id="uniform_movement_subtype" class="form-select form-select-md" required disabled>
+        <option value="">Selecione o movimento primeiro</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Quantidade *</label>
+      <input type="number" name="quantity" class="form-control form-control-md" min="1" step="1" required value="1" />
+    </div>
+    <div class="col-12" id="uniform_movement_motoboy_wrap" style="display: none;">
+      <label class="form-label" id="uniform_movement_motoboy_label">Motoboy</label>
+      <div class="position-relative">
+        <input type="hidden" name="motoboy_id" id="uniform_movement_motoboy_id" value="">
+        <input
+          type="text"
+          class="form-control form-control-md search-entity-input"
+          id="uniform_movement_motoboy_input"
+          data-search-url="{{ url_for('admin.motoboys_search') }}"
+          data-target-hidden="uniform_movement_motoboy_id"
+          placeholder="Digite ao menos 3 letras para buscar..."
+          autocomplete="off"
+        >
+        <div class="search-entity-dropdown list-group shadow-sm" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="col-12" id="uniform_movement_payable_wrap" style="display: none;">
+      <label class="form-label">Conta a pagar (opcional)</label>
+      <select name="financial_entry_id" class="form-select form-select-md">
+        <option value="">Nenhuma</option>
+        {% for e in payable_entries %}
+        <option value="{{ e.id }}">
+          #{{ e.id }} — {{ e.supplier.name if e.supplier else 'Sem fornecedor' }} — R$ {{ e.amount|format_currency }}{% if e.due_date %} — venc. {{ e.due_date }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <p class="form-text small text-muted mb-0">Vincule uma compra quitada ou pendente, se desejar.</p>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Observação</label>
+      <textarea name="notes" class="form-control form-control-md" rows="2" maxlength="500" placeholder="Opcional"></textarea>
+    </div>
+  </div>
+  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">Registrar</button>
+  </div>
+</form>
+<script>
+(function () {
+  var entrySubtypes = {{ entry_subtypes | tojson }};
+  var exitSubtypes = {{ exit_subtypes | tojson }};
+  var directionEl = document.getElementById('uniform_movement_direction');
+  var subtypeEl = document.getElementById('uniform_movement_subtype');
+  var motoboyWrap = document.getElementById('uniform_movement_motoboy_wrap');
+  var motoboyLabel = document.getElementById('uniform_movement_motoboy_label');
+  var payableWrap = document.getElementById('uniform_movement_payable_wrap');
+  if (!directionEl || !subtypeEl) return;
+
+  function clearMotoboy() {
+    var hid = document.getElementById('uniform_movement_motoboy_id');
+    var inp = document.getElementById('uniform_movement_motoboy_input');
+    if (hid) hid.value = '';
+    if (inp) inp.value = '';
+  }
+
+  function fillSubtypes(map) {
+    subtypeEl.innerHTML = '<option value="">Selecione</option>';
+    Object.keys(map).forEach(function (key) {
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = map[key];
+      subtypeEl.appendChild(opt);
+    });
+    subtypeEl.disabled = false;
+  }
+
+  function updateFields() {
+    var direction = directionEl.value;
+    var subtype = subtypeEl.value;
+    motoboyWrap.style.display = 'none';
+    payableWrap.style.display = 'none';
+    motoboyLabel.textContent = 'Motoboy';
+    if (!direction) {
+      subtypeEl.innerHTML = '<option value="">Selecione o movimento primeiro</option>';
+      subtypeEl.disabled = true;
+      clearMotoboy();
+      return;
+    }
+    if (direction === 'entry') {
+      fillSubtypes(entrySubtypes);
+    } else {
+      fillSubtypes(exitSubtypes);
+    }
+    if (direction === 'entry' && subtype === 'purchase') {
+      payableWrap.style.display = '';
+    }
+    if (direction === 'entry' && subtype === 'return') {
+      motoboyWrap.style.display = '';
+      motoboyLabel.textContent = 'Motoboy (retorno) *';
+    }
+    if (direction === 'exit' && subtype === 'shipment') {
+      motoboyWrap.style.display = '';
+      motoboyLabel.textContent = 'Motoboy (envio) *';
+    }
+    if (direction === 'exit' && (subtype === 'discard' || subtype === 'lost')) {
+      clearMotoboy();
+    }
+  }
+
+  directionEl.addEventListener('change', function () {
+    clearMotoboy();
+    updateFields();
+  });
+  subtypeEl.addEventListener('change', updateFields);
+})();
+</script>

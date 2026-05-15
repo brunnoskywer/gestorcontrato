@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Estoque de fardamentos{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0">Estoque de fardamentos</h1>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.uniform_movements_list') }}" class="btn btn-primary btn-sm" data-turbo-frame="main-content">Registrar movimentação</a>
+    <a href="{{ url_for('admin.uniforms_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Cadastro</a>
+    <a href="{{ url_for('admin.uniform_movements_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Movimentações</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total em estoque</p>
+        <p class="h3 mb-0 fw-bold text-primary">{{ grand_total }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.uniforms_stock_list') }}">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
+        <label class="form-label mb-1">Descrição</label>
+        <input type="text" name="name" class="form-control form-control-sm w-100" value="{{ filters.name }}" placeholder="Filtrar por descrição" />
+      </div>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
+        <a href="{{ url_for('admin.uniforms_stock_list') }}" class="btn btn-danger btn-sm">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list">
+    <thead class="table-light">
+      <tr>
+        <th class="text-nowrap">Fardamento</th>
+        {% for s in sizes %}
+        <th class="text-center text-nowrap">{{ s }}</th>
+        {% endfor %}
+        <th class="text-center text-nowrap fw-bold">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in stock_rows %}
+      <tr>
+        <td class="fw-semibold text-nowrap" data-label="Fardamento">{{ row.name }}</td>
+        {% for s in sizes %}
+        <td class="text-center tabular-nums {% if row.sizes[s] > 0 %}fw-semibold{% else %}text-muted{% endif %}" data-label="{{ s }}">
+          {{ row.sizes[s] }}
+        </td>
+        {% endfor %}
+        <td class="text-center tabular-nums fw-bold" data-label="Total">{{ row.row_total }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="{{ sizes|length + 2 }}" class="text-center text-muted py-4">
+          Nenhum fardamento cadastrado. <a href="{{ url_for('admin.uniforms_list') }}" data-turbo-frame="main-content">Cadastre itens</a> para controlar o estoque.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if stock_rows %}
+    <tfoot class="table-secondary fw-semibold">
+      <tr>
+        <td class="text-end">Total por tamanho</td>
+        {% for s in sizes %}
+        <td class="text-center tabular-nums">{{ totals_by_size[s] }}</td>
+        {% endfor %}
+        <td class="text-center tabular-nums">{{ grand_total }}</td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+{% endblock %}

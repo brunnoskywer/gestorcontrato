@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Cadastro de fardamentos{% endblock %}
+
+{% block content %}
+{% from "admin/_pagination.html" import render_admin_pagination %}
+{% set table_id = 'list-table' %}
+{% set insert_url = url_for('admin.uniforms_form_new') %}
+{% set insert_title = 'Novo fardamento' %}
+{% set _edit_base = url_for('admin.uniforms_form_edit', uniform_id=999999) %}
+{% set edit_url_template = _edit_base.replace('999999', '{id}') %}
+{% set delete_bulk_url = url_for('admin.uniforms_bulk_delete') %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0">Cadastro de fardamentos</h1>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.uniforms_stock_list') }}" class="btn btn-outline-primary btn-sm" data-turbo-frame="main-content">Ver estoque</a>
+    <a href="{{ url_for('admin.uniform_movements_list') }}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="main-content">Movimentações</a>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.uniforms_list') }}">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
+        <label class="form-label mb-1">Descrição</label>
+        <input type="text" name="name" class="form-control form-control-sm w-100" value="{{ filters.name }}" placeholder="Pesquisar por descrição" />
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Tamanho</label>
+        <select name="size" class="form-select form-select-sm w-100">
+          <option value="">Todos</option>
+          {% for s in sizes %}
+          <option value="{{ s }}" {% if filters.size == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
+        <a href="{{ url_for('admin.uniforms_list') }}" class="btn btn-danger btn-sm">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% include "admin/_toolbar.html" with context %}
+<div class="table-responsive">
+<table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list" id="list-table">
+  <thead>
+    <tr>
+      <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
+      <th>Descrição</th>
+      <th class="text-center">Tamanho</th>
+      <th class="text-center">Estoque</th>
+      <th class="text-center">Ativo</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in uniforms %}
+    <tr data-id="{{ u.id }}">
+      <td data-label="Selecionar"><input type="checkbox" class="form-check-input row-select" value="{{ u.id }}" aria-label="Selecionar" /></td>
+      <td data-label="Descrição">{{ u.name }}</td>
+      <td data-label="Tamanho" class="text-center">{{ u.size }}</td>
+      <td data-label="Estoque" class="text-center tabular-nums fw-semibold">{{ u.quantity or 0 }}</td>
+      <td data-label="Ativo" class="text-center">{{ 'Sim' if u.is_active else 'Não' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="text-center text-muted">Nenhum fardamento cadastrado.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ render_admin_pagination(pagination, 'admin.uniforms_list') }}
+<script>(function(){ var t=document.getElementById('list-table'); if(!t) return; var h=t.querySelector('thead .select-all'); if(h) h.addEventListener('change',function(){ var c=this.checked; t.querySelectorAll('tbody .row-select').forEach(function(cb){ cb.checked=c; }); }); })();</script>
+{% endblock %}

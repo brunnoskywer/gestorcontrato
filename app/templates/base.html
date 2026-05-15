@@ -170,6 +170,22 @@
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="administrativoMenu">
                   <li>
+                    <a class="dropdown-item" href="{{ url_for('admin.uniforms_stock_list') }}" data-turbo-frame="main-content"
+                      >Estoque de fardamentos</a
+                    >
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('admin.uniforms_list') }}" data-turbo-frame="main-content"
+                      >Cadastro de fardamentos</a
+                    >
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('admin.uniform_movements_list') }}" data-turbo-frame="main-content"
+                      >Movimentações de fardamentos</a
+                    >
+                  </li>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li>
                     <a class="dropdown-item" href="{{ url_for('admin.users_list') }}" data-turbo-frame="main-content"
                       >Usuários</a
                     >
