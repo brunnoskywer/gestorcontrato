@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Fardamentos com motoboys{% endblock %}
+
+{% block content %}
+{% from "admin/_pagination.html" import render_admin_pagination %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Fardamentos com motoboys</h1>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Total de peças com motoboys</p>
+        <p class="h3 mb-0 fw-bold text-primary">{{ grand_total }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.uniforms_motoboy_balance_list') }}">
+      <div class="admin-filter-flex__field admin-filter-flex__field--wide">
+        <label class="form-label mb-1">Motoboy</label>
+        <input
+          type="text"
+          name="motoboy_name"
+          class="form-control form-control-sm w-100"
+          value="{{ filters.motoboy_name }}"
+          placeholder="Pesquisar por nome do motoboy"
+        />
+      </div>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
+        <a href="{{ url_for('admin.uniforms_motoboy_balance_list') }}" class="btn btn-danger btn-sm">Limpar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list">
+    <thead class="table-light">
+      <tr>
+        <th class="text-nowrap">Motoboy</th>
+        <th class="text-center text-nowrap" style="width: 6rem;">Total</th>
+        <th>Itens em posse</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in motoboy_rows %}
+      <tr>
+        <td class="fw-semibold text-nowrap" data-label="Motoboy">{{ row.motoboy_name }}</td>
+        <td class="text-center tabular-nums fw-bold" data-label="Total">{{ row.total }}</td>
+        <td data-label="Itens em posse">
+          <ul class="list-unstyled mb-0 small">
+            {% for item in row.items %}
+            <li>
+              <span class="text-body">{{ item.label }}</span>
+              <span class="text-muted">×</span>
+              <span class="fw-semibold tabular-nums">{{ item.quantity }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="3" class="text-center text-muted py-4">
+          Nenhum motoboy com fardamento em posse no momento.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if motoboy_rows %}
+    <tfoot class="table-secondary fw-semibold">
+      <tr>
+        <td class="text-end">Total (página / filtro)</td>
+        <td class="text-center tabular-nums">{{ motoboy_rows | sum(attribute='total') }}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+{{ render_admin_pagination(pagination, 'admin.uniforms_motoboy_balance_list') }}
+<p class="text-muted small mb-0">
+  Considera movimentações de <strong>Envio</strong> (saída para o motoboy) menos <strong>Retorno</strong> (entrada devolvida pelo motoboy).
+</p>
+{% endblock %}

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app.admin.auth_helpers import handle_delete_constraint_error, require_admin, resolve_next_url
-from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, admin_list_page
+from app.admin.list_pagination import ADMIN_LIST_PER_PAGE, SlicePagination, admin_list_page
 from app.extensions import db
 from app.filters import format_currency
 from app.models import (
@@ -25,6 +25,7 @@ from app.models import (
     UniformMovement,
 )
 from app.search_text import folded_icontains
+from app.services.uniform_motoboy_balance import motoboy_uniform_balance_rows
 from app.services.uniform_stock import (
     UniformStockError,
     create_uniform_movement,
@@ -84,6 +85,22 @@ def register_routes(bp: Blueprint) -> None:
             grand_total=grand_total,
             sizes=UNIFORM_SIZES,
             filters={"name": name},
+        )
+
+    @bp.route("/fardamentos/motoboys")
+    @login_required
+    def uniforms_motoboy_balance_list():
+        require_admin()
+        motoboy_name = request.args.get("motoboy_name", "").strip()
+        all_rows = motoboy_uniform_balance_rows(motoboy_name=motoboy_name)
+        grand_total = sum(r["total"] for r in all_rows)
+        pagination = SlicePagination(all_rows, admin_list_page(), ADMIN_LIST_PER_PAGE)
+        return render_template(
+            "admin/uniforms/motoboys_balance.html",
+            motoboy_rows=pagination.items,
+            pagination=pagination,
+            grand_total=grand_total,
+            filters={"motoboy_name": motoboy_name},
         )
 
     @bp.route("/fardamentos")
