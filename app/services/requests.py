@@ -13,6 +13,7 @@ from app.models import (
     CONTRACT_TYPE_MOTOBOY,
     Contract,
     Supplier,
+    SUPPLIER_CLIENT,
     SUPPLIER_MOTOBOY,
 )
 from app.models.requests import (
