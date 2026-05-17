@@ -952,6 +952,48 @@
         postSingleRowAction(mbActTpl, 'Reativar o motoboy selecionado?', 'Ativar');
       });
 
+      var resolveTpl = toolbar.getAttribute('data-resolve-url-template');
+      var resolveTitle = toolbar.getAttribute('data-resolve-title') || 'Resolver solicitação';
+      toolbar.querySelector('.admin-toolbar-resolve')?.addEventListener('click', function () {
+        if (!resolveTpl) return;
+        var ids = getSelectedIds();
+        if (ids.length === 0) {
+          showMessageModal('Selecione uma solicitação pendente para resolver.', 'Atenção');
+          return;
+        }
+        if (ids.length > 1) {
+          showMessageModal('Selecione apenas uma solicitação por vez.', 'Atenção');
+          return;
+        }
+        var row = getFirstSelectedRow();
+        if (row && row.getAttribute('data-pending') !== '1') {
+          showMessageModal('Somente solicitações pendentes podem ser resolvidas.', 'Atenção');
+          return;
+        }
+        openFormModal(resolveTpl.replace('{id}', ids[0]), resolveTitle, 'xl');
+      });
+
+      var rejectTpl = toolbar.getAttribute('data-reject-url-template');
+      var rejectTitle = toolbar.getAttribute('data-reject-title') || 'Rejeitar solicitação';
+      toolbar.querySelector('.admin-toolbar-reject')?.addEventListener('click', function () {
+        if (!rejectTpl) return;
+        var ids = getSelectedIds();
+        if (ids.length === 0) {
+          showMessageModal('Selecione uma solicitação pendente para rejeitar.', 'Atenção');
+          return;
+        }
+        if (ids.length > 1) {
+          showMessageModal('Selecione apenas uma solicitação por vez.', 'Atenção');
+          return;
+        }
+        var row = getFirstSelectedRow();
+        if (row && row.getAttribute('data-pending') !== '1') {
+          showMessageModal('Somente solicitações pendentes podem ser rejeitadas.', 'Atenção');
+          return;
+        }
+        openFormModal(rejectTpl.replace('{id}', ids[0]), rejectTitle, 'md');
+      });
+
       var faltaTpl = toolbar.getAttribute('data-falta-url-template');
       var faltaTitle = toolbar.getAttribute('data-falta-title') || 'Registrar falta';
       toolbar.querySelector('.admin-toolbar-falta')?.addEventListener('click', function () {

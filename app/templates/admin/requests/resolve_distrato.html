@@ -1,0 +1,54 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal admin-finance-modal-form">
+  <p class="text-muted small mb-2">
+    Resolvendo solicitação #{{ req.id }} — <strong>{{ req.type_label }}</strong>
+  </p>
+  {% if contract %}
+  <div class="row g-2 mb-2">
+    <div class="col-12">
+      <p class="text-muted small mb-1">
+        <strong>Contrato:</strong> {{ contract.supplier.name if contract.supplier else '—' }}
+        {% if contract.other_supplier %} — {{ contract.other_supplier|client_display_label }}{% endif %}
+      </p>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label mb-0">Data de distrato *</label>
+      <input type="date" name="end_date" class="form-control form-control-sm" required
+        value="{{ payload.get('end_date', '') or (contract.end_date.isoformat() if contract.end_date else '') }}" />
+    </div>
+    {% if payload.get('reason') %}
+    <div class="col-12">
+      <label class="form-label mb-0 text-muted">Motivo informado pelo solicitante</label>
+      <p class="small mb-0">{{ payload.get('reason') }}</p>
+    </div>
+    {% endif %}
+    <div class="col-12 col-sm-6">
+      <label class="form-label mb-0">Data de cobrança (vencimento) *</label>
+      <input type="date" name="charge_date" class="form-control form-control-sm" required value="{{ default_charge_date }}" />
+    </div>
+    <div class="col-12 col-sm-6">
+      <label class="form-label mb-0">Empresa *</label>
+      <select name="company_id" class="form-select form-select-sm" required>
+        <option value="">— Selecione —</option>
+        {% for c in companies %}
+        <option value="{{ c.id }}">{{ c.legal_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label mb-0">Natureza financeira *</label>
+      <select name="financial_nature_id" class="form-select form-select-sm" required>
+        <option value="">— Selecione —</option>
+        {% for n in natures %}
+        <option value="{{ n.id }}">{{ n.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-danger small">Contrato não encontrado.</p>
+  {% endif %}
+  <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-success btn-sm" {% if not contract %}disabled{% endif %}>Gerar distrato e resolver</button>
+  </div>
+</form>

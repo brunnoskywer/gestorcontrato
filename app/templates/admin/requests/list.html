@@ -4,11 +4,13 @@
 {% block content %}
 {% from "admin/_pagination.html" import render_admin_pagination %}
 {% set table_id = 'list-table' %}
+{% if is_solicitante_user or current_user.is_admin %}
 {% set insert_url = url_for('admin.requests_form_new') %}
 {% set insert_title = 'Nova solicitação' %}
 {% set _edit_base = url_for('admin.requests_form_edit', request_id=999999) %}
 {% set edit_url_template = _edit_base.replace('999999', '{id}') %}
 {% set delete_bulk_url = url_for('admin.requests_bulk_delete') %}
+{% endif %}
 {% set modal_size = 'xl' %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -59,7 +61,7 @@
     <tr>
       <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
       <th>Data</th>
-      {% if show_supervisor_column %}<th>Supervisor</th>{% endif %}
+      {% if show_requester_column %}<th>Solicitante</th>{% endif %}
       <th>Tipo</th>
       <th>Resumo</th>
       <th class="text-center">Status</th>
@@ -70,20 +72,25 @@
     {% set r = row.req %}
     <tr data-id="{{ r.id }}" data-pending="{{ '1' if r.is_pending else '0' }}">
       <td data-label="Selecionar">
-        {% if r.is_pending %}
+        {% if r.is_pending and (is_solicitante_user or current_user.is_admin) %}
         <input type="checkbox" class="form-check-input row-select" value="{{ r.id }}" aria-label="Selecionar" />
         {% endif %}
       </td>
       <td data-label="Data">{{ r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else '—' }}</td>
-      {% if show_supervisor_column %}
-      <td data-label="Supervisor">{{ r.supervisor.name if r.supervisor else '—' }}</td>
+      {% if show_requester_column %}
+      <td data-label="Solicitante">{{ r.requester.name if r.requester else '—' }}</td>
       {% endif %}
       <td data-label="Tipo">{{ r.type_label }}</td>
-      <td data-label="Resumo">{{ row.summary }}</td>
+      <td data-label="Resumo">
+        {{ row.summary }}
+        {% if r.status == 'rejected' and r.rejection_reason %}
+        <div class="small text-danger mt-1"><strong>Motivo da rejeição:</strong> {{ r.rejection_reason }}</div>
+        {% endif %}
+      </td>
       <td data-label="Status" class="text-center">
         {% if r.status == 'pending' %}
         <span class="badge text-bg-warning">{{ r.status_label }}</span>
-        {% elif r.status == 'approved' %}
+        {% elif r.status in ['resolved', 'approved'] %}
         <span class="badge text-bg-success">{{ r.status_label }}</span>
         {% elif r.status == 'rejected' %}
         <span class="badge text-bg-danger">{{ r.status_label }}</span>
@@ -93,7 +100,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="{{ 6 if show_supervisor_column else 5 }}" class="text-center text-muted">Nenhuma solicitação no período.</td></tr>
+    <tr><td colspan="{{ 6 if show_requester_column else 5 }}" class="text-center text-muted">Nenhuma solicitação no período.</td></tr>
     {% endfor %}
   </tbody>
 </table>

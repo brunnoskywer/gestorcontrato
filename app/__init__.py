@@ -63,5 +63,23 @@ def create_app(config_class: type[Config] | None = None) -> Flask:
     app.jinja_env.filters["client_display_label"] = client_display_label
     app.add_template_global(paginated_url)
 
+    @app.context_processor
+    def inject_request_role_flags():
+        from flask_login import current_user
+
+        from app.admin.auth_helpers import is_membro, is_request_staff, is_solicitante
+
+        if not current_user.is_authenticated:
+            return {
+                "is_solicitante_user": False,
+                "is_membro_user": False,
+                "is_request_staff_user": False,
+            }
+        return {
+            "is_solicitante_user": is_solicitante(),
+            "is_membro_user": is_membro(),
+            "is_request_staff_user": is_request_staff(),
+        }
+
     return app
 

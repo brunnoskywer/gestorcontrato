@@ -7,6 +7,7 @@ suas rotas no mesmo blueprint via register_routes(bp).
 from flask import Blueprint, abort, request
 from flask_login import current_user
 
+from .auth_helpers import ROLE_MEMBRO, ROLE_SOLICITANTE, ROLE_SUPERVISOR_LEGACY, normalized_role
 from .companies import register_routes as register_companies
 from .clients import register_routes as register_clients
 from .motoboys import register_routes as register_motoboys
@@ -23,7 +24,7 @@ from .requests import register_routes as register_requests
 
 admin_bp = Blueprint("admin", __name__, template_folder="../templates/admin")
 
-_SUPERVISOR_ALLOWED_ENDPOINTS = frozenset(
+_SOLICITANTE_ALLOWED_ENDPOINTS = frozenset(
     {
         "admin.requests_list",
         "admin.requests_form_new",
@@ -37,22 +38,38 @@ _SUPERVISOR_ALLOWED_ENDPOINTS = frozenset(
         "admin.requests_motoboy_contract_api",
         "admin.requests_diarist_motoboys_api",
         "admin.requests_clients_search",
+        "admin.requests_pending_count_api",
+    }
+)
+
+_MEMBRO_ALLOWED_ENDPOINTS = frozenset(
+    {
+        "admin.requests_list",
+        "admin.requests_resolve_form",
+        "admin.requests_resolve",
+        "admin.requests_reject_form",
+        "admin.requests_reject",
+        "admin.requests_pending_count_api",
     }
 )
 
 
 @admin_bp.before_request
-def _restrict_supervisor_to_requests():
+def _restrict_role_to_allowed_endpoints():
     if not current_user.is_authenticated:
         return None
     if current_user.is_admin:
         return None
-    if getattr(current_user, "role", None) != "supervisor":
-        return None
+    role = normalized_role()
     endpoint = request.endpoint or ""
-    if endpoint not in _SUPERVISOR_ALLOWED_ENDPOINTS:
-        abort(403)
+    if role in (ROLE_SOLICITANTE, ROLE_SUPERVISOR_LEGACY):
+        if endpoint not in _SOLICITANTE_ALLOWED_ENDPOINTS:
+            abort(403)
+    elif role == ROLE_MEMBRO:
+        if endpoint not in _MEMBRO_ALLOWED_ENDPOINTS:
+            abort(403)
     return None
+
 
 register_companies(admin_bp)
 register_clients(admin_bp)

@@ -136,7 +136,9 @@ def index():
 @main_bp.route("/dashboard")
 @login_required
 def dashboard():
-    if getattr(current_user, "role", None) == "supervisor" and not current_user.is_admin:
+    from app.admin.auth_helpers import is_membro, is_solicitante
+
+    if is_solicitante() or is_membro():
         return redirect(url_for("admin.requests_list"))
     today = date.today()
     month_param = request.args.get("month", "").strip()

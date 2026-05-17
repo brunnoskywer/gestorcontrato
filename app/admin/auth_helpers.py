@@ -4,6 +4,47 @@ from flask_login import current_user
 
 from app.extensions import db
 
+ROLE_SOLICITANTE = "solicitante"
+ROLE_MEMBRO = "membro"
+ROLE_SUPERVISOR_LEGACY = "supervisor"
+
+
+def normalized_role(user=None) -> str | None:
+    """Normaliza role legado supervisor → solicitante."""
+    u = user or current_user
+    if not u or not getattr(u, "is_authenticated", False):
+        return None
+    role = getattr(u, "role", None)
+    if role == ROLE_SUPERVISOR_LEGACY:
+        return ROLE_SOLICITANTE
+    return role
+
+
+def is_solicitante() -> bool:
+    return bool(
+        current_user.is_authenticated
+        and not current_user.is_admin
+        and normalized_role() == ROLE_SOLICITANTE
+    )
+
+
+def is_membro() -> bool:
+    return bool(
+        current_user.is_authenticated
+        and not current_user.is_admin
+        and normalized_role() == ROLE_MEMBRO
+    )
+
+
+def is_request_staff() -> bool:
+    """Administrador ou membro — resolve/rejeita solicitações e vê o sino."""
+    return bool(current_user.is_authenticated and (current_user.is_admin or is_membro()))
+
+
+def is_supervisor() -> bool:
+    """Alias legado: perfil solicitante."""
+    return is_solicitante()
+
 
 def require_admin() -> None:
     """Aborta com 403 se o usuário não estiver autenticado ou não for admin."""
@@ -11,20 +52,35 @@ def require_admin() -> None:
         abort(403)
 
 
-def require_supervisor_or_admin() -> None:
-    """Permite apenas usuários admin ou supervisor."""
+def require_staff() -> None:
+    """Administrador ou membro."""
     if not current_user.is_authenticated:
         abort(403)
-    if not (current_user.is_admin or getattr(current_user, "role", None) == "supervisor"):
+    if not is_request_staff():
         abort(403)
 
 
-def is_supervisor() -> bool:
-    return bool(current_user.is_authenticated and getattr(current_user, "role", None) == "supervisor" and not current_user.is_admin)
+def require_request_module_access() -> None:
+    """Solicitante, membro ou administrador."""
+    if not current_user.is_authenticated:
+        abort(403)
+    if current_user.is_admin or is_membro() or is_solicitante():
+        return
+    abort(403)
 
 
-def is_motoboy_user() -> bool:
-    return bool(current_user.is_authenticated and getattr(current_user, "role", None) == "motoboy" and not current_user.is_admin)
+def require_solicitante_or_admin() -> None:
+    """Solicitante ou administrador (criação/edição de solicitações)."""
+    if not current_user.is_authenticated:
+        abort(403)
+    if current_user.is_admin or is_solicitante():
+        return
+    abort(403)
+
+
+def require_supervisor_or_admin() -> None:
+    """Alias legado."""
+    require_request_module_access()
 
 
 def handle_delete_constraint_error() -> None:

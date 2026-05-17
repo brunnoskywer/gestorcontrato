@@ -54,8 +54,10 @@
       <td data-label="Perfil">
         {% if u.is_admin or u.role == 'admin' %}
           Administrador
-        {% elif u.role == 'supervisor' %}
-          Supervisor
+        {% elif u.role in ['solicitante', 'supervisor'] %}
+          Solicitante
+        {% elif u.role == 'membro' %}
+          Membro
         {% elif u.role == 'motoboy' %}
           Motoboy
         {% else %}

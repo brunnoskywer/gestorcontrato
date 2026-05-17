@@ -19,7 +19,8 @@
       {% set current_role = user.role if user else 'admin' %}
       <select name="role" class="form-select">
         <option value="admin" {% if current_role == 'admin' %}selected{% endif %}>Administrador</option>
-        <option value="supervisor" {% if current_role == 'supervisor' %}selected{% endif %}>Supervisor</option>
+        <option value="solicitante" {% if current_role in ['solicitante', 'supervisor'] %}selected{% endif %}>Solicitante</option>
+        <option value="membro" {% if current_role == 'membro' %}selected{% endif %}>Membro</option>
         <option value="motoboy" {% if current_role == 'motoboy' %}selected{% endif %}>Motoboy</option>
       </select>
     </div>

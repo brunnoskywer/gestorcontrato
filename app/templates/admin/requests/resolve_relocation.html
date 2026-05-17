@@ -1,0 +1,38 @@
+<form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
+  <p class="text-muted small mb-2">
+    Resolvendo solicitação #{{ req.id }} — <strong>{{ req.type_label }}</strong>
+  </p>
+  {% if contract %}
+  <div class="row g-3">
+    <div class="col-12">
+      <p class="text-muted small mb-0">
+        <strong>Contrato:</strong> {{ contract.supplier.name if contract.supplier else '—' }}
+        {% if contract.other_supplier %} — {{ contract.other_supplier|client_display_label }}{% endif %}
+      </p>
+    </div>
+    {% if payload.get('reason') %}
+    <div class="col-12">
+      <label class="form-label text-muted mb-0">Motivo informado pelo solicitante</label>
+      <p class="small mb-0">{{ payload.get('reason') }}</p>
+    </div>
+    {% endif %}
+    <div class="col-12">
+      <label class="form-label">Nova locação (cliente) *</label>
+      <select name="new_client_id" class="form-select" required>
+        <option value="">— Selecione —</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {% if payload.get('new_client_id') and payload.get('new_client_id')|int == c.id %}selected{% endif %}>
+          {{ c|client_display_label }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-danger small">Contrato não encontrado.</p>
+  {% endif %}
+  <div class="d-flex gap-2 justify-content-end mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-success btn-sm" {% if not contract %}disabled{% endif %}>Confirmar realocação e resolver</button>
+  </div>
+</form>

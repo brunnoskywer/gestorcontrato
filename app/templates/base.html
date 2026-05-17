@@ -52,7 +52,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             {% if current_user.is_authenticated %}
-              {% if not (current_user.role == 'supervisor' and not current_user.is_admin) %}
+              {% if current_user.is_admin or (not is_solicitante_user and not is_membro_user) %}
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('main.dashboard') }}" data-turbo-frame="main-content"
                   >Dashboard</a
@@ -208,8 +208,8 @@
                   </li>
                 </ul>
               </li>
-              {# Supervisor: apenas Solicitações #}
-              {% elif current_user.role == 'supervisor' %}
+              {# Solicitante ou membro: apenas Solicitações #}
+              {% elif is_solicitante_user or is_membro_user %}
               <li class="nav-item">
                 <a
                   class="nav-link"
@@ -218,11 +218,29 @@
                   >Solicitações</a
                 >
               </li>
-              {# Motoboy user: no admin menus for now #}
               {% endif %}
             {% endif %}
           </ul>
           <ul class="navbar-nav ms-auto align-items-center flex-row gap-1">
+            {% if is_request_staff_user %}
+            <li class="nav-item d-flex align-items-center">
+              <a
+                id="requests-bell"
+                class="nav-link position-relative d-flex align-items-center justify-content-center px-2"
+                href="{{ url_for('admin.requests_list', status='pending') }}"
+                data-turbo-frame="main-content"
+                data-count-url="{{ url_for('admin.requests_pending_count_api') }}"
+                title="Solicitações pendentes"
+                aria-label="Solicitações pendentes"
+                style="min-width: 2.35rem; min-height: 2.35rem"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+                </svg>
+                <span id="requests-bell-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger" hidden>0</span>
+              </a>
+            </li>
+            {% endif %}
             <li class="nav-item d-flex align-items-center">
               <button
                 type="button"
@@ -258,7 +276,7 @@
                 <span class="me-1">{{ current_user.name }}</span>
               </a>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                {% if not (current_user.role == 'supervisor' and not current_user.is_admin) %}
+                {% if current_user.is_admin or (not is_solicitante_user and not is_membro_user) %}
                 <li>
                   <a class="dropdown-item" href="{{ url_for('main.dashboard') }}" data-turbo-frame="main-content">
                     Dashboard
@@ -290,7 +308,7 @@
 
     {# data-turbo-permanent: mantém as abas dinâmicas após POST/redirect (ex.: modais) — senão o Turbo troca o DOM pelo HTML do servidor (lista vazia). #}
     <div id="admin-tab-bar-wrap" class="container-fluid px-0" data-turbo-permanent
-      {% if current_user.is_authenticated and current_user.role == 'supervisor' and not current_user.is_admin %}
+      {% if current_user.is_authenticated and (is_solicitante_user or is_membro_user) %}
       data-home-url="{{ url_for('admin.requests_list') }}" data-home-title="Solicitações"
       {% else %}
       data-home-url="{{ url_for('main.dashboard') }}" data-home-title="Dashboard"
@@ -323,6 +341,9 @@
     <script src="{{ url_for('static', filename='js/dre-turbo.js') }}"></script>
     <script src="{{ url_for('static', filename='js/uniform-movement-form.js') }}"></script>
     <script src="{{ url_for('static', filename='js/request-form.js') }}"></script>
+    {% if is_request_staff_user %}
+    <script src="{{ url_for('static', filename='js/requests-bell.js') }}"></script>
+    {% endif %}
     {% block scripts %}{% endblock %}
   </body>
 </html>

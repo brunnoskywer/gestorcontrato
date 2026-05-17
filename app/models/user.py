@@ -15,7 +15,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
-    # Role controls non-admin profiles: admin | supervisor | motoboy
+    # Role: admin | solicitante | membro | motoboy (supervisor legado → solicitante)
     role = db.Column(db.String(20), nullable=False, default="admin")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
