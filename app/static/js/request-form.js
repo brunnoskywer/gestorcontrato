@@ -40,13 +40,39 @@
     return intPart + "," + fixed[1];
   }
 
+  function resetFormFieldsExceptType(form) {
+    form.querySelectorAll("input, textarea, select").forEach(function (el) {
+      if (el.id === "sr_request_type") return;
+      if (el.name === "request_type" && el.type === "hidden") return;
+
+      if (el.type === "checkbox") {
+        el.checked = false;
+        return;
+      }
+      if (el.tagName === "SELECT") {
+        el.selectedIndex = 0;
+        return;
+      }
+      if (el.type === "hidden") {
+        el.value = "";
+        return;
+      }
+      el.value = "";
+    });
+    form.removeAttribute("data-contract-missing");
+    fillDiaristSelect(form, [], null);
+    fillContractSelect(form, [], null);
+  }
+
   function fillContractSelect(form, contracts, selectedId) {
     var sel = form.querySelector("#sr_motoboy_contract_id");
     if (!sel) return;
     sel.innerHTML = "";
     var opt0 = document.createElement("option");
     opt0.value = "";
-    opt0.textContent = contracts.length ? "Selecione o contrato..." : "Nenhum contrato vigente nesta locação";
+    opt0.textContent = contracts.length
+      ? "Selecione o contrato..."
+      : "Nenhum contrato vigente nesta locação";
     sel.appendChild(opt0);
     contracts.forEach(function (c) {
       var opt = document.createElement("option");
@@ -57,26 +83,39 @@
     });
   }
 
-  function updateContractInfo(form, data) {
-    var box = form.querySelector("#sr-contract-info");
-    var text = form.querySelector("#sr-contract-info-text");
-    if (!box || !text) return;
-    if (!data || !data.id) {
-      box.classList.add("d-none");
-      text.textContent = "";
-      return;
+  function fillDiaristSelect(form, motoboys, selectedId) {
+    var sel = form.querySelector("#sr_substitute_id");
+    if (!sel) return;
+    sel.innerHTML = "";
+    var opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = "Nenhum — só registro de falta";
+    sel.appendChild(opt0);
+    motoboys.forEach(function (m) {
+      var opt = document.createElement("option");
+      opt.value = String(m.id);
+      opt.textContent = m.label;
+      if (selectedId && String(selectedId) === String(m.id)) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  function setContractMissing(form, data) {
+    if (data && data.missing_value != null && !isNaN(Number(data.missing_value))) {
+      form.setAttribute("data-contract-missing", String(data.missing_value));
+    } else {
+      form.removeAttribute("data-contract-missing");
     }
-    var parts = [];
-    if (data.motoboy_name) parts.push("Motoboy: " + data.motoboy_name);
-    if (data.client_label) parts.push("Cliente: " + data.client_label);
-    if (data.missing_value != null) parts.push("Valor falta: R$ " + formatBr(data.missing_value));
-    text.textContent = parts.join(" · ");
-    box.classList.remove("d-none");
   }
 
   function contractDetailUrl(form, contractId) {
     var tpl = form.getAttribute("data-contract-detail-url") || "";
     return tpl.replace("/0", "/" + contractId);
+  }
+
+  function diaristsUrl(form, contractId) {
+    var base = form.getAttribute("data-diarists-url") || "";
+    return base + "?contract_id=" + encodeURIComponent(contractId);
   }
 
   function loadContracts(form, location, selectedId) {
@@ -96,9 +135,27 @@
       });
   }
 
+  function loadDiarists(form, contractId, selectedId) {
+    if (!contractId) {
+      fillDiaristSelect(form, [], null);
+      return Promise.resolve([]);
+    }
+    return fetch(diaristsUrl(form, contractId), { headers: { Accept: "application/json" } })
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (list) {
+        fillDiaristSelect(form, list || [], selectedId);
+        return list;
+      })
+      .catch(function () {
+        fillDiaristSelect(form, [], selectedId);
+      });
+  }
+
   function loadContractDetail(form, contractId) {
     if (!contractId) {
-      updateContractInfo(form, null);
+      setContractMissing(form, null);
       return Promise.resolve(null);
     }
     var url = contractDetailUrl(form, contractId);
@@ -107,39 +164,57 @@
         return r.json();
       })
       .then(function (data) {
-        updateContractInfo(form, data);
-        if (currentType(form) === "absence") syncAbsenceAmount(form, data);
+        setContractMissing(form, data);
         return data;
       })
       .catch(function () {
-        updateContractInfo(form, null);
+        setContractMissing(form, null);
         return null;
       });
   }
 
-  function syncAbsenceAmount(form, data) {
+  function applyDiaristAmount(form) {
     var sub = form.querySelector("#sr_substitute_id");
     var amt = form.querySelector("#sr_substitute_amount");
-    if (!sub || !amt || !sub.value) return;
-    if (amt.value && String(amt.value).trim()) return;
-    if (data && data.missing_value != null) {
-      amt.value = formatBr(data.missing_value);
+    if (!sub || !amt) return;
+    if (!sub.value) {
+      amt.value = "";
+      return;
+    }
+    var missing = form.getAttribute("data-contract-missing");
+    if (missing != null && missing !== "") {
+      amt.value = formatBr(Number(missing));
     }
   }
 
   function bindAbsenceDiarist(form) {
     var sub = form.querySelector("#sr_substitute_id");
-    var nat = form.querySelector("#sr_financial_nature_id");
-    var amt = form.querySelector("#sr_substitute_amount");
-    if (!sub || !nat || !amt) return;
-    function sync() {
-      var has = !!sub.value;
-      nat.required = has;
-      amt.required = has;
-      if (!has) amt.value = "";
+    if (!sub) return;
+    sub.addEventListener("change", function () {
+      applyDiaristAmount(form);
+    });
+  }
+
+  function onContractChange(form) {
+    var contractSel = form.querySelector("#sr_motoboy_contract_id");
+    if (!contractSel) return;
+    var contractId = contractSel.value;
+    var type = currentType(form);
+
+    loadContractDetail(form, contractId);
+    if (type === "absence") {
+      var payloadEl = form.querySelector("#request-payload-json");
+      var selectedDiarist = null;
+      if (payloadEl) {
+        try {
+          var p = JSON.parse(payloadEl.textContent || "{}");
+          selectedDiarist = p.substitute_supplier_id || null;
+        } catch (e) {}
+      }
+      loadDiarists(form, contractId, selectedDiarist);
+      var amt = form.querySelector("#sr_substitute_amount");
+      if (amt) amt.value = "";
     }
-    sub.addEventListener("change", sync);
-    sync();
   }
 
   function initRequestForm(root) {
@@ -159,14 +234,19 @@
         payload = {};
       }
     }
+
     var typeSel = getTypeSelect(form);
     var initialType = currentType(form) || form.getAttribute("data-initial-type") || "";
+    var isEdit = !!form.querySelector('input[type="hidden"][name="request_type"]');
 
     function onTypeChange() {
+      if (!isEdit) {
+        resetFormFieldsExceptType(form);
+      }
       togglePanels(form, currentType(form));
     }
 
-    if (typeSel) {
+    if (typeSel && !isEdit) {
       typeSel.addEventListener("change", onTypeChange);
     }
     onTypeChange();
@@ -178,13 +258,16 @@
       locSel.addEventListener("change", function () {
         var loc = locSel.value || "";
         loadContracts(form, loc, null);
-        updateContractInfo(form, null);
+        setContractMissing(form, null);
+        fillDiaristSelect(form, [], null);
+        var amt = form.querySelector("#sr_substitute_amount");
+        if (amt) amt.value = "";
       });
     }
 
     if (contractSel) {
       contractSel.addEventListener("change", function () {
-        loadContractDetail(form, contractSel.value);
+        onContractChange(form);
       });
     }
 
@@ -195,7 +278,17 @@
       var cid = payload.motoboy_contract_id || "";
       if (loc) {
         loadContracts(form, loc, cid).then(function () {
-          if (cid) loadContractDetail(form, cid);
+          if (cid) {
+            loadContractDetail(form, cid).then(function () {
+              if (initialType === "absence") {
+                loadDiarists(form, cid, payload.substitute_supplier_id || null).then(
+                  function () {
+                    applyDiaristAmount(form);
+                  }
+                );
+              }
+            });
+          }
         });
       }
     }

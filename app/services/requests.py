@@ -12,7 +12,6 @@ from app.extensions import db
 from app.models import (
     CONTRACT_TYPE_MOTOBOY,
     Contract,
-    FinancialNature,
     Supplier,
     SUPPLIER_MOTOBOY,
 )
@@ -117,13 +116,10 @@ def contract_to_api_dict(contract: Contract) -> dict[str, Any]:
     }
 
 
-def payable_natures_for_form():
+def clients_for_relocation_select():
     return (
-        FinancialNature.query.filter(
-            FinancialNature.is_active.is_(True),
-            FinancialNature.kind.in_(["payable", "both"]),
-        )
-        .order_by(FinancialNature.name)
+        Supplier.query.filter_by(type=SUPPLIER_CLIENT, is_active=True)
+        .order_by(func.coalesce(Supplier.trade_name, Supplier.legal_name, Supplier.name))
         .all()
     )
 
@@ -137,6 +133,16 @@ def diarist_motoboys_for_form(contract: Optional[Contract] = None):
         if uf:
             q = q.filter(func.upper(Supplier.state) == uf)
     return q.all()
+
+
+def diarist_motoboys_to_api(contract: Contract) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": m.id,
+            "label": f"{m.name}{f' — {m.document}' if m.document else ''}",
+        }
+        for m in diarist_motoboys_for_form(contract)
+    ]
 
 
 def build_payload_from_form(request_type: str) -> dict[str, Any]:
@@ -176,8 +182,13 @@ def build_payload_from_form(request_type: str) -> dict[str, Any]:
             payload["end_date"] = end_d.isoformat() if end_d else ""
             payload["reason"] = _str_field("reason")
         elif request_type == REQUEST_TYPE_RELOCATION:
-            payload["new_client_id"] = _int_field("new_client_id")
-            payload["new_client_label"] = _str_field("new_client_label")
+            client_id = _int_field("new_client_id")
+            payload["new_client_id"] = client_id
+            payload["new_client_label"] = ""
+            if client_id:
+                client = Supplier.query.get(client_id)
+                if client:
+                    payload["new_client_label"] = client_display_label(client)
             payload["reason"] = _str_field("reason")
         elif request_type == REQUEST_TYPE_ABSENCE:
             abs_d = _parse_date(_str_field("absence_date"))
@@ -185,7 +196,6 @@ def build_payload_from_form(request_type: str) -> dict[str, Any]:
             payload["justification"] = _str_field("justification")
             payload["substitute_supplier_id"] = _int_field("substitute_supplier_id")
             payload["substitute_amount"] = _str_field("substitute_amount")
-            payload["financial_nature_id"] = _int_field("financial_nature_id")
         return payload
 
     return {}

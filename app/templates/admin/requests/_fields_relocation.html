@@ -4,22 +4,15 @@
       <h6 class="text-uppercase text-muted fw-bold mb-0">Realocação (troca de cliente)</h6>
     </div>
     <div class="col-12">
-      <label class="form-label">Novo cliente</label>
-      <div class="position-relative">
-        <input type="hidden" name="new_client_id" id="sr_new_client_id" value="{{ payload.get('new_client_id', '') or '' }}" />
-        <input
-          type="text"
-          name="new_client_label"
-          class="form-control form-control-md search-entity-input"
-          id="sr_new_client_search"
-          data-search-url="{{ url_for('admin.requests_clients_search') }}"
-          data-target-hidden="new_client_id"
-          placeholder="Digite ao menos 3 caracteres..."
-          autocomplete="off"
-          value="{{ payload.get('new_client_label', '') }}"
-        />
-        <div class="search-entity-dropdown list-group shadow-sm" style="display:none;"></div>
-      </div>
+      <label class="form-label">Nova Locação</label>
+      <select name="new_client_id" id="sr_new_client_id" class="form-select form-select-md">
+        <option value="">Selecione o cliente...</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {% if payload.get('new_client_id') == c.id %}selected{% endif %}>
+          {{ c|client_display_label }}
+        </option>
+        {% endfor %}
+      </select>
     </div>
     <div class="col-12">
       <label class="form-label">Motivo / observações</label>

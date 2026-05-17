@@ -25,12 +25,13 @@ from app.search_text import folded_icontains
 from app.services.requests import (
     active_motoboy_contracts_query,
     build_payload_from_form,
+    clients_for_relocation_select,
     contract_to_api_dict,
     diarist_motoboys_for_form,
+    diarist_motoboys_to_api,
     distinct_active_locations,
     list_date_range_from_request,
     list_filter_datetime_bounds,
-    payable_natures_for_form,
     request_summary,
     validate_request_type,
 )
@@ -62,7 +63,7 @@ def _form_context(req: Request | None = None):
         "request_types": REQUEST_TYPES,
         "request_type_labels": REQUEST_TYPE_LABELS,
         "locations": distinct_active_locations(),
-        "financial_natures": payable_natures_for_form(),
+        "clients": clients_for_relocation_select(),
         "diarist_motoboys": diarist_motoboys_for_form(contract),
         "selected_contract": contract,
     }
@@ -252,6 +253,18 @@ def register_routes(bp: Blueprint) -> None:
             joinedload(Contract.other_supplier),
         ).get_or_404(contract_id)
         return jsonify(contract_to_api_dict(contract))
+
+    @bp.get("/requests/api/diarist-motoboys")
+    @login_required
+    def requests_diarist_motoboys_api():
+        require_supervisor_or_admin()
+        contract_id = request.args.get("contract_id", type=int)
+        if not contract_id:
+            return jsonify([])
+        contract = Contract.query.options(joinedload(Contract.supplier)).get_or_404(
+            contract_id
+        )
+        return jsonify(diarist_motoboys_to_api(contract))
 
     @bp.get("/requests/api/clients-search")
     @login_required

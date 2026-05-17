@@ -7,7 +7,7 @@
   id="request-form"
   data-contracts-url="{{ url_for('admin.requests_motoboy_contracts_api') }}"
   data-contract-detail-url="{{ url_for('admin.requests_motoboy_contract_api', contract_id=0) }}"
-  data-clients-search-url="{{ url_for('admin.requests_clients_search') }}"
+  data-diarists-url="{{ url_for('admin.requests_diarist_motoboys_api') }}"
   data-initial-type="{{ req.request_type if req else '' }}"
 >
   <div class="row g-3">

@@ -35,6 +35,7 @@ _SUPERVISOR_ALLOWED_ENDPOINTS = frozenset(
         "admin.requests_locations_api",
         "admin.requests_motoboy_contracts_api",
         "admin.requests_motoboy_contract_api",
+        "admin.requests_diarist_motoboys_api",
         "admin.requests_clients_search",
     }
 )
