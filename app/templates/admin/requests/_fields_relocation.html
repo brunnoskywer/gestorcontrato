@@ -1,0 +1,29 @@
+<div class="sr-type-panel d-none col-12" data-type="relocation" id="sr-panel-relocation">
+  <div class="row g-3">
+    <div class="col-12">
+      <h6 class="text-uppercase text-muted fw-bold mb-0">Realocação (troca de cliente)</h6>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Novo cliente</label>
+      <div class="position-relative">
+        <input type="hidden" name="new_client_id" id="sr_new_client_id" value="{{ payload.get('new_client_id', '') or '' }}" />
+        <input
+          type="text"
+          name="new_client_label"
+          class="form-control form-control-md search-entity-input"
+          id="sr_new_client_search"
+          data-search-url="{{ url_for('admin.requests_clients_search') }}"
+          data-target-hidden="new_client_id"
+          placeholder="Digite ao menos 3 caracteres..."
+          autocomplete="off"
+          value="{{ payload.get('new_client_label', '') }}"
+        />
+        <div class="search-entity-dropdown list-group shadow-sm" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Motivo / observações</label>
+      <textarea name="reason" class="form-control form-control-md" rows="3" placeholder="Informações sobre a realocação...">{{ payload.get('reason', '') }}</textarea>
+    </div>
+  </div>
+</div>

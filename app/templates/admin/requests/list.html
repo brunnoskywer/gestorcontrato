@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Solicitações{% endblock %}
+
+{% block content %}
+{% from "admin/_pagination.html" import render_admin_pagination %}
+{% set table_id = 'list-table' %}
+{% set insert_url = url_for('admin.requests_form_new') %}
+{% set insert_title = 'Nova solicitação' %}
+{% set _edit_base = url_for('admin.requests_form_edit', request_id=999999) %}
+{% set edit_url_template = _edit_base.replace('999999', '{id}') %}
+{% set delete_bulk_url = url_for('admin.requests_bulk_delete') %}
+{% set modal_size = 'xl' %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Solicitações</h1>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="admin-filter-flex" method="get" action="{{ url_for('admin.requests_list') }}">
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">De</label>
+        <input type="date" name="date_from" class="form-control form-control-sm w-100" value="{{ filters.date_from }}" />
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Até</label>
+        <input type="date" name="date_to" class="form-control form-control-sm w-100" value="{{ filters.date_to }}" />
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Tipo</label>
+        <select name="request_type" class="form-select form-select-sm w-100">
+          <option value="">Todos</option>
+          {% for t, label in request_type_labels.items() %}
+          <option value="{{ t }}" {% if filters.request_type == t %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm w-100">
+          <option value="">Todos</option>
+          {% for s, label in status_labels.items() %}
+          <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="admin-filter-flex__actions">
+        <button type="submit" class="btn btn-primary btn-sm">Pesquisar</button>
+        <a href="{{ url_for('admin.requests_list') }}" class="btn btn-danger btn-sm">Últimos 7 dias</a>
+      </div>
+    </form>
+    <p class="text-muted small mb-0 mt-2">Por padrão, exibimos solicitações dos últimos 7 dias.</p>
+  </div>
+</div>
+
+{% include "admin/_toolbar.html" with context %}
+<div class="table-responsive">
+<table class="table table-striped table-hover table-sm align-middle shadow-sm bg-white table-list" id="list-table">
+  <thead>
+    <tr>
+      <th style="width: 40px;"><input type="checkbox" class="form-check-input select-all" title="Selecionar todos" aria-label="Selecionar todos" /></th>
+      <th>Data</th>
+      {% if show_supervisor_column %}<th>Supervisor</th>{% endif %}
+      <th>Tipo</th>
+      <th>Resumo</th>
+      <th class="text-center">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    {% set r = row.req %}
+    <tr data-id="{{ r.id }}" data-pending="{{ '1' if r.is_pending else '0' }}">
+      <td data-label="Selecionar">
+        {% if r.is_pending %}
+        <input type="checkbox" class="form-check-input row-select" value="{{ r.id }}" aria-label="Selecionar" />
+        {% endif %}
+      </td>
+      <td data-label="Data">{{ r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else '—' }}</td>
+      {% if show_supervisor_column %}
+      <td data-label="Supervisor">{{ r.supervisor.name if r.supervisor else '—' }}</td>
+      {% endif %}
+      <td data-label="Tipo">{{ r.type_label }}</td>
+      <td data-label="Resumo">{{ row.summary }}</td>
+      <td data-label="Status" class="text-center">
+        {% if r.status == 'pending' %}
+        <span class="badge text-bg-warning">{{ r.status_label }}</span>
+        {% elif r.status == 'approved' %}
+        <span class="badge text-bg-success">{{ r.status_label }}</span>
+        {% elif r.status == 'rejected' %}
+        <span class="badge text-bg-danger">{{ r.status_label }}</span>
+        {% else %}
+        <span class="badge text-bg-secondary">{{ r.status_label }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="{{ 6 if show_supervisor_column else 5 }}" class="text-center text-muted">Nenhuma solicitação no período.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ render_admin_pagination(pagination, 'admin.requests_list') }}
+<script>(function(){ var t=document.getElementById('list-table'); if(!t) return; var h=t.querySelector('thead .select-all'); if(h) h.addEventListener('change',function(){ var c=this.checked; t.querySelectorAll('tbody .row-select').forEach(function(cb){ cb.checked=c; }); }); })();</script>
+{% endblock %}

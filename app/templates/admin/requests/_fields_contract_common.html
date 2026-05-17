@@ -1,0 +1,28 @@
+<div class="sr-type-panel d-none col-12 sr-contract-fields" data-types="distrato,relocation,absence">
+  <div class="row g-3">
+    <div class="col-12">
+      <h6 class="text-uppercase text-muted fw-bold mb-0">Contrato</h6>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Locação</label>
+      <select name="location" id="sr_location" class="form-select form-select-md">
+        <option value="">Selecione a locação...</option>
+        {% for loc in locations %}
+        <option value="{{ loc }}" {% if payload.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Contrato vigente</label>
+      <select name="motoboy_contract_id" id="sr_motoboy_contract_id" class="form-select form-select-md">
+        <option value="">Selecione a locação primeiro...</option>
+        {% if selected_contract %}
+        <option value="{{ selected_contract.id }}" selected>{{ selected_contract.id }} — {{ selected_contract.supplier.name if selected_contract.supplier else '' }}</option>
+        {% endif %}
+      </select>
+    </div>
+    <div class="col-12 d-none" id="sr-contract-info">
+      <p class="text-muted small mb-0" id="sr-contract-info-text"></p>
+    </div>
+  </div>
+</div>

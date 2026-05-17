@@ -1,0 +1,15 @@
+<div class="sr-type-panel d-none col-12" data-type="distrato" id="sr-panel-distrato">
+  <div class="row g-3">
+    <div class="col-12">
+      <h6 class="text-uppercase text-muted fw-bold mb-0">Distrato</h6>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Data de distrato</label>
+      <input type="date" name="end_date" class="form-control form-control-md" value="{{ payload.get('end_date', '') }}" />
+    </div>
+    <div class="col-12">
+      <label class="form-label">Motivo</label>
+      <textarea name="reason" class="form-control form-control-md" rows="3" placeholder="Descreva o motivo do distrato...">{{ payload.get('reason', '') }}</textarea>
+    </div>
+  </div>
+</div>

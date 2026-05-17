@@ -478,6 +478,9 @@
         if (typeof window.initUniformMovementForm === 'function') {
           window.initUniformMovementForm(bodyEl);
         }
+        if (typeof window.initRequestForm === 'function') {
+          window.initRequestForm(bodyEl);
+        }
       })
       .catch(function () {
         bodyEl.innerHTML = '<p class="text-danger text-center py-3">Erro ao carregar o formulário.</p>';

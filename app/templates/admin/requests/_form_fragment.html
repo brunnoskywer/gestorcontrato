@@ -1,0 +1,42 @@
+{% from "admin/_macros.html" import uf_select %}
+<form
+  method="post"
+  action="{{ action_url }}"
+  data-turbo-frame="main-content"
+  class="admin-form-modal"
+  id="request-form"
+  data-contracts-url="{{ url_for('admin.requests_motoboy_contracts_api') }}"
+  data-contract-detail-url="{{ url_for('admin.requests_motoboy_contract_api', contract_id=0) }}"
+  data-clients-search-url="{{ url_for('admin.requests_clients_search') }}"
+  data-initial-type="{{ req.request_type if req else '' }}"
+>
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Tipo de solicitação</label>
+      <select name="request_type" id="sr_request_type" class="form-select form-select-md" {% if req %}disabled{% endif %}>
+        <option value="">Selecione...</option>
+        {% for t in request_types %}
+        <option value="{{ t }}" {% if req and req.request_type == t %}selected{% elif not req and loop.first %}{% endif %}>
+          {{ request_type_labels[t] }}
+        </option>
+        {% endfor %}
+      </select>
+      {% if req %}
+      <input type="hidden" name="request_type" value="{{ req.request_type }}" />
+      {% endif %}
+    </div>
+
+    {% include "admin/requests/_fields_motoboy_inclusion.html" %}
+    {% include "admin/requests/_fields_contract_common.html" %}
+    {% include "admin/requests/_fields_distrato.html" %}
+    {% include "admin/requests/_fields_relocation.html" %}
+    {% include "admin/requests/_fields_absence.html" %}
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary">{{ 'Salvar alterações' if req else 'Enviar solicitação' }}</button>
+  </div>
+</form>
+
+<script type="application/json" id="request-payload-json">{{ payload | tojson }}</script>

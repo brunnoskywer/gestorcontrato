@@ -1,0 +1,41 @@
+<div class="sr-type-panel d-none col-12" data-type="absence" id="sr-panel-absence">
+  <div class="row g-3">
+    <div class="col-12">
+      <h6 class="text-uppercase text-muted fw-bold mb-0">Falta</h6>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Dia</label>
+      <input type="date" name="absence_date" class="form-control form-control-md" value="{{ payload.get('absence_date', '') }}" />
+    </div>
+    <div class="col-12">
+      <label class="form-label">Justificativa</label>
+      <textarea name="justification" class="form-control form-control-md" rows="3" placeholder="Descreva o motivo da falta...">{{ payload.get('justification', '') }}</textarea>
+    </div>
+    <div class="col-12 mt-1">
+      <h6 class="mb-2 text-uppercase text-muted fw-bold">Diarista e financeiro</h6>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Motoboy diarista (quem cobriu)</label>
+      <select name="substitute_supplier_id" id="sr_substitute_id" class="form-select form-select-md">
+        <option value="">Nenhum — só registro de falta</option>
+        {% for m in diarist_motoboys %}
+        <option value="{{ m.id }}" {% if payload.get('substitute_supplier_id') == m.id %}selected{% endif %}>{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Opcional. Se informado, indique valor e natureza financeira.</div>
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Valor pago ao diarista (R$)</label>
+      <input type="text" name="substitute_amount" id="sr_substitute_amount" class="form-control form-control-md" data-mask="currency" placeholder="0,00" autocomplete="off" value="{{ payload.get('substitute_amount', '') }}" />
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Natureza financeira</label>
+      <select name="financial_nature_id" id="sr_financial_nature_id" class="form-select form-select-md">
+        <option value="">—</option>
+        {% for n in financial_natures %}
+        <option value="{{ n.id }}" {% if payload.get('financial_nature_id') == n.id %}selected{% endif %}>{{ n.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>

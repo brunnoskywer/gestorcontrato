@@ -1,0 +1,78 @@
+<div class="sr-type-panel d-none col-12" data-type="motoboy_inclusion" id="sr-panel-motoboy-inclusion">
+  <div class="row g-3">
+    <div class="col-12">
+      <h6 class="text-uppercase text-muted fw-bold mb-0">Dados do motoboy</h6>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Nome completo</label>
+      <input type="text" name="full_name" class="form-control form-control-md" value="{{ payload.get('full_name', '') }}" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">CPF</label>
+      <input type="text" name="cpf" class="form-control form-control-md" value="{{ payload.get('cpf', '') }}" data-mask="cpf" maxlength="14" placeholder="000.000.000-00" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">CNPJ</label>
+      <input type="text" name="cnpj" class="form-control form-control-md" value="{{ payload.get('cnpj', '') }}" data-mask="cnpj" maxlength="18" placeholder="00.000.000/0000-00" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">CEP</label>
+      <input type="text" name="cep" class="form-control form-control-md" value="{{ payload.get('cep', '') }}" data-mask="cep" maxlength="9" placeholder="00000-000" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Cidade</label>
+      <input type="text" name="city" class="form-control form-control-md" value="{{ payload.get('city', '') }}" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label d-block">Estado (UF)</label>
+      {{ uf_select('state', payload.get('state', ''), 'sr_motoboy_state') }}
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Rua / logradouro</label>
+      <input type="text" name="street" class="form-control form-control-md" value="{{ payload.get('street', '') }}" />
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Bairro</label>
+      <input type="text" name="neighborhood" class="form-control form-control-md" value="{{ payload.get('neighborhood', '') }}" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Complemento</label>
+      <input type="text" name="address" class="form-control form-control-md" value="{{ payload.get('address', '') }}" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Contato de referência</label>
+      <input type="text" name="reference_contact" class="form-control form-control-md" value="{{ payload.get('reference_contact', '') }}" />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Placa moto</label>
+      <input type="text" name="bike_plate" class="form-control form-control-md" value="{{ payload.get('bike_plate', '') }}" />
+    </div>
+    <div class="col-12 col-md-6">
+      <label class="form-label">Conta bancária / PIX</label>
+      <input type="text" name="bank_account_pix" class="form-control form-control-md" value="{{ payload.get('bank_account_pix', '') }}" />
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label">Status</label>
+      {% set raw_st = (payload.get('status') or 'pending')|lower %}
+      <select name="status" class="form-select form-select-md">
+        <option value="active" {% if raw_st == 'active' %}selected{% endif %}>Ativo</option>
+        <option value="pending" {% if raw_st == 'pending' %}selected{% endif %}>Pendente</option>
+        <option value="terminated" {% if raw_st in ['terminated', 'inactive'] %}selected{% endif %}>Encerrado</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label">Telefone de contato</label>
+      <input type="text" name="contact_phone" class="form-control form-control-md" value="{{ payload.get('contact_phone', '') }}" />
+    </div>
+    <div class="col-12 col-md-3 d-flex align-items-end">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="is_diarist" value="1" id="sr_is_diarist" {% if payload.get('is_diarist') %}checked{% endif %} />
+        <label class="form-check-label" for="sr_is_diarist">Diarista</label>
+      </div>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Observações</label>
+      <textarea name="notes" class="form-control form-control-md" rows="2">{{ payload.get('notes', '') }}</textarea>
+    </div>
+  </div>
+</div>

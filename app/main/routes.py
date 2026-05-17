@@ -1,8 +1,8 @@
 import calendar
 from datetime import date, datetime, time, timedelta
 
-from flask import Blueprint, render_template, request
-from flask_login import login_required
+from flask import Blueprint, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
@@ -136,6 +136,8 @@ def index():
 @main_bp.route("/dashboard")
 @login_required
 def dashboard():
+    if getattr(current_user, "role", None) == "supervisor" and not current_user.is_admin:
+        return redirect(url_for("admin.requests_list"))
     today = date.today()
     month_param = request.args.get("month", "").strip()
     company_id = request.args.get("company_id", type=int)

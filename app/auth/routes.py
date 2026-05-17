@@ -17,6 +17,8 @@ def login():
         if user and user.check_password(password) and user.is_active:
             login_user(user)
             flash("Login realizado com sucesso.", "success")
+            if getattr(user, "role", None) == "supervisor" and not user.is_admin:
+                return redirect(url_for("admin.requests_list"))
             return redirect(url_for("main.dashboard"))
 
         flash("Credenciais inválidas.", "danger")

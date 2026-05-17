@@ -52,11 +52,13 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             {% if current_user.is_authenticated %}
+              {% if not (current_user.role == 'supervisor' and not current_user.is_admin) %}
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('main.dashboard') }}" data-turbo-frame="main-content"
                   >Dashboard</a
                 >
               </li>
+              {% endif %}
               {# Admin full menu #}
               {% if current_user.is_admin %}
               <li class="nav-item dropdown">
@@ -131,6 +133,15 @@
                       >Contratos de cliente</a
                     >
                   </li>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('admin.requests_list') }}"
+                      data-turbo-frame="main-content"
+                      >Solicitações</a
+                    >
+                  </li>
                 </ul>
               </li>
               <li class="nav-item dropdown">
@@ -197,29 +208,15 @@
                   </li>
                 </ul>
               </li>
-              {# Supervisor: only Motoboy contracts #}
+              {# Supervisor: apenas Solicitações #}
               {% elif current_user.role == 'supervisor' %}
-              <li class="nav-item dropdown">
+              <li class="nav-item">
                 <a
-                  class="nav-link dropdown-toggle"
-                  href="#"
-                  id="contratosMenu"
-                  role="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
+                  class="nav-link"
+                  href="{{ url_for('admin.requests_list') }}"
+                  data-turbo-frame="main-content"
+                  >Solicitações</a
                 >
-                  Contratos
-                </a>
-                <ul class="dropdown-menu" aria-labelledby="contratosMenu">
-                  <li>
-                    <a
-                      class="dropdown-item"
-                      href="{{ url_for('admin.motoboy_contracts_list') }}"
-                      data-turbo-frame="main-content"
-                      >Contratos de motoboy</a
-                    >
-                  </li>
-                </ul>
               </li>
               {# Motoboy user: no admin menus for now #}
               {% endif %}
@@ -261,12 +258,14 @@
                 <span class="me-1">{{ current_user.name }}</span>
               </a>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+                {% if not (current_user.role == 'supervisor' and not current_user.is_admin) %}
                 <li>
                   <a class="dropdown-item" href="{{ url_for('main.dashboard') }}" data-turbo-frame="main-content">
                     Dashboard
                   </a>
                 </li>
                 <li><hr class="dropdown-divider" /></li>
+                {% endif %}
                 <li>
                   <a class="dropdown-item" href="{{ url_for('auth.logout') }}" data-turbo-frame="_top">
                     Sair
@@ -290,7 +289,13 @@
     {% include "admin/_modal_confirm_action.html" %}
 
     {# data-turbo-permanent: mantém as abas dinâmicas após POST/redirect (ex.: modais) — senão o Turbo troca o DOM pelo HTML do servidor (lista vazia). #}
-    <div id="admin-tab-bar-wrap" class="container-fluid px-0" data-turbo-permanent data-home-url="{{ url_for('main.dashboard') }}" data-home-title="Dashboard">
+    <div id="admin-tab-bar-wrap" class="container-fluid px-0" data-turbo-permanent
+      {% if current_user.is_authenticated and current_user.role == 'supervisor' and not current_user.is_admin %}
+      data-home-url="{{ url_for('admin.requests_list') }}" data-home-title="Solicitações"
+      {% else %}
+      data-home-url="{{ url_for('main.dashboard') }}" data-home-title="Dashboard"
+      {% endif %}
+    >
       <div id="admin-tab-bar" class="admin-tab-bar border-bottom px-2" style="display: none;">
         <ul id="admin-tab-list" class="nav nav-tabs"></ul>
       </div>
@@ -317,6 +322,7 @@
     <script src="{{ url_for('static', filename='js/admin-modals.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dre-turbo.js') }}"></script>
     <script src="{{ url_for('static', filename='js/uniform-movement-form.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/request-form.js') }}"></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>
