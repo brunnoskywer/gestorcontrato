@@ -72,7 +72,7 @@
         </div>
         <div>
           <p class="text-muted small mb-0 fw-medium">Receitas quitadas</p>
-          <p class="mb-0 fs-4 fw-bold text-success">R$ {{ "%.2f"|format(month_total_receivable) }}</p>
+          <p class="mb-0 fs-4 fw-bold text-success">R$ {{ month_total_receivable|format_currency }}</p>
         </div>
       </div>
     </div>
