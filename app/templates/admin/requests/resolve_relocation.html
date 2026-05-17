@@ -10,16 +10,13 @@
         {% if contract.other_supplier %} — {{ contract.other_supplier|client_display_label }}{% endif %}
       </p>
     </div>
-    {% if payload.get('reason') %}
     <div class="col-12">
-      <label class="form-label text-muted mb-0">Motivo informado pelo solicitante</label>
-      <p class="small mb-0">{{ payload.get('reason') }}</p>
+      <h6 class="text-uppercase text-muted fw-bold mb-0">Realocação (troca de cliente)</h6>
     </div>
-    {% endif %}
     <div class="col-12">
-      <label class="form-label">Nova locação (cliente) *</label>
-      <select name="new_client_id" class="form-select" required>
-        <option value="">— Selecione —</option>
+      <label class="form-label">Nova Locação</label>
+      <select name="new_client_id" id="sr_new_client_id" class="form-select form-select-md" required>
+        <option value="">Selecione o cliente...</option>
         {% for c in clients %}
         <option value="{{ c.id }}" {% if payload.get('new_client_id') and payload.get('new_client_id')|int == c.id %}selected{% endif %}>
           {{ c|client_display_label }}
@@ -27,6 +24,12 @@
         {% endfor %}
       </select>
     </div>
+    {% if payload.get('reason') %}
+    <div class="col-12">
+      <label class="form-label">Motivo / observações (solicitante)</label>
+      <p class="small text-muted mb-0">{{ payload.get('reason') }}</p>
+    </div>
+    {% endif %}
   </div>
   {% else %}
   <p class="text-danger small">Contrato não encontrado.</p>

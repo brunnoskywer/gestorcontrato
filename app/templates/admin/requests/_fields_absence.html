@@ -22,6 +22,7 @@
         <option value="{{ m.id }}" {% if payload.get('substitute_supplier_id') == m.id %}selected{% endif %}>{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
         {% endfor %}
       </select>
+      <div class="form-text small">Apenas diaristas ativos do mesmo estado (UF) do motoboy titular do contrato.</div>
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Valor pago ao diarista (R$)</label>

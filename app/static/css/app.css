@@ -640,3 +640,43 @@ select.form-no-uppercase {
   text-transform: none !important;
 }
 
+/* Sino de solicitações pendentes (navbar) — alinhado ao botão de tema */
+.requests-bell-btn {
+  position: relative;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
+}
+
+.requests-bell-btn svg {
+  color: #fff;
+}
+
+.requests-bell-badge {
+  position: absolute;
+  bottom: -0.2rem;
+  left: -0.35rem;
+  top: auto;
+  right: auto;
+  transform: none;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.28rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background-color: #dc3545;
+  border: 1.5px solid var(--bs-dark, #212529);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.requests-bell-badge[hidden] {
+  display: none !important;
+}
+

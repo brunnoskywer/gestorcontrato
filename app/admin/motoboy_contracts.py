@@ -127,21 +127,9 @@ def _motoboys_for_contract_select(contract: Optional[Contract] = None):
 
 
 def _diarist_motoboys_for_select(contract: Contract, absence: Optional[ContractAbsence] = None):
-    """Diaristas ativos do mesmo UF do titular; na edição inclui o atual se não estiver na lista."""
-    titular = contract.supplier
-    uf = (titular.state or "").strip().upper() if titular else ""
-    q = (
-        Supplier.query.filter_by(type=SUPPLIER_MOTOBOY, is_active=True, is_diarist=True)
-        .filter(~Supplier.status.in_(MOTOBOY_TERMINATED_STATUSES))
-    )
-    if uf:
-        q = q.filter(func.upper(Supplier.state) == uf)
-    rows = q.order_by(Supplier.name).all()
-    if absence and absence.substitute_supplier_id:
-        current = absence.substitute_supplier
-        if current and current.id not in {m.id for m in rows}:
-            return [current] + rows
-    return rows
+    from app.services.motoboy_diarists import diarist_motoboys_for_contract
+
+    return diarist_motoboys_for_contract(contract, absence)
 
 
 def _render_motoboy_contract_form(

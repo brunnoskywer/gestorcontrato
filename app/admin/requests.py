@@ -1,7 +1,7 @@
 """Módulo de solicitações (solicitante, membro e administrador)."""
-from datetime import datetime
+from datetime import date, datetime
 
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
 
@@ -65,12 +65,22 @@ def _require_pending(req: Request) -> bool:
     return True
 
 
+def _contract_from_payload(payload: dict, *, with_relations: bool = False) -> Contract | None:
+    cid = payload.get("motoboy_contract_id")
+    if not cid:
+        return None
+    q = Contract.query.filter_by(id=int(cid), contract_type=CONTRACT_TYPE_MOTOBOY)
+    if with_relations:
+        q = q.options(
+            joinedload(Contract.supplier),
+            joinedload(Contract.other_supplier),
+        )
+    return q.first()
+
+
 def _form_context(req: Request | None = None):
     payload = dict(req.payload) if req and req.payload else {}
-    contract = None
-    cid = payload.get("motoboy_contract_id")
-    if cid:
-        contract = Contract.query.get(int(cid))
+    contract = _contract_from_payload(payload, with_relations=True)
     return {
         "req": req,
         "payload": payload,
@@ -92,29 +102,56 @@ def _resolve_form_context(req: Request):
     }
     if req.request_type == REQUEST_TYPE_MOTOBOY_INCLUSION:
         ctx["motoboy"] = motoboy_from_payload(payload)
-    elif req.request_type in (
-        REQUEST_TYPE_DISTRATO,
-        REQUEST_TYPE_RELOCATION,
-        REQUEST_TYPE_ABSENCE,
-    ):
-        contract_id = payload.get("motoboy_contract_id")
-        contract = (
-            Contract.query.filter_by(
-                id=int(contract_id), contract_type=CONTRACT_TYPE_MOTOBOY
-            ).first()
-            if contract_id
-            else None
-        )
-        ctx["contract"] = contract
-        if req.request_type == REQUEST_TYPE_DISTRATO:
-            ctx["companies"] = Company.query.order_by(Company.legal_name).all()
-            ctx["natures"] = _payable_natures_query().all()
-            ctx["default_charge_date"] = datetime.utcnow().date().isoformat()
-        elif req.request_type == REQUEST_TYPE_ABSENCE:
-            ctx["diarist_motoboys"] = _diarist_motoboys_for_select(contract) if contract else []
-            ctx["financial_natures"] = _payable_natures_query().all()
-        elif req.request_type == REQUEST_TYPE_RELOCATION:
-            ctx["clients"] = clients_for_relocation_select()
+        return ctx
+
+    contract = _contract_from_payload(payload, with_relations=True)
+    ctx["contract"] = contract
+
+    if req.request_type == REQUEST_TYPE_DISTRATO:
+        if not contract:
+            ctx["distrato_error"] = "Contrato não encontrado na solicitação."
+            return ctx
+        end_raw = (payload.get("end_date") or "").strip()
+        had_end_date = contract.end_date is not None
+        if not had_end_date and end_raw:
+            try:
+                contract.end_date = date.fromisoformat(end_raw)
+                ctx["hidden_end_date"] = end_raw
+            except ValueError:
+                ctx["distrato_error"] = "Data de distrato inválida na solicitação."
+                return ctx
+        if contract.end_date is None:
+            ctx["distrato_error"] = (
+                "Cadastre a <strong>data de distrato</strong> na solicitação antes de gerar o lançamento."
+            )
+            return ctx
+        ctx["companies"] = Company.query.order_by(Company.legal_name).all()
+        ctx["natures"] = _payable_natures_query().all()
+        ctx["default_charge_date"] = date.today().isoformat()
+        ctx["next_url"] = url_for("admin.requests_list")
+        ctx["submit_label"] = "Gerar distrato e resolver"
+        return ctx
+
+    if req.request_type == REQUEST_TYPE_ABSENCE:
+        if not contract:
+            ctx["absence_error"] = "Contrato não encontrado na solicitação."
+            return ctx
+        ctx["diarist_motoboys"] = _diarist_motoboys_for_select(contract)
+        ctx["financial_natures"] = _payable_natures_query().all()
+        ctx["default_date"] = payload.get("absence_date") or date.today().isoformat()
+        ctx["falta_prefill"] = {
+            "absence_date": payload.get("absence_date"),
+            "justification": payload.get("justification", ""),
+            "substitute_supplier_id": payload.get("substitute_supplier_id"),
+            "substitute_amount": payload.get("substitute_amount", ""),
+        }
+        ctx["submit_label"] = "Registrar falta e resolver"
+        return ctx
+
+    if req.request_type == REQUEST_TYPE_RELOCATION:
+        if not contract:
+            ctx["relocation_error"] = "Contrato não encontrado na solicitação."
+        ctx["clients"] = clients_for_relocation_select()
     return ctx
 
 
@@ -216,6 +253,17 @@ def register_routes(bp: Blueprint) -> None:
                 400,
             )
         ctx = _resolve_form_context(req)
+        err = (
+            ctx.get("distrato_error")
+            or ctx.get("absence_error")
+            or ctx.get("relocation_error")
+        )
+        if err:
+            return Response(
+                f'<p class="text-danger small mb-0">{err}</p>',
+                mimetype="text/html; charset=utf-8",
+                status=400,
+            )
         templates = {
             REQUEST_TYPE_MOTOBOY_INCLUSION: "admin/requests/resolve_motoboy.html",
             REQUEST_TYPE_DISTRATO: "admin/requests/resolve_distrato.html",

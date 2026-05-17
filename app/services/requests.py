@@ -126,14 +126,9 @@ def clients_for_relocation_select():
 
 
 def diarist_motoboys_for_form(contract: Optional[Contract] = None):
-    q = Supplier.query.filter_by(
-        type=SUPPLIER_MOTOBOY, is_active=True, is_diarist=True
-    ).order_by(Supplier.name)
-    if contract and contract.supplier:
-        uf = (contract.supplier.state or "").strip().upper()
-        if uf:
-            q = q.filter(func.upper(Supplier.state) == uf)
-    return q.all()
+    from app.services.motoboy_diarists import diarist_motoboys_for_contract
+
+    return diarist_motoboys_for_contract(contract)
 
 
 def diarist_motoboys_to_api(contract: Contract) -> list[dict[str, Any]]:

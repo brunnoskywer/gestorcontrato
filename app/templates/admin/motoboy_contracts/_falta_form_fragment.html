@@ -1,3 +1,9 @@
+{% set prefill = falta_prefill if falta_prefill is defined and falta_prefill else {} %}
+{% set absence_date_value = prefill.get('absence_date') if prefill.get('absence_date') else default_date %}
+{% set justification_value = prefill.get('justification', '') %}
+{% set selected_substitute_id = prefill.get('substitute_supplier_id') %}
+{% set substitute_amount_value = prefill.get('substitute_amount', '') %}
+{% set selected_nature_id = prefill.get('financial_nature_id') %}
 <form method="post" action="{{ action_url }}" data-turbo-frame="main-content" class="admin-form-modal">
   <div class="row g-3">
     <div class="col-12">
@@ -12,11 +18,11 @@
     </div>
     <div class="col-12">
       <label class="form-label">Dia *</label>
-      <input type="date" name="absence_date" class="form-control form-control-md" required value="{{ default_date }}" />
+      <input type="date" name="absence_date" class="form-control form-control-md" required value="{{ absence_date_value }}" />
     </div>
     <div class="col-12">
       <label class="form-label">Justificativa *</label>
-      <textarea name="justification" class="form-control form-control-md" rows="3" required placeholder="Descreva o motivo da falta..."></textarea>
+      <textarea name="justification" class="form-control form-control-md" rows="3" required placeholder="Descreva o motivo da falta...">{{ justification_value }}</textarea>
     </div>
     <div class="col-12 mt-2">
       <h6 class="mb-2 text-uppercase text-muted fw-bold">Diarista e financeiro</h6>
@@ -26,14 +32,14 @@
       <select name="substitute_supplier_id" id="falta_substitute_id" class="form-select form-select-md">
         <option value="">Nenhum — só registro de falta</option>
         {% for m in diarist_motoboys %}
-        <option value="{{ m.id }}">{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
+        <option value="{{ m.id }}" {% if selected_substitute_id and selected_substitute_id|int == m.id %}selected{% endif %}>{{ m.name }}{% if m.document %} — {{ m.document }}{% endif %}</option>
         {% endfor %}
       </select>
-      <div class="form-text">Opcional. Apenas motoboys com <strong>Diarista</strong> no cadastro. Se informado, será gerada <strong>conta a pagar</strong> com o valor abaixo.</div>
+      <div class="form-text">Opcional. Apenas motoboys com <strong>Diarista</strong> no cadastro e do <strong>mesmo estado (UF)</strong> do titular. Se informado, será gerada <strong>conta a pagar</strong> com o valor abaixo.</div>
     </div>
     <div class="col-12 col-md-6">
       <label class="form-label">Valor pago ao diarista (R$)</label>
-      <input type="text" name="substitute_amount" id="falta_substitute_amount" class="form-control form-control-md" data-mask="currency" placeholder="0,00" autocomplete="off" />
+      <input type="text" name="substitute_amount" id="falta_substitute_amount" class="form-control form-control-md" data-mask="currency" placeholder="0,00" autocomplete="off" value="{{ substitute_amount_value }}" />
       <div class="form-text">Ao escolher o diarista, preenche com o valor de falta do contrato; você pode alterar antes de salvar.</div>
     </div>
     <div class="col-12 col-md-6">
@@ -41,7 +47,7 @@
       <select name="financial_nature_id" id="falta_financial_nature_id" class="form-select form-select-md">
         <option value="">—</option>
         {% for n in financial_natures %}
-        <option value="{{ n.id }}">{{ n.name }}</option>
+        <option value="{{ n.id }}" {% if selected_nature_id and selected_nature_id|int == n.id %}selected{% endif %}>{{ n.name }}</option>
         {% endfor %}
       </select>
       <div class="form-text">Obrigatória se houver motoboy diarista (quem cobriu).</div>
@@ -49,7 +55,7 @@
   </div>
   <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-    <button type="submit" class="btn btn-primary">Registrar falta</button>
+    <button type="submit" class="btn btn-primary">{{ submit_label if submit_label is defined and submit_label else 'Registrar falta' }}</button>
   </div>
 </form>
 <script type="application/json" id="falta-contract-missing-json">{% if contract.missing_value is not none %}{{ contract.missing_value|float }}{% else %}null{% endif %}</script>
