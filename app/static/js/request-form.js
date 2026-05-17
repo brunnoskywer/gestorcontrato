@@ -29,6 +29,10 @@
     form.querySelectorAll(".sr-type-panel").forEach(function (panel) {
       var show = panelVisible(panel, type);
       panel.classList.toggle("d-none", !show);
+      panel.querySelectorAll("input, select, textarea").forEach(function (el) {
+        el.removeAttribute("required");
+        el.required = false;
+      });
     });
   }
 
@@ -45,6 +49,8 @@
       if (el.id === "sr_request_type") return;
       if (el.name === "request_type" && el.type === "hidden") return;
 
+      el.removeAttribute("required");
+      el.required = false;
       if (el.type === "checkbox") {
         el.checked = false;
         return;

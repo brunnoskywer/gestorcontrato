@@ -405,6 +405,93 @@
     });
   }
 
+  function stripFormMasksForSubmit(form) {
+    if (!form) return;
+    form.querySelectorAll('[data-mask="cpf"]').forEach(function (el) {
+      el.value = (el.value || '').replace(/\D/g, '');
+    });
+    form.querySelectorAll('[data-mask="cnpj"]').forEach(function (el) {
+      el.value = (el.value || '').replace(/\D/g, '');
+    });
+    form.querySelectorAll('[data-mask="cep"]').forEach(function (el) {
+      el.value = (el.value || '').replace(/\D/g, '');
+    });
+    form.querySelectorAll('[data-mask="currency"]').forEach(function (el) {
+      var raw = (el.value || '').trim();
+      if (!raw) return;
+      raw = raw.replace(/[^0-9,]/g, '').replace(/\./g, ',');
+      var parts = raw.split(',');
+      if (parts.length > 2) {
+        raw = parts[0] + ',' + parts.slice(1).join('');
+      }
+      el.value = raw;
+    });
+  }
+
+  function submitAdminModalForm(form) {
+    stripFormMasksForSubmit(form);
+    var turboFrame = form.getAttribute('data-turbo-frame') || 'main-content';
+    fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: {
+        Accept: 'text/html',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Turbo-Frame': turboFrame
+      },
+      redirect: 'follow'
+    })
+      .then(function (r) {
+        return r.text();
+      })
+      .then(function (html) {
+        mergeTurboMainContentFromHtml(html);
+        var modalEl = document.getElementById('adminFormModal');
+        if (modalEl && window.bootstrap) {
+          var inst = window.bootstrap.Modal.getInstance(modalEl);
+          if (inst) inst.hide();
+        }
+        showFlashModalIfNeeded();
+      })
+      .catch(function () {
+        showMessageModal('Erro ao salvar. Tente novamente.', 'Erro');
+      });
+  }
+
+  function initAdminModalFormSubmit() {
+    if (document.body.dataset.adminModalFormSubmitInited === '1') return;
+    document.body.dataset.adminModalFormSubmitInited = '1';
+    document.addEventListener(
+      'submit',
+      function (e) {
+        var form = e.target;
+        if (!form || form.tagName !== 'FORM') return;
+        if (!form.classList.contains('admin-form-modal')) return;
+        var bodyEl = document.getElementById('adminFormModalBody');
+        if (!bodyEl || !bodyEl.contains(form)) return;
+        if (form.hasAttribute('data-replace-modal-body')) return;
+        if (form.getAttribute('data-turbo') === 'false') return;
+        if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (form.id === 'request-form') {
+          var hiddenType = form.querySelector('input[type="hidden"][name="request_type"]');
+          var typeSel = form.querySelector('#sr_request_type');
+          var reqType = (hiddenType && hiddenType.value) || (typeSel && typeSel.value) || '';
+          if (!reqType) {
+            showMessageModal('Selecione o tipo de solicitação.', 'Atenção');
+            return;
+          }
+        }
+
+        submitAdminModalForm(form);
+      },
+      true
+    );
+  }
+
   /** Atualiza só o turbo-frame principal a partir do HTML da resposta (mantém abas e URL com filtros). */
   function mergeTurboMainContentFromHtml(html) {
     var frame = document.getElementById('main-content');
@@ -1305,6 +1392,7 @@ showMessageModal('Selecione um ou mais lançamentos quitados para reabrir.', 'At
     initConfirmModal();
     initConfirmActionModal();
     initFormModal();
+    initAdminModalFormSubmit();
     initConfirmSubmitForms();
     initToolbar();
     initTableListRowClick();
