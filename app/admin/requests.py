@@ -18,8 +18,10 @@ from app.admin.motoboy_contracts import _diarist_motoboys_for_select, _payable_n
 from app.extensions import db
 from app.models import CONTRACT_TYPE_MOTOBOY, Company, Contract, SUPPLIER_CLIENT, Supplier
 from app.models.requests import (
-    REQUEST_STATUS_LABELS,
+    REQUEST_STATUS_APPROVED,
+    REQUEST_STATUS_FILTER_LABELS,
     REQUEST_STATUS_PENDING,
+    REQUEST_STATUS_RESOLVED,
     REQUEST_TYPE_ABSENCE,
     REQUEST_TYPE_DISTRATO,
     REQUEST_TYPE_LABELS,
@@ -177,7 +179,11 @@ def register_routes(bp: Blueprint) -> None:
             q = q.filter(Request.request_type == req_type)
 
         status = request.args.get("status", "").strip()
-        if status in REQUEST_STATUS_LABELS:
+        if status == REQUEST_STATUS_RESOLVED:
+            q = q.filter(
+                Request.status.in_((REQUEST_STATUS_RESOLVED, REQUEST_STATUS_APPROVED))
+            )
+        elif status in REQUEST_STATUS_FILTER_LABELS:
             q = q.filter(Request.status == status)
 
         rows = q.order_by(Request.created_at.desc()).all()
@@ -199,7 +205,7 @@ def register_routes(bp: Blueprint) -> None:
                 "status": status,
             },
             request_type_labels=REQUEST_TYPE_LABELS,
-            status_labels=REQUEST_STATUS_LABELS,
+            status_labels=REQUEST_STATUS_FILTER_LABELS,
             show_requester_column=staff or current_user.is_admin,
             is_solicitante_user=is_solicitante(),
             is_request_staff_user=staff,

@@ -38,7 +38,11 @@ REQUEST_STATUS_LABELS = {
     REQUEST_STATUS_PENDING: "Pendente",
     REQUEST_STATUS_RESOLVED: "Resolvida",
     REQUEST_STATUS_REJECTED: "Rejeitada",
-    REQUEST_STATUS_APPROVED: "Resolvida",
+}
+
+# Opções do filtro (sem status legado duplicado)
+REQUEST_STATUS_FILTER_LABELS = {
+    s: REQUEST_STATUS_LABELS[s] for s in REQUEST_STATUSES
 }
 
 
@@ -87,4 +91,6 @@ class Request(db.Model):
 
     @property
     def status_label(self) -> str:
+        if self.status == REQUEST_STATUS_APPROVED:
+            return REQUEST_STATUS_LABELS[REQUEST_STATUS_RESOLVED]
         return REQUEST_STATUS_LABELS.get(self.status, self.status)
