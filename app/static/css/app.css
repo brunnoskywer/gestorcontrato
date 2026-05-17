@@ -640,29 +640,23 @@ select.form-no-uppercase {
   text-transform: none !important;
 }
 
-/* Sino de solicitações pendentes (navbar) — alinhado ao botão de tema */
-.requests-bell-btn {
+/* Botões circulares da navbar (tema e sino) — mesmo tamanho; hover via Bootstrap btn-outline-light */
+.navbar-icon-btn {
   position: relative;
   width: 2.35rem;
   height: 2.35rem;
   flex-shrink: 0;
-  background-color: transparent;
-  border-color: rgba(255, 255, 255, 0.75);
-  color: #fff;
 }
 
-.requests-bell-btn:hover,
-.requests-bell-btn:focus,
-.requests-bell-btn:active,
-.requests-bell-btn:focus-visible {
-  background-color: rgba(255, 255, 255, 0.14) !important;
-  border-color: #fff !important;
-  color: #fff !important;
-  box-shadow: none !important;
+.navbar-icon-btn__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
-.requests-bell-btn svg {
-  color: currentColor;
+#requests-bell.navbar-icon-btn {
+  text-decoration: none;
 }
 
 .requests-bell-badge {
