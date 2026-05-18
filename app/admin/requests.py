@@ -104,6 +104,7 @@ def _resolve_form_context(req: Request):
     }
     if req.request_type == REQUEST_TYPE_MOTOBOY_INCLUSION:
         ctx["motoboy"] = motoboy_from_payload(payload)
+        ctx["submit_label"] = "Confirmar inclusão e resolver"
         return ctx
 
     contract = _contract_from_payload(payload, with_relations=True)

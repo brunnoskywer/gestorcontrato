@@ -18,6 +18,38 @@
   var FRAME_ID = 'main-content';
   var TABS_SESSION_KEY = 'gestorContrato-admin-tabs-v1';
 
+  /** Rotas que não devem virar aba (login, logout, etc.). */
+  function isExcludedTabPath(path) {
+    var key = pathDedupeKey(path);
+    if (!key) return true;
+    return key === '/auth/login' || key === '/auth/logout' || key.indexOf('/auth/') === 0;
+  }
+
+  function purgeExcludedTabs() {
+    if (!tabs.length) return false;
+    var removed = false;
+    tabs = tabs.filter(function (t) {
+      if (!isExcludedTabPath(t.path)) return true;
+      removed = true;
+      var link = document.querySelector('[data-tab-id="' + t.id + '"]');
+      if (link) {
+        var li = link.closest('.admin-tab-item');
+        if (li) li.remove();
+      }
+      return false;
+    });
+    if (!removed) return false;
+    if (!tabs.length) {
+      activeTabId = null;
+      var bar = document.getElementById(TAB_BAR_ID);
+      if (bar) bar.style.display = 'none';
+    } else if (activeTabId && !tabs.some(function (t) { return t.id === activeTabId; })) {
+      setActiveTab(tabs[0].id);
+    }
+    saveTabsState();
+    return true;
+  }
+
   var tabs = [];
   var activeTabId = null;
   var listenersBound = false;
@@ -329,6 +361,7 @@
       var merged = [];
       data.tabs.forEach(function (t) {
         if (!t || !t.id || !t.path) return;
+        if (isExcludedTabPath(t.path)) return;
         var k = pathDedupeKey(t.path);
         if (!k || seenKeys[k]) return;
         seenKeys[k] = true;
@@ -363,7 +396,7 @@
 
   function addTab(path, title, focus) {
     var norm = normalizePath(path);
-    if (!norm) return null;
+    if (!norm || isExcludedTabPath(norm)) return null;
 
     var existing = findTabForHref(path);
     if (existing) {
@@ -399,6 +432,7 @@
   function initInitialTab() {
     if (!getFrame()) return;
     var path = (window.location.pathname || '/') + (window.location.search || '');
+    if (isExcludedTabPath(path)) return;
     var rawTitle = document.title || path;
     var parts = rawTitle.split(' - ');
     var title = parts[parts.length - 1].trim();
@@ -448,6 +482,7 @@
       if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
 
       e.preventDefault();
+      if (isExcludedTabPath(href)) return;
       var title = (link.textContent || '').trim();
       addTab(href, title || undefined, true);
     });
@@ -473,10 +508,12 @@
 
   function init() {
     if (!getFrame()) return;
+    purgeExcludedTabs();
     if (!initialTabsReady) {
       if (!restoreTabsFromSession()) {
         initInitialTab();
       } else {
+        purgeExcludedTabs();
         var bar = document.getElementById(TAB_BAR_ID);
         if (bar) bar.style.display = 'block';
       }

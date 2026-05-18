@@ -1,5 +1,5 @@
 {% from "admin/_macros.html" import uf_select %}
-<form method="post" action="{{ action_url }}" data-turbo-frame="main-content">
+<form method="post" action="{{ action_url }}" class="admin-form-modal" data-turbo-frame="main-content">
   <div class="row">
     <div class="col-12 col-md-4 mb-2">
       <label class="form-label">Nome completo *</label>
@@ -88,6 +88,6 @@
   </div>
   <div class="d-flex gap-2 justify-content-end">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-    <button type="submit" class="btn btn-primary">Salvar</button>
+    <button type="submit" class="btn btn-primary">{{ submit_label if submit_label is defined and submit_label else 'Salvar' }}</button>
   </div>
 </form>
