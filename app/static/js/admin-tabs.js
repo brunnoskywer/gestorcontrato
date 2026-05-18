@@ -16,12 +16,24 @@
   var TAB_BAR_WRAP_ID = 'admin-tab-bar-wrap';
   var TAB_LIST_ID = 'admin-tab-list';
   var FRAME_ID = 'main-content';
-  var TABS_SESSION_KEY = 'gestorContrato-admin-tabs-v1';
+  var TABS_SESSION_KEY = 'gestorContrato-admin-tabs-v2';
 
-  /** Rotas que não devem virar aba (login, logout, etc.). */
+  function isAdminTabsEnabled() {
+    return document.body && document.body.getAttribute('data-admin-tabs') === '1';
+  }
+
+  function clearTabsSession() {
+    try {
+      sessionStorage.removeItem(TABS_SESSION_KEY);
+      sessionStorage.removeItem('gestorContrato-admin-tabs-v1');
+    } catch (e) {}
+  }
+
+  /** Rotas que não devem virar aba (login, logout, página pública inicial, etc.). */
   function isExcludedTabPath(path) {
     var key = pathDedupeKey(path);
     if (!key) return true;
+    if (key === '/' || key === '/index') return true;
     return key === '/auth/login' || key === '/auth/logout' || key.indexOf('/auth/') === 0;
   }
 
@@ -507,7 +519,12 @@
   }
 
   function init() {
+    if (!isAdminTabsEnabled()) {
+      clearTabsSession();
+      return;
+    }
     if (!getFrame()) return;
+    if (!document.getElementById(TAB_BAR_WRAP_ID)) return;
     purgeExcludedTabs();
     if (!initialTabsReady) {
       if (!restoreTabsFromSession()) {

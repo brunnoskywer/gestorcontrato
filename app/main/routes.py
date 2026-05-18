@@ -130,6 +130,12 @@ def _dre_third_party_label(entry: FinancialEntry) -> tuple[str, str]:
 
 @main_bp.route("/")
 def index():
+    if current_user.is_authenticated:
+        from app.admin.auth_helpers import is_membro, is_solicitante
+
+        if is_solicitante() or is_membro():
+            return redirect(url_for("admin.requests_list"))
+        return redirect(url_for("main.dashboard"))
     return render_template("main/index.html")
 
 

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, login_required
+from flask_login import current_user, login_user, logout_user, login_required
 
 from app.extensions import db
 from app.models import User
@@ -9,6 +9,13 @@ auth_bp = Blueprint("auth", __name__, template_folder="../templates/auth")
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    if current_user.is_authenticated:
+        from app.admin.auth_helpers import is_membro, is_solicitante
+
+        if is_solicitante() or is_membro():
+            return redirect(url_for("admin.requests_list"))
+        return redirect(url_for("main.dashboard"))
+
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")

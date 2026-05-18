@@ -1,5 +1,13 @@
-{% extends "base.html" %}
+{% extends "base_auth.html" %}
 {% block title %}Início{% endblock %}
+
+{% block nav_extra %}
+<ul class="navbar-nav ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('auth.login') }}">Entrar</a>
+  </li>
+</ul>
+{% endblock %}
 
 {% block content %}
 <div class="text-center py-5">
@@ -12,4 +20,3 @@
   </a>
 </div>
 {% endblock %}
-

@@ -32,10 +32,14 @@
     />
     <script src="https://unpkg.com/@hotwired/turbo@8.0.0/dist/turbo.umd.min.js"></script>
   </head>
-  <body>
+  <body data-admin-tabs="1">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-0">
       <div class="container-fluid">
-        <a class="navbar-brand" href="{{ url_for('main.index') }}" data-turbo-frame="main-content">
+        <a
+          class="navbar-brand"
+          href="{% if current_user.is_authenticated and (is_solicitante_user or is_membro_user) %}{{ url_for('admin.requests_list') }}{% else %}{{ url_for('main.dashboard') }}{% endif %}"
+          data-turbo-frame="main-content"
+        >
           {{ config.APP_NAME }}
         </a>
         <button
