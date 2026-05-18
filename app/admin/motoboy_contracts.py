@@ -2,6 +2,7 @@
 import calendar
 import json
 from datetime import date
+from io import BytesIO
 from typing import Optional, Tuple
 
 from flask import Blueprint, Response, current_app, flash, make_response, redirect, render_template, request, send_file, url_for
@@ -50,6 +51,7 @@ from app.services.motoboy_distrato import (
 )
 from app.services.motoboy_contract_pdf import build_motoboy_contract_pdf
 from app.services.motoboy_distrato_pdf import build_motoboy_distrato_pdf
+from app.services.motoboy_active_contracts_export import build_active_motoboy_contracts_xlsx
 from app.utils import apply_created_at_range, parse_decimal_form
 from app.models.supplier import client_display_label
 from app.search_text import folded_icontains
@@ -443,12 +445,26 @@ def register_routes(bp: Blueprint) -> None:
             contracts=pagination.items,
             pagination=pagination,
             contracts_with_contrato_attachment=contracts_with_contrato_attachment,
+            export_active_url=url_for("admin.motoboy_contracts_export_active"),
             filters={
                 "motoboy_name": motoboy_name,
                 "client_name": client_name,
                 "created_from": created_from,
                 "created_to": created_to,
             },
+        )
+
+    @bp.route("/motoboy-contracts/export-active")
+    @login_required
+    def motoboy_contracts_export_active():
+        require_supervisor_or_admin()
+        data = build_active_motoboy_contracts_xlsx()
+        filename = f"motoboys-contrato-ativo-{date.today().isoformat()}.xlsx"
+        return send_file(
+            BytesIO(data),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename,
         )
 
     @bp.route("/motoboy-contracts/create", methods=["GET", "POST"])
