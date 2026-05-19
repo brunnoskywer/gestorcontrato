@@ -41,6 +41,13 @@
         <input type="date" name="date_to" class="form-control form-control-sm w-100" value="{{ filters.date_to }}" />
       </div>
       <div class="admin-filter-flex__field">
+        <label class="form-label mb-1">Filtrar por</label>
+        <select name="date_field" class="form-select form-select-sm w-100">
+          <option value="due" {% if filters.date_field == 'due' %}selected{% endif %}>Data vencimento</option>
+          <option value="settled" {% if filters.date_field == 'settled' %}selected{% endif %}>Data quitação</option>
+        </select>
+      </div>
+      <div class="admin-filter-flex__field">
         <label class="form-label mb-1">Empresa</label>
         <select name="company_id" class="form-select form-select-sm w-100">
           <option value="">Todas</option>

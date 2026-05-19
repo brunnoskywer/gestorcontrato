@@ -86,6 +86,39 @@ def _financial_natures():
     return FinancialNature.query.filter_by(is_active=True).order_by(FinancialNature.name).all()
 
 
+FINANCE_DATE_FIELD_DUE = "due"
+FINANCE_DATE_FIELD_SETTLED = "settled"
+
+
+def _normalize_finance_date_field(value: str | None) -> str:
+    v = (value or "").strip().lower()
+    if v == FINANCE_DATE_FIELD_SETTLED:
+        return FINANCE_DATE_FIELD_SETTLED
+    return FINANCE_DATE_FIELD_DUE
+
+
+def _apply_financial_entry_period_filter(query, date_from_filter, date_to_filter, date_field):
+    """Filtra pelo intervalo em data de vencimento ou data de quitação."""
+    if not date_from_filter and not date_to_filter:
+        return query
+
+    if date_field == FINANCE_DATE_FIELD_SETTLED:
+        query = query.filter(FinancialEntry.settled_at.isnot(None))
+        if date_from_filter:
+            settled_start = datetime.combine(date_from_filter, time(0, 0, 0))
+            query = query.filter(FinancialEntry.settled_at >= settled_start)
+        if date_to_filter:
+            settled_end = datetime.combine(date_to_filter, time(23, 59, 59))
+            query = query.filter(FinancialEntry.settled_at <= settled_end)
+        return query
+
+    if date_from_filter:
+        query = query.filter(FinancialEntry.due_date >= date_from_filter)
+    if date_to_filter:
+        query = query.filter(FinancialEntry.due_date <= date_to_filter)
+    return query
+
+
 def _suggest_charge_date(year: int, month: int) -> date:
     # mês seguinte, dia 5, pulando fim de semana para segunda
     if month == 12:
@@ -220,6 +253,8 @@ def register_routes(bp: Blueprint) -> None:
         else:
             status = request.args.get("status", "").strip()  # '', pending, settled
 
+        date_field = _normalize_finance_date_field(request.args.get("date_field"))
+
         date_from_filter = None
         date_to_filter = None
         if date_from_str:
@@ -251,10 +286,9 @@ def register_routes(bp: Blueprint) -> None:
                 joinedload(FinancialEntry.attachment),
             ).outerjoin(Supplier)
         )
-        if date_from_filter:
-            query = query.filter(FinancialEntry.due_date >= date_from_filter)
-        if date_to_filter:
-            query = query.filter(FinancialEntry.due_date <= date_to_filter)
+        query = _apply_financial_entry_period_filter(
+            query, date_from_filter, date_to_filter, date_field
+        )
         if company_id:
             query = query.filter(FinancialEntry.company_id == company_id)
         if entry_type in (ENTRY_PAYABLE, ENTRY_RECEIVABLE):
@@ -281,9 +315,19 @@ def register_routes(bp: Blueprint) -> None:
         sum_val = query.with_entities(func.sum(FinancialEntry.amount)).order_by(None).scalar()
         entries_total = Decimal(str(sum_val)) if sum_val is not None else Decimal("0")
 
-        pagination = query.order_by(
-            FinancialEntry.due_date.desc().nullslast(), FinancialEntry.id.desc()
-        ).paginate(page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False)
+        if date_field == FINANCE_DATE_FIELD_SETTLED:
+            order_cols = (
+                FinancialEntry.settled_at.desc().nullslast(),
+                FinancialEntry.id.desc(),
+            )
+        else:
+            order_cols = (
+                FinancialEntry.due_date.desc().nullslast(),
+                FinancialEntry.id.desc(),
+            )
+        pagination = query.order_by(*order_cols).paginate(
+            page=admin_list_page(), per_page=ADMIN_LIST_PER_PAGE, error_out=False
+        )
         return render_template(
             "admin/financeiro/manual_entry.html",
             companies=companies,
@@ -295,6 +339,7 @@ def register_routes(bp: Blueprint) -> None:
             filters={
                 "date_from": date_from_str,
                 "date_to": date_to_str,
+                "date_field": date_field,
                 "company_id": company_id,
                 "entry_type": entry_type,
                 "nature_id": nature_id,
